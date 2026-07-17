@@ -1,0 +1,26 @@
+# Phase 2 — Domain Model & Storage: progress notes
+
+Status: complete. `npm run lint`, `npm run test` (8 files, 25 tests passing, including the full `StorageEngine` contract suite — CRUD, bulk ops, and the transaction block: commit-across-scopes, rollback-on-throw, read-your-writes, nested-transaction joining/rollback, and concurrent-transaction serialization), and `npm run build -- --configuration production` all pass.
+
+## What changed
+
+- **npm workspaces set up for the first time**: root `package.json` gained `"workspaces": ["shared"]`; new `shared/` package (`@go-gather/shared`, no build step, `main`/`types` point straight at `src/index.ts`) matching `go-gather-next/shared/package.json` exactly. Root `tsconfig.json` gained the `@go-gather/shared` path alias. `server/` is **not** created yet — deferred to Phase 4 (catalog pipeline) / Phase 10 (backend deploy).
+- **Domain model types** copied verbatim into `shared/src/models.ts` from `go-gather-next/shared/src/models.ts` (`Region`, `PokemonClass`, `PokedexType`, `CatalogEntry`, `ProgressEntry`, `ImplicitlyExcludedSearchTerm`, `ExportBundle`, `SearchTermData`, `PresetQuery*`, `ShinyFilter`, `UnifiedRegion`, `RegionFilter`, `UserSettings`, `DEFAULT_SETTINGS`), including their doc comments. `shared/src/index.ts` re-exports via `export * from './models.js'` (the `.js` extension is required by the package's ESM/NodeNext resolution).
+- **`StorageEngine` interface** (`src/app/core/data/storage-engine.ts`): scopes `catalog`/`progress`/`settings`/`imageCache`/`syncMeta` (no `outbox` — see below), `STORAGE_ENGINE` injection token, `isStorageConstraintError()` helper ported from game-shelf.
+- **Dexie web engine**: `app-db.ts` (single `version(1)` schema, no migration chain needed — fresh app), `dexie-storage-engine.ts` (ports game-shelf's transaction-queue + nested-transaction-detection pattern verbatim, adapted to go-gather's scopes/method names), `storage-transaction-context.ts` + `.node.ts` (ported unchanged — these are generic Zone/AsyncLocalStorage helpers with no game-shelf-specific content).
+- **Contract test suite** (`storage-engine.contract.ts` + `dexie-storage-engine.spec.ts`): ported game-shelf's `describeStorageEngineContract` pattern, with fixture builders and per-scope test blocks rewritten for go-gather's actual scopes.
+- **`storage-engine.factory.ts`**: web-only for now — always constructs `DexieStorageEngine`. Wired into `main.ts` via `provideAppInitializer()` + a `STORAGE_ENGINE` provider factory, both copied from game-shelf's `main.ts` pattern.
+- **`PreferenceStorageService`** (`src/app/core/storage/preference-storage.service.ts`): thin async wrapper around `@capacitor/preferences`.
+
+## Scope decisions
+
+- **`outbox` scope omitted**: go-gather has no per-write push-sync of progress/settings to a server (unlike game-shelf) — only periodic catalog pulls, tracked via `syncMeta`. Add `outbox` later if a "back up my progress" feature is added.
+- **`syncMeta` is load-bearing, not just insurance**: since the catalog is fetched (not bundled), tracking the installed catalog version matters from day one, even though the actual fetch logic is Phase 4.
+- **`PreferenceStorageService` simplified**: no migration-from-legacy-localStorage logic (fresh app, nothing to migrate) and no in-memory cache for synchronous reads (no consumers yet). Add the cache pattern later if a consumer needs sync reads.
+- **Native/SQLite engine deferred to Phase 6**, per the source checklist's explicit sequencing ("web-only branch first").
+- **No unique-constraint tests in the contract suite**: unlike game-shelf's `games`/`tags` scopes (which have real business-rule uniqueness — compound identity, case-insensitive names — enforced via Dexie compound/unique indexes), none of go-gather's scopes need a secondary unique index: `catalog`/`progress` are keyed by their own natural id, `settings` is a fixed single row. `isStorageConstraintError()` is still ported and exported for when Phase 6's SQLite engine needs it, or if a future scope does.
+
+## Gaps found and fixed beyond the checklist's literal wording
+
+- **`storage-engine.contract.ts` needed explicit `vitest` imports** (`describe`/`it`/`expect`/`beforeEach`/`afterEach`), unlike game-shelf's version which relies on ambient globals. Cause: game-shelf uses a single unified `tsconfig.json` with `"types": ["vitest/globals"]` set directly on it, so vitest globals are available everywhere. go-gather's split `tsconfig.app.json`/`tsconfig.spec.json` (inherited from the Angular CLI starter, see `docs/progress/phase-0-tooling.md`) means non-`*.spec.ts` files that use test globals (like this shared contract module) fall outside `tsconfig.spec.json`'s `include` and lose type coverage. Explicit imports are the correct fix given the split-config structure, not a workaround.
+- **`storage-transaction-context.node.ts` needed `@types/node`**: `tsconfig.spec.json`'s `"types": ["vitest/globals"]` override disables TypeScript's default auto-inclusion of all other `@types/*` packages (including `@types/node`), so `node:async_hooks`'s `AsyncLocalStorage` type didn't resolve. Fixed by adding `"node"` to that `types` array and adding `@types/node` as an explicit devDependency (was previously only a transitive, unpinned dependency).

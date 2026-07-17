@@ -45,9 +45,9 @@ See [`MIGRATION-CHECKLIST.md` Phase 0](../../go-gather-next/docs/migration/MIGRA
 
 See [`MIGRATION-CHECKLIST.md` Phase 1](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-1--domain-model--storage-do-this-before-any-ui) and [`STORAGE-MIGRATION.md`](../../go-gather-next/docs/migration/STORAGE-MIGRATION.md) (centerpiece doc). Do this before any UI work.
 
-- [ ] Port domain model types from `shared/src/models.ts`
-- [ ] `StorageEngine` interface + Dexie (web) implementation + contract test suite
-- [ ] `PreferenceStorageService` equivalent (`@capacitor/preferences`)
+- [x] Port domain model types from `shared/src/models.ts` — ported into a new `@go-gather/shared` npm workspace package (not `core/models/`), per the auto-resolved "keep npm workspaces" decision, see [progress notes](progress/phase-2-domain-storage.md)
+- [x] `StorageEngine` interface + Dexie (web) implementation + contract test suite — native/SQLite engine deferred to Phase 6
+- [x] `PreferenceStorageService` equivalent (`@capacitor/preferences`) — simplified vs. game-shelf's version (no legacy-migration logic, no consumers yet), see progress notes
 
 ## Phase 3 — Search-Engine Port
 
