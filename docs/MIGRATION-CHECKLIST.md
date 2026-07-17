@@ -53,8 +53,8 @@ See [`MIGRATION-CHECKLIST.md` Phase 1](../../go-gather-next/docs/migration/MIGRA
 
 See [`MIGRATION-CHECKLIST.md` Phase 2](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-2--port-search-engine-logic-isolated-testable-zero-ui-dependency) and [`current/SEARCH-ENGINE.md`](../../go-gather-next/docs/current/SEARCH-ENGINE.md). Port verbatim, do not reinterpret the grammar — zero current test coverage to preserve, so every test here is net-new value.
 
-- [ ] Copy `core/search-engine/*` verbatim
-- [ ] Full unit test coverage for serializer, compiler, and the NOT-cannot-wrap-OR parser quirk
+- [x] Copy `core/search-engine/*` verbatim — confirmed byte-for-byte identical via `diff` against `go-gather-next`, see [progress notes](progress/phase-3-search-engine.md)
+- [x] Full unit test coverage for serializer, compiler, and the NOT-cannot-wrap-OR parser quirk — all net-new (zero prior coverage existed)
 
 ## Phase 4 — Catalog Data Pipeline
 
