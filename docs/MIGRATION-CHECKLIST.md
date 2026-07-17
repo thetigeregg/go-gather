@@ -8,7 +8,10 @@ Source docs live in the sibling repo: [`go-gather-next/docs/README.md`](../../go
 
 ## Before starting: Open Decisions gate
 
-Resolve the blocking rows in [`OPEN-DECISIONS.md`](../../go-gather-next/docs/migration/OPEN-DECISIONS.md) before Phase 1 — bundle ID, dialogs-vs-pages, bundled-vs-fetched catalog, keep-a-backend. Later phases' decisions (signing team ID, hosting target, etc.) can be deferred until those phases start.
+- [x] Resolved in [`OPEN-DECISIONS.md`](../../go-gather-next/docs/migration/OPEN-DECISIONS.md): bundle ID (`io.github.thetigeregg.gogather`, `.dev` suffix variant), dialogs-vs-pages (routed pages), bundled-vs-fetched catalog (**fetched**, deviating from the doc's bundled recommendation), keep-a-backend (**yes** — auto-resolves the `SearchTermData` duplication and npm-workspaces rows to "keep as-is" too)
+- [ ] Still open, not blocking Phase 1 but needed before Phase 10: hosting target, GHCR image publishing (now in scope since a backend is being kept)
+- [ ] Still open, not blocking Phase 1 but needed before Phase 8: Apple Developer team ID, match certs storage repo, App Store Connect API key
+- [ ] Still open, low priority: web-build-or-iOS-only (Product), native E2E/Maestro, Vitest `.ui.spec.ts` split — none block any phase
 
 ## Phase 0 — Tooling Bootstrap
 
@@ -34,9 +37,9 @@ Not a separate phase in the source checklist (it's folded into its Phase 7); pul
 
 See [`MIGRATION-CHECKLIST.md` Phase 0](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-0--scaffold) and [`ARCHITECTURE-TARGET.md`](../../go-gather-next/docs/migration/ARCHITECTURE-TARGET.md).
 
-- [ ] Folder structure per `ARCHITECTURE-TARGET.md#folder-structure`
-- [ ] `provideIonicAngular({ mode: 'ios' })` + `provideRouter` with the target route table
-- [ ] Routing approach resolved (routed pages vs. modals) per the Open Decisions gate above
+- [x] Folder structure per `ARCHITECTURE-TARGET.md#folder-structure` — routed page directories (`tabs/`, `gather/`, `settings/`, `search-strings/`, `preset-queries/`) scaffolded with stub content; `core/` subfolders intentionally deferred to Phases 2–3 when their first real files land, see [progress notes](progress/phase-1-scaffold.md)
+- [x] `provideIonicAngular({ mode: 'ios' })` + `provideRouter` with the target route table — `provideHttpClient(withInterceptorsFromDi())` also added ahead of schedule, see progress notes
+- [x] Routing approach resolved (routed pages vs. modals) per the Open Decisions gate above — stock `tab1`/`tab2`/`tab3`/`explore-container` starter boilerplate removed and replaced with the target page set
 
 ## Phase 2 — Domain Model & Storage
 
@@ -55,10 +58,10 @@ See [`MIGRATION-CHECKLIST.md` Phase 2](../../go-gather-next/docs/migration/MIGRA
 
 ## Phase 4 — Catalog Data Pipeline
 
-See [`MIGRATION-CHECKLIST.md` Phase 3](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-3--catalog-data-pipeline) and [`current/SERVER-AND-SYNC.md`](../../go-gather-next/docs/current/SERVER-AND-SYNC.md). Depends on the bundled-vs-fetched decision.
+See [`MIGRATION-CHECKLIST.md` Phase 3](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-3--catalog-data-pipeline) and [`current/SERVER-AND-SYNC.md`](../../go-gather-next/docs/current/SERVER-AND-SYNC.md). Catalog is **fetched** from the live backend (resolved — see Open Decisions gate above), not bundled at build time.
 
-- [ ] Port sync/transform scripts as dev-time/CI script
-- [ ] Wire catalog artifact into app bundling per the bundled/fetched decision
+- [ ] Port sync/transform scripts, deployed as the live catalog-serving endpoint (not a build-time script)
+- [ ] Wire app's catalog loading to fetch from the live endpoint, with `syncMeta` version tracking
 
 ## Phase 5 — Services & UI Rebuild
 
@@ -101,9 +104,9 @@ See [`MIGRATION-CHECKLIST.md` Phase 9](../../go-gather-next/docs/migration/MIGRA
 - [ ] Signed-bundle build script + manifest endpoint + `LiveUpdateService`
 - [ ] Verified: `src/**`-only change ships via OTA; native-shell change falls through to Phase 8 instead
 
-## Phase 10 — Backend Deploy (conditional)
+## Phase 10 — Backend Deploy
 
-Only relevant if [`OPEN-DECISIONS.md`](../../go-gather-next/docs/migration/OPEN-DECISIONS.md)'s "keep a live backend" is answered yes. See [`MIGRATION-CHECKLIST.md` Phase 10](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-10--backend-deploy-only-if-a-live-backend-was-kept-per-open-decisionsmd) and [`CI-CD-AND-DEPLOY.md`](../../go-gather-next/docs/migration/CI-CD-AND-DEPLOY.md).
+Applies — a live backend is being kept (resolved, see Open Decisions gate above). See [`MIGRATION-CHECKLIST.md` Phase 10](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-10--backend-deploy-only-if-a-live-backend-was-kept-per-open-decisionsmd) and [`CI-CD-AND-DEPLOY.md`](../../go-gather-next/docs/migration/CI-CD-AND-DEPLOY.md). Hosting target and GHCR publishing still need deciding before this phase starts.
 
 - [ ] Scaled-down hosting stack per the hosting-target decision
 - [ ] GHCR image publishing if containerized
