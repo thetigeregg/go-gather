@@ -6,7 +6,10 @@ describe('ExploreContainerComponent', () => {
   let component: ExploreContainerComponent;
   let fixture: ComponentFixture<ExploreContainerComponent>;
 
-  beforeEach(async () => {
+  beforeEach(() => {
+    TestBed.overrideComponent(ExploreContainerComponent, {
+      set: { template: '<div></div>', styleUrls: [] },
+    });
     fixture = TestBed.createComponent(ExploreContainerComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();

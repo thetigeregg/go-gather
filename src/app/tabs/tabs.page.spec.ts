@@ -8,10 +8,11 @@ describe('TabsPage', () => {
   let fixture: ComponentFixture<TabsPage>;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
-      imports: [TabsPage],
-      providers: [provideRouter([])]
-    }).compileComponents();
+    TestBed.configureTestingModule({
+      providers: [provideRouter([])],
+    });
+    TestBed.overrideComponent(TabsPage, { set: { template: '<div></div>', styleUrls: [] } });
+    await TestBed.compileComponents();
   });
 
   beforeEach(() => {

@@ -1,0 +1,47 @@
+# Dependencies
+**/node_modules
+
+# Build output and caches
+.angular
+dist
+www
+coverage
+out-tsc
+tmp
+.tmp
+**/.tmp
+
+# Ionic / Capacitor native builds
+android
+ios
+
+# Test artifacts
+playwright-report
+test-results
+.playwright
+
+# Local/editor/system artifacts
+.DS_Store
+.vscode
+.idea
+*.log
+
+# Lockfiles (avoid large diffs)
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+
+# Binary assets
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.ico
+*.pdf
+*.zip
+*.tar
+*.gz
+
+# OS artifacts
+Thumbs.db

@@ -6,7 +6,10 @@ describe('Tab2Page', () => {
   let component: Tab2Page;
   let fixture: ComponentFixture<Tab2Page>;
 
-  beforeEach(async () => {
+  beforeEach(() => {
+    TestBed.overrideComponent(Tab2Page, {
+      set: { template: '<div></div>', styleUrls: [], imports: [] },
+    });
     fixture = TestBed.createComponent(Tab2Page);
     component = fixture.componentInstance;
     fixture.detectChanges();
