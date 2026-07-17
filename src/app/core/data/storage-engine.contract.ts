@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { CatalogEntry, ProgressEntry, UserSettings } from '@go-gather/shared';
 import { DEFAULT_SETTINGS } from '@go-gather/shared';
-import type { ImageCacheRecord, StorageEngine, SyncMetaEntry } from './storage-engine';
+import type { ImageCacheRecord, OutboxEntry, StorageEngine, SyncMetaEntry } from './storage-engine';
 
 export interface StorageEngineContractHarness {
   engine: StorageEngine;
@@ -64,6 +64,20 @@ export function makeContractSyncMetaEntry(overrides: Partial<SyncMetaEntry> = {}
   return {
     key: 'catalogVersion',
     value: '1',
+    ...overrides,
+  };
+}
+
+export function makeContractOutboxEntry(overrides: Partial<OutboxEntry> = {}): OutboxEntry {
+  return {
+    opId: 'op-1',
+    entityType: 'progress',
+    operation: 'upsert',
+    payload: { catalogEntryId: 'bulbasaur-regular', caught: true },
+    clientTimestamp: '2026-01-01T00:00:00.000Z',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    attemptCount: 0,
+    lastError: null,
     ...overrides,
   };
 }
@@ -193,6 +207,41 @@ export function describeStorageEngineContract(
       });
     });
 
+    describe('outbox', () => {
+      it('supports put, get, ordered listing, bulk delete and clear', async () => {
+        await engine.putOutboxEntry(
+          makeContractOutboxEntry({ opId: 'op-2', createdAt: '2026-01-02T00:00:00.000Z' })
+        );
+        await engine.putOutboxEntry(
+          makeContractOutboxEntry({ opId: 'op-1', createdAt: '2026-01-01T00:00:00.000Z' })
+        );
+
+        expect((await engine.getOutboxEntry('op-1'))?.opId).toBe('op-1');
+
+        const ordered = await engine.listOutboxOrderedByCreatedAt();
+        expect(ordered.map((entry) => entry.opId)).toEqual(['op-1', 'op-2']);
+
+        await engine.bulkDeleteOutbox(['op-1']);
+        expect(await engine.getOutboxEntry('op-1')).toBeUndefined();
+        expect((await engine.listOutboxOrderedByCreatedAt()).length).toBe(1);
+
+        await engine.clearOutbox();
+        expect(await engine.listOutboxOrderedByCreatedAt()).toEqual([]);
+      });
+
+      it('putOutboxEntry replaces an entry with the same opId (e.g. to bump attemptCount)', async () => {
+        await engine.putOutboxEntry(makeContractOutboxEntry({ opId: 'op-1', attemptCount: 0 }));
+        await engine.putOutboxEntry(
+          makeContractOutboxEntry({ opId: 'op-1', attemptCount: 1, lastError: 'network error' })
+        );
+
+        const stored = await engine.getOutboxEntry('op-1');
+        expect(stored?.attemptCount).toBe(1);
+        expect(stored?.lastError).toBe('network error');
+        expect((await engine.listOutboxOrderedByCreatedAt()).length).toBe(1);
+      });
+    });
+
     describe('transactions', () => {
       it('commits writes across scopes', async () => {
         await engine.runInTransaction(['catalog', 'syncMeta'], async () => {
@@ -218,6 +267,27 @@ export function describeStorageEngineContract(
         const entries = await engine.listCatalog();
         expect(entries.map((entry) => entry.id)).toEqual(['keep']);
         expect(await engine.getSyncMeta('catalogVersion')).toBeUndefined();
+      });
+
+      it('atomically commits a domain write together with its outbox entry (the local-first write pattern)', async () => {
+        await engine.runInTransaction(['progress', 'outbox'], async () => {
+          await engine.putProgress(makeContractProgressEntry({ caught: true }));
+          await engine.putOutboxEntry(makeContractOutboxEntry());
+        });
+
+        expect((await engine.getProgress('bulbasaur-regular'))?.caught).toBe(true);
+        expect((await engine.listOutboxOrderedByCreatedAt()).length).toBe(1);
+      });
+
+      it('rolls back the domain write if enqueuing the outbox entry fails', async () => {
+        await expect(
+          engine.runInTransaction(['progress', 'outbox'], async () => {
+            await engine.putProgress(makeContractProgressEntry({ caught: true }));
+            throw new Error('enqueue failed');
+          })
+        ).rejects.toThrow('enqueue failed');
+
+        expect(await engine.getProgress('bulbasaur-regular')).toBeUndefined();
       });
 
       it('supports reads of own writes within a transaction', async () => {

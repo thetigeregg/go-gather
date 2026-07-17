@@ -29,10 +29,19 @@ log.txt
 /out-tsc
 /bazel-out
 
-# Node
-/node_modules
+# Node (unanchored so this also matches npm workspace packages'
+# node_modules, e.g. shared/node_modules, server/node_modules)
+node_modules/
 npm-debug.log
 yarn-error.log
+
+# Server sync data (regenerate via `npm run sync` in server/)
+server/data/*.db
+server/data/*.db-journal
+server/data/*.db-wal
+server/data/*.db-shm
+server/data/images/
+!server/data/.gitkeep
 
 # IDEs and editors
 .idea/

@@ -1,5 +1,7 @@
 # Phase 2 — Domain Model & Storage: progress notes
 
+> **Correction (Phase 4)**: the "`outbox` scope omitted" decision below turned out to be wrong — the backend is the source of truth for progress/settings, matching game-shelf, which requires an outbox for push-sync. Phase 4 added it retroactively. See [phase-4-catalog-pipeline.md](phase-4-catalog-pipeline.md) for the full correction and why. Everything else below is still accurate.
+
 Status: complete. `npm run lint`, `npm run test` (8 files, 25 tests passing, including the full `StorageEngine` contract suite — CRUD, bulk ops, and the transaction block: commit-across-scopes, rollback-on-throw, read-your-writes, nested-transaction joining/rollback, and concurrent-transaction serialization), and `npm run build -- --configuration production` all pass.
 
 ## What changed

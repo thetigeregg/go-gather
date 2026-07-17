@@ -4,12 +4,29 @@ import type { CatalogEntry, ProgressEntry, UserSettings } from '@go-gather/share
 /**
  * Logical stores that can participate in a storage transaction.
  *
- * No `outbox` scope: unlike game-shelf, go-gather has no per-write
- * push-sync of progress/settings to a server — the only server interaction
- * is periodic catalog pulls, tracked via `syncMeta`. Add an `outbox` scope
- * later if a "back up my progress to my own server" feature is added.
+ * `outbox` matches game-shelf's pattern: the backend is the durable source
+ * of truth for `progress`/`settings`, and local writes are queued here for
+ * push-sync rather than applied to the server directly — see
+ * `local-user-data-repository.ts` and `sync.service.ts`.
  */
-export type StorageScope = 'catalog' | 'progress' | 'settings' | 'imageCache' | 'syncMeta';
+export type StorageScope =
+  'catalog' | 'progress' | 'settings' | 'imageCache' | 'syncMeta' | 'outbox';
+
+/**
+ * A queued local write awaiting push-sync to the backend. Only `'upsert'` —
+ * unlike game-shelf's games/tags/views, `progress`/`settings` rows are never
+ * deleted, only replaced.
+ */
+export interface OutboxEntry {
+  opId: string;
+  entityType: 'progress' | 'settings';
+  operation: 'upsert';
+  payload: unknown;
+  clientTimestamp: string;
+  createdAt: string;
+  attemptCount: number;
+  lastError: string | null;
+}
 
 /**
  * Image cache row. The web engine persists the image bytes inline (`blob`);
@@ -91,6 +108,13 @@ export interface StorageEngine {
   // Sync metadata
   getSyncMeta(key: string): Promise<SyncMetaEntry | undefined>;
   putSyncMeta(entry: SyncMetaEntry): Promise<void>;
+
+  // Outbox
+  getOutboxEntry(opId: string): Promise<OutboxEntry | undefined>;
+  listOutboxOrderedByCreatedAt(): Promise<OutboxEntry[]>;
+  putOutboxEntry(entry: OutboxEntry): Promise<void>;
+  bulkDeleteOutbox(opIds: string[]): Promise<void>;
+  clearOutbox(): Promise<void>;
 }
 
 export const STORAGE_ENGINE = new InjectionToken<StorageEngine>('STORAGE_ENGINE');

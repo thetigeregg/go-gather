@@ -48,6 +48,7 @@ See [`MIGRATION-CHECKLIST.md` Phase 1](../../go-gather-next/docs/migration/MIGRA
 - [x] Port domain model types from `shared/src/models.ts` — ported into a new `@go-gather/shared` npm workspace package (not `core/models/`), per the auto-resolved "keep npm workspaces" decision, see [progress notes](progress/phase-2-domain-storage.md)
 - [x] `StorageEngine` interface + Dexie (web) implementation + contract test suite — native/SQLite engine deferred to Phase 6
 - [x] `PreferenceStorageService` equivalent (`@capacitor/preferences`) — simplified vs. game-shelf's version (no legacy-migration logic, no consumers yet), see progress notes
+- [x] **Addendum (added in Phase 4)**: `outbox` scope — omitted here originally on the wrong assumption that progress/settings would be fully local with no server role; corrected once Phase 4 confirmed the backend is the source of truth (game-shelf's pattern). See [progress notes](progress/phase-4-catalog-pipeline.md).
 
 ## Phase 3 — Search-Engine Port
 
@@ -58,10 +59,11 @@ See [`MIGRATION-CHECKLIST.md` Phase 2](../../go-gather-next/docs/migration/MIGRA
 
 ## Phase 4 — Catalog Data Pipeline
 
-See [`MIGRATION-CHECKLIST.md` Phase 3](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-3--catalog-data-pipeline) and [`current/SERVER-AND-SYNC.md`](../../go-gather-next/docs/current/SERVER-AND-SYNC.md). Catalog is **fetched** from the live backend (resolved — see Open Decisions gate above), not bundled at build time.
+See [`MIGRATION-CHECKLIST.md` Phase 3](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-3--catalog-data-pipeline) and [`current/SERVER-AND-SYNC.md`](../../go-gather-next/docs/current/SERVER-AND-SYNC.md). Catalog is **fetched** from the live backend (resolved — see Open Decisions gate above), not bundled at build time. Scope grew beyond the literal checklist wording: the backend is also the source of truth for progress/settings (game-shelf's pattern, corrected from an earlier wrong assumption) — see [progress notes](progress/phase-4-catalog-pipeline.md).
 
-- [ ] Port sync/transform scripts, deployed as the live catalog-serving endpoint (not a build-time script)
-- [ ] Wire app's catalog loading to fetch from the live endpoint, with `syncMeta` version tracking
+- [x] Port sync/transform scripts, deployed as the live catalog-serving endpoint (not a build-time script) — `sync.ts`/`transform.ts`/`pokeapi.ts`/`sync-overrides.json` ported near-verbatim (confirmed via `diff`, deviations are only lint-disable comments + one `markCatalogSynced()` addition); ran for real against live APIs (8984 catalog entries, 3646 sprites)
+- [x] Wire app's catalog loading to fetch from the live endpoint, with `syncMeta` version tracking — `SyncService.pullCatalog()`, compares the server's `syncedAt` envelope against local `syncMeta`
+- [x] **Beyond the checklist**: `server/` workspace package created (deferred from Phase 2); `idempotency_keys`/`sync_events` tables + `POST /api/sync/push`/`POST /api/sync/pull` routes adapted from game-shelf's Postgres sync routes to SQLite; `LocalUserDataRepository` + `SyncService` (outbox push/pull) on the Angular side, following game-shelf's `LocalGameRepository`/`GameSyncService` pattern
 
 ## Phase 5 — Services & UI Rebuild
 

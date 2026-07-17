@@ -2,7 +2,13 @@ import { Injectable, inject } from '@angular/core';
 import Dexie, { Table, Transaction } from 'dexie';
 import type { CatalogEntry, ProgressEntry, UserSettings } from '@go-gather/shared';
 import { AppDb, SettingsRow } from './app-db';
-import { ImageCacheRecord, StorageEngine, StorageScope, SyncMetaEntry } from './storage-engine';
+import {
+  ImageCacheRecord,
+  OutboxEntry,
+  StorageEngine,
+  StorageScope,
+  SyncMetaEntry,
+} from './storage-engine';
 import {
   isInsideStorageTransaction,
   runInsideStorageTransactionZone,
@@ -19,6 +25,7 @@ const SCOPE_TABLE_NAMES: Record<StorageScope, string> = {
   settings: 'settings',
   imageCache: 'imageCache',
   syncMeta: 'syncMeta',
+  outbox: 'outbox',
 };
 
 const SETTINGS_ROW_ID = 1;
@@ -132,6 +139,26 @@ export class DexieStorageEngine implements StorageEngine {
     return this.syncMetaTable.put(entry).then(() => undefined);
   }
 
+  getOutboxEntry(opId: string): Promise<OutboxEntry | undefined> {
+    return this.outboxTable.get(opId);
+  }
+
+  listOutboxOrderedByCreatedAt(): Promise<OutboxEntry[]> {
+    return this.outboxTable.orderBy('createdAt').toArray();
+  }
+
+  putOutboxEntry(entry: OutboxEntry): Promise<void> {
+    return this.outboxTable.put(entry).then(() => undefined);
+  }
+
+  bulkDeleteOutbox(opIds: string[]): Promise<void> {
+    return this.outboxTable.bulkDelete(opIds);
+  }
+
+  clearOutbox(): Promise<void> {
+    return this.outboxTable.clear();
+  }
+
   private get catalogTable(): Table<CatalogEntry, string> {
     return this.resolveTable('catalog', this.db.catalog);
   }
@@ -150,6 +177,10 @@ export class DexieStorageEngine implements StorageEngine {
 
   private get syncMetaTable(): Table<SyncMetaEntry, string> {
     return this.resolveTable('syncMeta', this.db.syncMeta);
+  }
+
+  private get outboxTable(): Table<OutboxEntry, string> {
+    return this.resolveTable('outbox', this.db.outbox);
   }
 
   private resolveTable<T, K>(scopeName: StorageScope, fallback: Table<T, K>): Table<T, K> {

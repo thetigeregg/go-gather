@@ -1,7 +1,7 @@
 import Dexie, { Table } from 'dexie';
 import { Injectable } from '@angular/core';
 import type { CatalogEntry, ProgressEntry, UserSettings } from '@go-gather/shared';
-import type { ImageCacheRecord, SyncMetaEntry } from './storage-engine';
+import type { ImageCacheRecord, OutboxEntry, SyncMetaEntry } from './storage-engine';
 
 /** The single `settings` row is always keyed `id: 1`. */
 export type SettingsRow = { id: 1 } & UserSettings;
@@ -13,6 +13,7 @@ export class AppDb extends Dexie {
   settings!: Table<SettingsRow, number>;
   imageCache!: Table<ImageCacheRecord, string>;
   syncMeta!: Table<SyncMetaEntry, string>;
+  outbox!: Table<OutboxEntry, string>;
 
   constructor() {
     super('go-gather');
@@ -23,6 +24,7 @@ export class AppDb extends Dexie {
       settings: 'id',
       imageCache: 'key',
       syncMeta: 'key',
+      outbox: 'opId, createdAt',
     });
   }
 }

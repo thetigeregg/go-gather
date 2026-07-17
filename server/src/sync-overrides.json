@@ -1,0 +1,837 @@
+{
+  "_readme": "Hand-edited config for known gaps in pokemon-go-api's upstream data that npm run sync patches in from PokeAPI. Edit freely — this file is read fresh on every sync, no code changes or redeploy needed. Note on releasedDynamaxDexNumbers specifically: unlike Gigantamax, Dynamax has no distinct sprite or per-species flag in pokemon-go-api OR PokeAPI (it's a universal mainline-game mechanic with no unique art) — entries here just mark a species as eligible for a DMax Pokedex entry that reuses its existing Regular sprite, no network fetch involved. dmaxOnlyFinalEvolution (applies to both releasedDynamaxDexNumbers AND formSplitDynamaxDexNumbers, not Gigantamax): when true, a listed species is silently skipped unless it's the final stage of its evolution line (pokemon-go-api's own evolutions: [] signal) — e.g. Bulbasaur/Ivysaur produce no DMax entry, only Venusaur does. Does NOT auto-redirect a mid-chain entry to its final form; list the final-form species itself to get its DMax entry. Set false to include every listed stage, matching pre-flag behavior. implicitlyExcludedSearchTerms: built-in Pokemon GO search keywords/sizes/tags that generated search strings exclude by default so the app doesn't suggest catching Pokemon the user isn't looking for (moved here from a hardcoded TypeScript constant so every implicit exclusion lives in one configurable place). Each entry has kind ('keyword'|'size'|'tag'), value, and enabled — set enabled:false to stop excluding that term. Served live to the frontend via GET /api/search-config (not baked into the synced catalog), so editing this list and refreshing the app takes effect immediately, no npm run sync needed. A 'size' entry (xxl/xxs) is automatically skipped when generating a search string for that exact matching pokedex type (e.g. xxl is never excluded on the XXL pokedex itself) — this exception is structural/hardcoded in SearchStringService, not a field in this list. regionFormAssetBackfill: species where pokemon-go-api has null assets for BOTH the base species AND every one of its regionForms (Squawkabilly, Wishiwashi, Silvally, Minior, Mimikyu, Magearna, Eiscue, Calyrex, Palafin, Koraidon, Miraidon) — entirely absent from the catalog otherwise, unlike missingAssetLinkDexNumbers/backfillMissingAssetsFromPokeApi which deliberately skip any species with regionForms (to avoid the Unown/Burmy/Wormadam duplicate-row bug). Each entry maps a specific regionForms key to an exact PokeAPI variety slug — hand-specified, not derived mechanically, since the mapping isn't uniform (Silvally's 17 types all share ONE PokeAPI sprite since no per-type art exists; Koraidon/Miraidon's GO-exclusive raid forms have no PokeAPI equivalent at all and fall back to the base sprite; Minior maps to PokeAPI's colored Core variety, not the generic rocky Meteor shell variety; Squawkabilly/Wishiwashi/Mimikyu/Eiscue/Palafin map cleanly but still need PokeAPI's exact slug spelling, which isn't always a mechanical lowercase of pokemon-go-api's own form name — e.g. Squawkabilly's colors need a trailing '-plumage'). regionFormNameOverrides: corrects known-wrong names.English values on specific regionForms — confirmed pokemon-go-api data bugs, not something transform.ts's existing genericName fallback catches. costumeGenderEnabled: controls whether the Costume Dex treats gendered costume pairs as two entries at all — both in the main grid (a female costume card is hidden, same as the existing 'Gender Forms' toggle but scoped just to the Costume pokedexType) and in the Search Strings dialog (hides the Male/Female breakdown section, in addition to Default/Shiny). Unlike Mega/GMax/DMax/XXL/XXS, costume entries sometimes come in real male/female pairs (see transform.ts's findGenderedFormKeys), so this is opt-out rather than structurally absent. Served live to the frontend via GET /api/search-config, same as implicitlyExcludedSearchTerms — no npm run sync needed to change it.",
+  "missingAssetLinkDexNumbers": [
+    {
+      "dexNr": 807,
+      "name": "Zeraora",
+      "notes": "pokemon-go-api leaves assets: null, but real sprite art exists at the standard pm{dexNr}.icon.png URL in its own asset repo — an upstream linking gap, not an unreleased species."
+    },
+    {
+      "dexNr": 973,
+      "name": "Flamigo",
+      "notes": "Same linking gap as Zeraora."
+    }
+  ],
+  "releasedGigantamaxDexNumbers": [
+    {
+      "dexNr": 52,
+      "name": "Meowth",
+      "notes": "Gigantamax Meowth has been released in Pokemon GO but pokemon-go-api doesn't list a GIGANTAMAX assetForms entry for it yet. Backfilled from PokeAPI's meowth-gmax variety sprite. Only add species here once you've confirmed they were actually released in-game — most Sword/Shield Gigantamax forms never were."
+    },
+    {
+      "dexNr": 25,
+      "name": "Pikachu",
+      "notes": "Gigantamax Pikachu has been released in Pokemon GO but pokemon-go-api doesn't list a GIGANTAMAX assetForms entry for it yet. Backfilled from PokeAPI's pikachu-gmax variety sprite. Only add species here once you've confirmed they were actually released in-game — most Sword/Shield Gigantamax forms never were."
+    }
+  ],
+  "dmaxOnlyFinalEvolution": true,
+  "releasedDynamaxDexNumbers": [
+    {
+      "dexNr": 1,
+      "name": "Bulbasaur",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 2,
+      "name": "Ivysaur",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 3,
+      "name": "Venusaur",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 4,
+      "name": "Charmander",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 5,
+      "name": "Charmeleon",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 6,
+      "name": "Charizard",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 7,
+      "name": "Squirtle",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 8,
+      "name": "Wartortle",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 9,
+      "name": "Blastoise",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 10,
+      "name": "Caterpie",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 11,
+      "name": "Metapod",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 12,
+      "name": "Butterfree",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 58,
+      "name": "Growlithe",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 59,
+      "name": "Arcanine",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 63,
+      "name": "Abra",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 64,
+      "name": "Kadabra",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 65,
+      "name": "Alakazam",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 66,
+      "name": "Machop",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 67,
+      "name": "Machoke",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 68,
+      "name": "Machamp",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 92,
+      "name": "Gastly",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 93,
+      "name": "Haunter",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 94,
+      "name": "Gengar",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 98,
+      "name": "Krabby",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 99,
+      "name": "Kingler",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 106,
+      "name": "Hitmonlee",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 107,
+      "name": "Hitmonchan",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 113,
+      "name": "Chansey",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 125,
+      "name": "Electabuzz",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 129,
+      "name": "Magikarp",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 130,
+      "name": "Gyarados",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 131,
+      "name": "Lapras",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 133,
+      "name": "Eevee",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 134,
+      "name": "Vaporeon",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 135,
+      "name": "Jolteon",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 136,
+      "name": "Flareon",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 138,
+      "name": "Omanyte",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 139,
+      "name": "Omastar",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 140,
+      "name": "Kabuto",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 141,
+      "name": "Kabutops",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 163,
+      "name": "Hoothoot",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 164,
+      "name": "Noctowl",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 196,
+      "name": "Espeon",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 197,
+      "name": "Umbreon",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 213,
+      "name": "Shuckle",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 237,
+      "name": "Hitmontop",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 242,
+      "name": "Blissey",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 280,
+      "name": "Ralts",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 281,
+      "name": "Kirlia",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 282,
+      "name": "Gardevoir",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 302,
+      "name": "Sableye",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 320,
+      "name": "Wailmer",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 321,
+      "name": "Wailord",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 328,
+      "name": "Trapinch",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 329,
+      "name": "Vibrava",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 330,
+      "name": "Flygon",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 349,
+      "name": "Feebas",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 350,
+      "name": "Milotic",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 363,
+      "name": "Spheal",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 364,
+      "name": "Sealeo",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 365,
+      "name": "Walrein",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 374,
+      "name": "Beldum",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 375,
+      "name": "Metang",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 376,
+      "name": "Metagross",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 466,
+      "name": "Electivire",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 470,
+      "name": "Leafeon",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 471,
+      "name": "Glaceon",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 475,
+      "name": "Gallade",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 519,
+      "name": "Pidove",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 520,
+      "name": "Tranquill",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 521,
+      "name": "Unfezant",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 524,
+      "name": "Roggenrola",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 525,
+      "name": "Boldore",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 526,
+      "name": "Gigalith",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 527,
+      "name": "Woobat",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 528,
+      "name": "Swoobat",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 529,
+      "name": "Drilbur",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 530,
+      "name": "Excadrill",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 554,
+      "name": "Darumaka",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 555,
+      "name": "Darmanitan",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 568,
+      "name": "Trubbish",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 569,
+      "name": "Garbodor",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 615,
+      "name": "Cryogonal",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 686,
+      "name": "Inkay",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 687,
+      "name": "Malamar",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 700,
+      "name": "Sylveon",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 761,
+      "name": "Bounsweet",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 762,
+      "name": "Steenee",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 763,
+      "name": "Tsareena",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 766,
+      "name": "Passimian",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 780,
+      "name": "Drampa",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 810,
+      "name": "Grookey",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 811,
+      "name": "Thwackey",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 812,
+      "name": "Rillaboom",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 813,
+      "name": "Scorbunny",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 814,
+      "name": "Raboot",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 815,
+      "name": "Cinderace",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 816,
+      "name": "Sobble",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 817,
+      "name": "Drizzile",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 818,
+      "name": "Inteleon",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 819,
+      "name": "Skwovet",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 820,
+      "name": "Greedent",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 821,
+      "name": "Rookidee",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 822,
+      "name": "Corvisquire",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 823,
+      "name": "Corviknight",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 831,
+      "name": "Wooloo",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 832,
+      "name": "Dubwool",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 849,
+      "name": "Toxtricity",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 856,
+      "name": "Hatenna",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 857,
+      "name": "Hattrem",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 858,
+      "name": "Hatterene",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 870,
+      "name": "Falinks",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 884,
+      "name": "Duraludon",
+      "notes": "Confirmed available in Pokemon GO Max Battles (Pokemon GO Hub's Available Dynamax/Gigantamax Pokemon list, cross-checked against pokemon-go-api's own assets)."
+    },
+    {
+      "dexNr": 144,
+      "name": "Articuno",
+      "notes": "Re-added after excluding these on an unverified/misleading 'is_deployable' field from a third-party source — that field's real meaning was never confirmed and directly contradicted the user's own in-game observation of Dynamax Raikou. Treat the source's visible/isAvailable list as authoritative instead."
+    },
+    {
+      "dexNr": 145,
+      "name": "Zapdos",
+      "notes": "Re-added after excluding these on an unverified/misleading 'is_deployable' field from a third-party source — that field's real meaning was never confirmed and directly contradicted the user's own in-game observation of Dynamax Raikou. Treat the source's visible/isAvailable list as authoritative instead."
+    },
+    {
+      "dexNr": 146,
+      "name": "Moltres",
+      "notes": "Re-added after excluding these on an unverified/misleading 'is_deployable' field from a third-party source — that field's real meaning was never confirmed and directly contradicted the user's own in-game observation of Dynamax Raikou. Treat the source's visible/isAvailable list as authoritative instead."
+    },
+    {
+      "dexNr": 243,
+      "name": "Raikou",
+      "notes": "Re-added after excluding these on an unverified/misleading 'is_deployable' field from a third-party source — that field's real meaning was never confirmed and directly contradicted the user's own in-game observation of Dynamax Raikou. Treat the source's visible/isAvailable list as authoritative instead."
+    },
+    {
+      "dexNr": 244,
+      "name": "Entei",
+      "notes": "Re-added after excluding these on an unverified/misleading 'is_deployable' field from a third-party source — that field's real meaning was never confirmed and directly contradicted the user's own in-game observation of Dynamax Raikou. Treat the source's visible/isAvailable list as authoritative instead."
+    },
+    {
+      "dexNr": 245,
+      "name": "Suicune",
+      "notes": "Re-added after excluding these on an unverified/misleading 'is_deployable' field from a third-party source — that field's real meaning was never confirmed and directly contradicted the user's own in-game observation of Dynamax Raikou. Treat the source's visible/isAvailable list as authoritative instead."
+    },
+    {
+      "dexNr": 249,
+      "name": "Lugia",
+      "notes": "Re-added after excluding these on an unverified/misleading 'is_deployable' field from a third-party source — that field's real meaning was never confirmed and directly contradicted the user's own in-game observation of Dynamax Raikou. Treat the source's visible/isAvailable list as authoritative instead."
+    },
+    {
+      "dexNr": 250,
+      "name": "Ho-Oh",
+      "notes": "Re-added after excluding these on an unverified/misleading 'is_deployable' field from a third-party source — that field's real meaning was never confirmed and directly contradicted the user's own in-game observation of Dynamax Raikou. Treat the source's visible/isAvailable list as authoritative instead."
+    },
+    {
+      "dexNr": 377,
+      "name": "Regirock",
+      "notes": "Re-added after excluding these on an unverified/misleading 'is_deployable' field from a third-party source — that field's real meaning was never confirmed and directly contradicted the user's own in-game observation of Dynamax Raikou. Treat the source's visible/isAvailable list as authoritative instead."
+    },
+    {
+      "dexNr": 378,
+      "name": "Regice",
+      "notes": "Re-added after excluding these on an unverified/misleading 'is_deployable' field from a third-party source — that field's real meaning was never confirmed and directly contradicted the user's own in-game observation of Dynamax Raikou. Treat the source's visible/isAvailable list as authoritative instead."
+    },
+    {
+      "dexNr": 379,
+      "name": "Registeel",
+      "notes": "Re-added after excluding these on an unverified/misleading 'is_deployable' field from a third-party source — that field's real meaning was never confirmed and directly contradicted the user's own in-game observation of Dynamax Raikou. Treat the source's visible/isAvailable list as authoritative instead."
+    },
+    {
+      "dexNr": 380,
+      "name": "Latias",
+      "notes": "Re-added after excluding these on an unverified/misleading 'is_deployable' field from a third-party source — that field's real meaning was never confirmed and directly contradicted the user's own in-game observation of Dynamax Raikou. Treat the source's visible/isAvailable list as authoritative instead."
+    },
+    {
+      "dexNr": 381,
+      "name": "Latios",
+      "notes": "Re-added after excluding these on an unverified/misleading 'is_deployable' field from a third-party source — that field's real meaning was never confirmed and directly contradicted the user's own in-game observation of Dynamax Raikou. Treat the source's visible/isAvailable list as authoritative instead."
+    },
+    {
+      "dexNr": 891,
+      "name": "Kubfu",
+      "notes": "Re-added after excluding these on an unverified/misleading 'is_deployable' field from a third-party source — that field's real meaning was never confirmed and directly contradicted the user's own in-game observation of Dynamax Raikou. Treat the source's visible/isAvailable list as authoritative instead."
+    },
+    {
+      "dexNr": 892,
+      "name": "Urshifu",
+      "notes": "Re-added after excluding these on an unverified/misleading 'is_deployable' field from a third-party source — that field's real meaning was never confirmed and directly contradicted the user's own in-game observation of Dynamax Raikou. Treat the source's visible/isAvailable list as authoritative instead."
+    }
+  ],
+  "formSplitGigantamaxDexNumbers": [
+    {
+      "dexNr": 849,
+      "name": "Toxtricity",
+      "forms": ["AMPED", "LOW_KEY"],
+      "notes": "pokemon-go-api only lists one generic GIGANTAMAX assetForm, but Gigantamax Toxtricity's appearance genuinely differs by which form (Amped/Low Key) evolved into it — confirmed via PokeAPI's separate toxtricity-amped-gmax/toxtricity-low-key-gmax varieties (visually distinct art). Split into one GMax entry per form here instead of the single generic one."
+    }
+  ],
+  "formSplitDynamaxDexNumbers": [
+    {
+      "dexNr": 849,
+      "name": "Toxtricity",
+      "forms": ["AMPED", "LOW_KEY"],
+      "notes": "Dynamax Toxtricity is separately listed for Amped Form and Low Key Form (Pokemon GO Hub's list carries distinct TOXTRICITY_AMPED/TOXTRICITY_LOW_KEY entries) — split into one DMax entry per form, each reusing that form's own regular sprite (Dynamax has no distinct art of its own)."
+    },
+    {
+      "dexNr": 892,
+      "name": "Urshifu",
+      "forms": ["SINGLE_STRIKE", "RAPID_STRIKE"],
+      "notes": "Dynamax Urshifu is separately listed for Single Strike Style and Rapid Strike Style (Pokemon GO Hub's list carries distinct URSHIFU_SINGLE_STRIKE/URSHIFU_RAPID_STRIKE entries) — split into one DMax entry per form, each reusing that form's own regular sprite (Dynamax has no distinct art of its own)."
+    }
+  ],
+  "implicitlyExcludedSearchTerms": [
+    {
+      "kind": "tag",
+      "value": "Trade",
+      "enabled": true,
+      "notes": "Pokemon earmarked for trading shouldn't be suggested as targets to go catch more of."
+    },
+    {
+      "kind": "tag",
+      "value": "2x Transfer",
+      "enabled": true,
+      "notes": "Same reasoning as Trade."
+    },
+    {
+      "kind": "keyword",
+      "value": "shadow",
+      "enabled": true,
+      "notes": "Shadow Pokemon aren't caught via normal means (Team Rocket encounters), so suggesting them as catch targets doesn't make sense for a regular search string."
+    },
+    {
+      "kind": "size",
+      "value": "xxl",
+      "enabled": true,
+      "notes": "Excluded by default so a regular/mega/etc. search string doesn't get diluted by size-specific results. Automatically NOT excluded when generating a search string for the XXL pokedex itself, where excluding xxl would exclude every result — this self-exception is structural/hardcoded, not configurable here."
+    },
+    {
+      "kind": "size",
+      "value": "xxs",
+      "enabled": true,
+      "notes": "Same reasoning as xxl, for the XXS pokedex."
+    }
+  ],
+  "regionFormAssetBackfill": [
+    {
+      "dexNr": 746,
+      "name": "Wishiwashi",
+      "forms": [
+        { "regionForm": "WISHIWASHI_SCHOOL", "slug": "wishiwashi-school" },
+        { "regionForm": "WISHIWASHI_SOLO", "slug": "wishiwashi-solo" }
+      ]
+    },
+    {
+      "dexNr": 773,
+      "name": "Silvally",
+      "notes": "PokeAPI has only ONE sprite for the whole species — no per-type art exists anywhere (a held-item color tint in the mainline games, not a separate asset) — so every regionForm below intentionally maps to the same 'silvally' slug.",
+      "forms": [
+        { "regionForm": "SILVALLY_BUG", "slug": "silvally" },
+        { "regionForm": "SILVALLY_DARK", "slug": "silvally" },
+        { "regionForm": "SILVALLY_DRAGON", "slug": "silvally" },
+        { "regionForm": "SILVALLY_ELECTRIC", "slug": "silvally" },
+        { "regionForm": "SILVALLY_FAIRY", "slug": "silvally" },
+        { "regionForm": "SILVALLY_FIGHTING", "slug": "silvally" },
+        { "regionForm": "SILVALLY_FIRE", "slug": "silvally" },
+        { "regionForm": "SILVALLY_FLYING", "slug": "silvally" },
+        { "regionForm": "SILVALLY_GHOST", "slug": "silvally" },
+        { "regionForm": "SILVALLY_GRASS", "slug": "silvally" },
+        { "regionForm": "SILVALLY_GROUND", "slug": "silvally" },
+        { "regionForm": "SILVALLY_ICE", "slug": "silvally" },
+        { "regionForm": "SILVALLY_POISON", "slug": "silvally" },
+        { "regionForm": "SILVALLY_PSYCHIC", "slug": "silvally" },
+        { "regionForm": "SILVALLY_ROCK", "slug": "silvally" },
+        { "regionForm": "SILVALLY_STEEL", "slug": "silvally" },
+        { "regionForm": "SILVALLY_WATER", "slug": "silvally" }
+      ]
+    },
+    {
+      "dexNr": 774,
+      "name": "Minior",
+      "notes": "Mapped to PokeAPI's colored 'Core' varieties (minior-red etc.), not the generic rocky 'Meteor' shell varieties — confirmed visually distinct; Core matches GO's color-named forms.",
+      "forms": [
+        { "regionForm": "MINIOR_RED", "slug": "minior-red" },
+        { "regionForm": "MINIOR_ORANGE", "slug": "minior-orange" },
+        { "regionForm": "MINIOR_YELLOW", "slug": "minior-yellow" },
+        { "regionForm": "MINIOR_GREEN", "slug": "minior-green" },
+        { "regionForm": "MINIOR_BLUE", "slug": "minior-blue" },
+        { "regionForm": "MINIOR_INDIGO", "slug": "minior-indigo" },
+        { "regionForm": "MINIOR_VIOLET", "slug": "minior-violet" }
+      ]
+    },
+    {
+      "dexNr": 778,
+      "name": "Mimikyu",
+      "forms": [
+        { "regionForm": "MIMIKYU_DISGUISED", "slug": "mimikyu-disguised" },
+        { "regionForm": "MIMIKYU_BUSTED", "slug": "mimikyu-busted" }
+      ]
+    },
+    {
+      "dexNr": 801,
+      "name": "Magearna",
+      "forms": [{ "regionForm": "MAGEARNA_ORIGINAL_COLOR", "slug": "magearna-original" }]
+    },
+    {
+      "dexNr": 875,
+      "name": "Eiscue",
+      "forms": [
+        { "regionForm": "EISCUE_ICE", "slug": "eiscue-ice" },
+        { "regionForm": "EISCUE_NOICE", "slug": "eiscue-noice" }
+      ]
+    },
+    {
+      "dexNr": 898,
+      "name": "Calyrex",
+      "forms": [{ "regionForm": "CALYREX_ICE_RIDER", "slug": "calyrex-ice" }]
+    },
+    {
+      "dexNr": 931,
+      "name": "Squawkabilly",
+      "forms": [
+        { "regionForm": "SQUAWKABILLY_BLUE", "slug": "squawkabilly-blue-plumage" },
+        { "regionForm": "SQUAWKABILLY_GREEN", "slug": "squawkabilly-green-plumage" },
+        { "regionForm": "SQUAWKABILLY_WHITE", "slug": "squawkabilly-white-plumage" },
+        { "regionForm": "SQUAWKABILLY_YELLOW", "slug": "squawkabilly-yellow-plumage" }
+      ]
+    },
+    {
+      "dexNr": 964,
+      "name": "Palafin",
+      "forms": [
+        { "regionForm": "PALAFIN_HERO", "slug": "palafin-hero" },
+        { "regionForm": "PALAFIN_ZERO", "slug": "palafin-zero" }
+      ]
+    },
+    {
+      "dexNr": 1007,
+      "name": "Koraidon",
+      "notes": "KORAIDON_APEX is a GO-exclusive raid form with no mainline-game equivalent — falls back to the base species' own PokeAPI sprite.",
+      "forms": [{ "regionForm": "KORAIDON_APEX", "slug": "koraidon" }]
+    },
+    {
+      "dexNr": 1008,
+      "name": "Miraidon",
+      "notes": "Same as Koraidon — MIRAIDON_ULTIMATE is GO-exclusive, falls back to the base sprite.",
+      "forms": [{ "regionForm": "MIRAIDON_ULTIMATE", "slug": "miraidon" }]
+    }
+  ],
+  "regionFormNameOverrides": [
+    {
+      "dexNr": 931,
+      "regionForm": "SQUAWKABILLY_WHITE",
+      "name": "Squawkabilly (White Plumage)",
+      "notes": "pokemon-go-api's own names.English for this regionForm is wrong — it says 'Squawkabilly (White Kyurem)', an apparent copy-paste error from Kyurem's own form naming, unrelated to Squawkabilly. Corrected here to match its Blue/Green/Yellow siblings' naming pattern. Only surfaced once regionFormAssetBackfill above gave this regionForm a real sprite — it previously produced no row at all, so the wrong name was invisible."
+    }
+  ],
+  "costumeGenderEnabled": false
+}
