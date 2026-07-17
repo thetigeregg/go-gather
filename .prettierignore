@@ -26,10 +26,20 @@ test-results
 .idea
 *.log
 
+# Runtime/generated files
+src/assets/runtime-config.js
+
+# Local data directories
+nas-data
+
 # Lockfiles (avoid large diffs)
 package-lock.json
 pnpm-lock.yaml
 yarn.lock
+
+# Docker Compose (avoid env interpolation issues)
+docker-compose*.yml
+compose*.yml
 
 # Binary assets
 *.png

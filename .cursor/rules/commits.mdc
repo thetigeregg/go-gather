@@ -1,0 +1,30 @@
+---
+description: Conventional Commits format for commits and PRs
+globs: ["**/*"]
+alwaysApply: true
+---
+
+## Commit format
+type(scope): description
+
+Allowed types: feat, fix, refactor, perf, docs, test, build, ci, chore, style
+
+Examples:
+- feat(ui): add settings page
+- fix(api): handle missing platform mapping
+- refactor(service): simplify sync logic
+
+Rules:
+- Avoid vague commit messages
+- Keep the subject line under 72 characters (commitlint enforces `header-max-length: 72`)
+- Prefer tight, precise wording over completeness — cut words, not meaning
+- Commit messages are validated by commitlint via `.husky/commit-msg`
+- commitlint config is in `commitlint.config.cjs`
+
+## PR titles
+Must follow Conventional Commits format.
+
+## PR descriptions must include:
+- Summary
+- Implementation details
+- Testing notes

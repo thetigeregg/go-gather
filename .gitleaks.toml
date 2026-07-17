@@ -1,4 +1,4 @@
-title = "go-gather gitleaks config"
+title = "thetigeregg shared gitleaks config"
 
 [extend]
 useDefault = true
