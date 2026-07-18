@@ -183,6 +183,48 @@ describe('PresetQueryEditPage', () => {
       expect(saveAndGetTerm()).toEqual({ kind: 'region', value: 'kanto' });
     });
 
+    it('enum (type) defaults to a real, non-blank enum option', () => {
+      // Regression: defaultValueForCatalogEntry used to default type/moveType/
+      // weakAgainst/superEffectiveAgainst's value to '', which matches no
+      // ion-select-option — Ionic's own select then desyncs from Angular's
+      // ngModel binding on the user's first pick, silently saving an empty
+      // value. Defaulting to enumOptions[0] (like region/gender/size/
+      // raidOrigin already did) keeps the select's initial value valid.
+      component.name = 'p';
+      component.addRule(component.groups[0]);
+      component.ruleKindChanged(component.groups[0].rules[0], 'type');
+
+      expect(component.groups[0].rules[0].enumValue).toBe('normal');
+      expect(saveAndGetTerm()).toEqual({ kind: 'type', value: 'normal' });
+    });
+
+    it('enum (weakAgainst) defaults to a real, non-blank enum option', () => {
+      component.name = 'p';
+      component.addRule(component.groups[0]);
+      component.ruleKindChanged(component.groups[0].rules[0], 'weakAgainst');
+
+      expect(component.groups[0].rules[0].enumValue).toBe('normal');
+      expect(saveAndGetTerm()).toEqual({ kind: 'weakAgainst', value: 'normal' });
+    });
+
+    it('enum (superEffectiveAgainst) defaults to a real, non-blank enum option', () => {
+      component.name = 'p';
+      component.addRule(component.groups[0]);
+      component.ruleKindChanged(component.groups[0].rules[0], 'superEffectiveAgainst');
+
+      expect(component.groups[0].rules[0].enumValue).toBe('normal');
+      expect(saveAndGetTerm()).toEqual({ kind: 'superEffectiveAgainst', value: 'normal' });
+    });
+
+    it('enum (moveType) defaults to a real, non-blank enum option', () => {
+      component.name = 'p';
+      component.addRule(component.groups[0]);
+      component.ruleKindChanged(component.groups[0].rules[0], 'moveType');
+
+      expect(component.groups[0].rules[0].enumValue).toBe('normal');
+      expect(saveAndGetTerm()).toEqual({ kind: 'moveType', value: 'normal' });
+    });
+
     it('keywordEnum (keyword)', () => {
       component.name = 'p';
       component.addRule(component.groups[0]);

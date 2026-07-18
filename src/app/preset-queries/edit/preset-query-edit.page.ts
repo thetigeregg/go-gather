@@ -97,11 +97,11 @@ function defaultValueForCatalogEntry(catalogEntry: TermCatalogEntry): SearchTerm
     case 'nickname':
       return { kind: 'nickname', value: '' };
     case 'type':
-      return { kind: 'type', value: '' };
+      return { kind: 'type', value: catalogEntry.enumOptions?.[0] ?? '' };
     case 'move':
       return { kind: 'move', value: '' };
     case 'moveType':
-      return { kind: 'moveType', value: '' };
+      return { kind: 'moveType', value: catalogEntry.enumOptions?.[0] ?? '' };
     case 'fastMoveType':
       return { kind: 'fastMoveType', value: '' };
     case 'chargedMoveType':
@@ -109,9 +109,9 @@ function defaultValueForCatalogEntry(catalogEntry: TermCatalogEntry): SearchTerm
     case 'secondChargedMoveType':
       return { kind: 'secondChargedMoveType', value: '' };
     case 'weakAgainst':
-      return { kind: 'weakAgainst', value: '' };
+      return { kind: 'weakAgainst', value: catalogEntry.enumOptions?.[0] ?? '' };
     case 'superEffectiveAgainst':
-      return { kind: 'superEffectiveAgainst', value: '' };
+      return { kind: 'superEffectiveAgainst', value: catalogEntry.enumOptions?.[0] ?? '' };
     case 'raw':
       return { kind: 'raw', value: '' };
   }
@@ -125,14 +125,10 @@ function applyTermValue(editable: EditableRule, term: SearchTermData): void {
     case 'family':
     case 'nickname':
     case 'tag':
-    case 'type':
     case 'move':
-    case 'moveType':
     case 'fastMoveType':
     case 'chargedMoveType':
     case 'secondChargedMoveType':
-    case 'weakAgainst':
-    case 'superEffectiveAgainst':
     case 'raw':
       editable.freeTextValue = term.value;
       break;
@@ -141,6 +137,16 @@ function applyTermValue(editable: EditableRule, term: SearchTermData): void {
     case 'gender':
     case 'size':
     case 'raidOrigin':
+    case 'type':
+    case 'moveType':
+    case 'weakAgainst':
+    case 'superEffectiveAgainst':
+      // These 4 share the same `inputKind: 'enum'` (a Pokemon-type picker,
+      // see search-term-catalog.ts) and are bound to `enumValue` in the
+      // template — pre-existing go-gather-next bug (carried over verbatim
+      // during the port) routed them through `freeTextValue` instead, which
+      // the enum <ion-select> never reads, silently discarding the picked
+      // type on save.
       editable.enumValue = term.value;
       break;
     case 'numeric':
@@ -204,14 +210,10 @@ function toSearchTermData(editable: EditableRule): SearchTermData {
     case 'family':
     case 'nickname':
     case 'tag':
-    case 'type':
     case 'move':
-    case 'moveType':
     case 'fastMoveType':
     case 'chargedMoveType':
     case 'secondChargedMoveType':
-    case 'weakAgainst':
-    case 'superEffectiveAgainst':
     case 'raw':
       return { kind, value: editable.freeTextValue };
     case 'region':
@@ -219,6 +221,10 @@ function toSearchTermData(editable: EditableRule): SearchTermData {
     case 'gender':
     case 'size':
     case 'raidOrigin':
+    case 'type':
+    case 'moveType':
+    case 'weakAgainst':
+    case 'superEffectiveAgainst':
       return { kind, value: editable.enumValue };
     case 'numeric':
       return {

@@ -72,7 +72,7 @@ See [`MIGRATION-CHECKLIST.md` Phase 4](../../go-gather-next/docs/migration/MIGRA
 - [x] Port domain services, re-pointed at `StorageEngine` — see [progress notes](progress/phase-5-domain-services.md)
 - [x] Rebuild components/pages in the order `SCREEN-AND-FEATURE-MAP.md` specifies — chunked into 5 groups (see [progress notes](progress/phase-5-gather-page.md) for the chunking), all complete: 1) gather page core ✅, 2) side menu/filters ✅ (see [progress notes](progress/phase-5-side-menu.md)), 3) settings page ✅ (see [progress notes](progress/phase-5-settings-page.md)), 4) search strings page ✅ (see [progress notes](progress/phase-5-search-strings-page.md)), 5) preset queries ✅ (see [progress notes](progress/phase-5-preset-queries.md))
 - [x] Rebuild export/import via Capacitor filesystem/file-picker/share plugins — see [progress notes](progress/phase-5-export-import.md)
-- [ ] Full feature parity verified running as a web app, before touching native
+- [x] Full feature parity verified running as a web app, before touching native — see [progress notes](progress/phase-5-full-parity-verification.md); found and fixed 2 real bugs (a `SearchConfigService` bootstrap gap, and a preset-editor bug — pre-existing in go-gather-next — that silently discarded Pokemon Type/Move Type/Weak-Against/Super-Effective-Against rule values)
 
 ## Phase 6 — Native iOS Shell
 
@@ -115,7 +115,7 @@ Applies — a live backend is being kept (resolved, see Open Decisions gate abov
 
 ## Done when
 
-- [ ] Every item in [`current/FUNCTIONALITY.md`](../../go-gather-next/docs/current/FUNCTIONALITY.md) has a working equivalent, verified by manual walkthrough
+- [x] Every item in [`current/FUNCTIONALITY.md`](../../go-gather-next/docs/current/FUNCTIONALITY.md) has a working equivalent, verified by manual walkthrough — see [progress notes](progress/phase-5-full-parity-verification.md)
 - [ ] `StorageEngine` contract tests pass against both Dexie and SQLite engines
 - [ ] `search-engine/` has full unit test coverage
 - [ ] A TestFlight build has been successfully uploaded and installed on a real device
