@@ -79,7 +79,7 @@ See [`MIGRATION-CHECKLIST.md` Phase 4](../../go-gather-next/docs/migration/MIGRA
 See [`MIGRATION-CHECKLIST.md` Phase 5](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-5--native-ios-shell) and [`IOS-CAPACITOR-SETUP.md`](../../go-gather-next/docs/migration/IOS-CAPACITOR-SETUP.md). The Ruby toolchain pin (`ios/.ruby-version` = `3.3`, `ios/Gemfile` with `fastlane '~> 2.230'`, matching game-shelf) still belongs to this phase, but `npx cap add ios` itself happened early — during Phase 5's export/import work, once native filesystem/share/file-picker plugins needed a real `ios/` project to sync into. See [progress notes](progress/phase-5-export-import.md) for the `PrivacyInfo.xcprivacy` addition this pulled forward too.
 
 - [x] `npx cap add ios`, configure `capacitor.config.ts` — done ahead of schedule, see note above
-- [ ] `SqliteStorageEngine` + `ImageFileStore`, contract tests extended to run against it
+- [x] `SqliteStorageEngine` + `ImageFileStore`, contract tests extended to run against it — see [progress notes](progress/phase-6-sqlite-storage.md)
 - [ ] Dual dev/prod Xcode targets, signing scaffolding
 - [ ] Build and run on a personal device, verify native feature parity
 
@@ -116,7 +116,7 @@ Applies — a live backend is being kept (resolved, see Open Decisions gate abov
 ## Done when
 
 - [x] Every item in [`current/FUNCTIONALITY.md`](../../go-gather-next/docs/current/FUNCTIONALITY.md) has a working equivalent, verified by manual walkthrough — see [progress notes](progress/phase-5-full-parity-verification.md)
-- [ ] `StorageEngine` contract tests pass against both Dexie and SQLite engines
+- [x] `StorageEngine` contract tests pass against both Dexie and SQLite engines — see [progress notes](progress/phase-6-sqlite-storage.md)
 - [ ] `search-engine/` has full unit test coverage
 - [ ] A TestFlight build has been successfully uploaded and installed on a real device
 - [ ] OTA live-update has been exercised at least once end-to-end

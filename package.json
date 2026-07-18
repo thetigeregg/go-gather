@@ -26,6 +26,7 @@
     "@angular/platform-browser": "^21.2.15",
     "@angular/platform-browser-dynamic": "^21.2.15",
     "@angular/router": "^21.2.15",
+    "@capacitor-community/sqlite": "^8.1.0",
     "@capacitor/app": "8.1.1",
     "@capacitor/clipboard": "^8.0.1",
     "@capacitor/core": "^8.4.2",
@@ -63,6 +64,7 @@
     "@thetigeregg/ncu-config": "^2.0.0",
     "@thetigeregg/prettier-config": "^1.0.0",
     "@types/node": "^26.1.1",
+    "@types/sql.js": "^1.4.11",
     "@typescript-eslint/eslint-plugin": "^8.62.0",
     "@typescript-eslint/parser": "^8.62.0",
     "@vitest/coverage-v8": "^4.1.9",
@@ -77,6 +79,7 @@
     "lint-staged": "^17.0.8",
     "npm-check-updates": "22.2.9",
     "prettier": "3.9.3",
+    "sql.js": "^1.14.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.62.0",
     "vitest": "^4.1.9"
