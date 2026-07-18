@@ -1,0 +1,17 @@
+<ion-item>
+  <ion-input
+    [(ngModel)]="draft"
+    [placeholder]="placeholder"
+    (keyup.enter)="addFromDraft()"
+    (ionBlur)="addFromDraft()"
+  ></ion-input>
+</ion-item>
+
+<div class="chip-list">
+  @for (value of values; track $index; let i = $index) {
+    <ion-chip>
+      {{ value }}
+      <ion-icon name="close" (click)="removeAt(i)"></ion-icon>
+    </ion-chip>
+  }
+</div>

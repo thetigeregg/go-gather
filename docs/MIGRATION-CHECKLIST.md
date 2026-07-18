@@ -70,7 +70,7 @@ See [`MIGRATION-CHECKLIST.md` Phase 3](../../go-gather-next/docs/migration/MIGRA
 See [`MIGRATION-CHECKLIST.md` Phase 4](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-4--port-services--rebuild-ui-web-only-ioniccapacitor-not-required-yet) and [`SCREEN-AND-FEATURE-MAP.md`](../../go-gather-next/docs/migration/SCREEN-AND-FEATURE-MAP.md) for the full component build order (lowest-risk first, preset query editor last).
 
 - [x] Port domain services, re-pointed at `StorageEngine` — see [progress notes](progress/phase-5-domain-services.md)
-- [ ] Rebuild components/pages in the order `SCREEN-AND-FEATURE-MAP.md` specifies — chunked into 5 groups (see [progress notes](progress/phase-5-gather-page.md) for the chunking): 1) gather page core ✅, 2) side menu/filters ✅ (see [progress notes](progress/phase-5-side-menu.md)), 3) settings page, 4) search strings page, 5) preset queries (highest complexity, last)
+- [ ] Rebuild components/pages in the order `SCREEN-AND-FEATURE-MAP.md` specifies — chunked into 5 groups (see [progress notes](progress/phase-5-gather-page.md) for the chunking): 1) gather page core ✅, 2) side menu/filters ✅ (see [progress notes](progress/phase-5-side-menu.md)), 3) settings page ✅ (see [progress notes](progress/phase-5-settings-page.md)), 4) search strings page, 5) preset queries (highest complexity, last)
 - [ ] Rebuild export/import via Capacitor filesystem/file-picker/share plugins
 - [ ] Full feature parity verified running as a web app, before touching native
 
