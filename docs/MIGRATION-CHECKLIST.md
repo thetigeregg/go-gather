@@ -76,11 +76,11 @@ See [`MIGRATION-CHECKLIST.md` Phase 4](../../go-gather-next/docs/migration/MIGRA
 
 ## Phase 6 — Native iOS Shell
 
-See [`MIGRATION-CHECKLIST.md` Phase 5](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-5--native-ios-shell) and [`IOS-CAPACITOR-SETUP.md`](../../go-gather-next/docs/migration/IOS-CAPACITOR-SETUP.md). The Ruby toolchain pin (`ios/.ruby-version` = `3.3`, `ios/Gemfile` with `fastlane '~> 2.230'`, matching game-shelf) still belongs to this phase, but `npx cap add ios` itself happened early — during Phase 5's export/import work, once native filesystem/share/file-picker plugins needed a real `ios/` project to sync into. See [progress notes](progress/phase-5-export-import.md) for the `PrivacyInfo.xcprivacy` addition this pulled forward too.
+See [`MIGRATION-CHECKLIST.md` Phase 5](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-5--native-ios-shell) and [`IOS-CAPACITOR-SETUP.md`](../../go-gather-next/docs/migration/IOS-CAPACITOR-SETUP.md). `npx cap add ios` itself happened early — during Phase 5's export/import work, once native filesystem/share/file-picker plugins needed a real `ios/` project to sync into. See [progress notes](progress/phase-5-export-import.md) for the `PrivacyInfo.xcprivacy` addition this pulled forward too. The Ruby toolchain pin (`ios/.ruby-version` = `3.3`, `ios/Gemfile` with `fastlane '~> 2.230'`, matching game-shelf) was deferred to Phase 8 instead — it's purely a Fastlane prerequisite, and Fastlane itself doesn't get set up until then (see [progress notes](progress/phase-6-ios-targets.md)).
 
 - [x] `npx cap add ios`, configure `capacitor.config.ts` — done ahead of schedule, see note above
 - [x] `SqliteStorageEngine` + `ImageFileStore`, contract tests extended to run against it — see [progress notes](progress/phase-6-sqlite-storage.md)
-- [ ] Dual dev/prod Xcode targets, signing scaffolding
+- [x] Dual dev/prod Xcode targets, signing scaffolding — see [progress notes](progress/phase-6-ios-targets.md)
 - [ ] Build and run on a personal device, verify native feature parity
 
 ## Phase 7 — Build Configs & Environments

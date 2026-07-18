@@ -13,8 +13,11 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "vitest run --coverage",
+    "test:scripts": "node --test \"scripts/*.test.mjs\"",
     "lint": "eslint .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "generate:ios-info-plists": "node scripts/generate-ios-info-plists.mjs",
+    "sync:ios:version": "node scripts/sync-ios-version.mjs"
   },
   "private": true,
   "dependencies": {
@@ -78,6 +81,7 @@
     "jsdom": "^29.1.1",
     "lint-staged": "^17.0.8",
     "npm-check-updates": "22.2.9",
+    "plist": "^5.0.0",
     "prettier": "3.9.3",
     "sql.js": "^1.14.1",
     "typescript": "~5.9.3",
