@@ -15,6 +15,11 @@ export const routes: Routes = [
       import('./search-strings/search-strings.page').then((m) => m.SearchStringsPage),
   },
   {
+    path: 'preset-queries/:id/edit',
+    loadComponent: () =>
+      import('./preset-queries/edit/preset-query-edit.page').then((m) => m.PresetQueryEditPage),
+  },
+  {
     path: 'preset-queries',
     loadComponent: () =>
       import('./preset-queries/preset-queries.page').then((m) => m.PresetQueriesPage),

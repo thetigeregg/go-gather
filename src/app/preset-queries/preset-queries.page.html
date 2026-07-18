@@ -1,10 +1,29 @@
 <ion-header>
   <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/gather"></ion-back-button>
+    </ion-buttons>
     <ion-title>Preset Queries</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="newPreset()">New Preset</ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
-  <p>Placeholder — replaces PresetQueriesDialogComponent in Phase 5.</p>
-  <ion-button routerLink="/tabs/gather">Back to Gather</ion-button>
+  @if (rows.length === 0) {
+    <p class="preset-queries-empty">No presets yet — tap "New Preset" to create one.</p>
+  }
+
+  @for (row of rows; track row.preset.id) {
+    <div class="preset-query-row">
+      <app-search-string [config]="row.config"></app-search-string>
+      <div class="preset-query-row-actions">
+        <ion-button size="small" fill="outline" (click)="editPreset(row.preset)">Edit</ion-button>
+        <ion-button size="small" fill="outline" color="danger" (click)="deletePreset(row.preset)">
+          Delete
+        </ion-button>
+      </div>
+    </div>
+  }
 </ion-content>

@@ -1,0 +1,255 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/preset-queries"></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ pageTitle }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-item>
+    <ion-input
+      label="Name"
+      labelPlacement="stacked"
+      placeholder="Preset name..."
+      [(ngModel)]="name"
+      (ngModelChange)="updatePreview()"
+    ></ion-input>
+  </ion-item>
+
+  @for (editableGroup of groups; track editableGroup.group.id; let groupIndex = $index) {
+    @if (groupIndex > 0) {
+      <div class="preset-editor-or-divider">OR</div>
+    }
+
+    <div class="preset-editor-group">
+      @for (editableRule of editableGroup.rules; track editableRule.rule.id) {
+        <div class="preset-editor-rule">
+          <ion-item>
+            <ion-select
+              label="Category"
+              labelPlacement="stacked"
+              [ngModel]="editableRule.selectedCategory"
+              (ngModelChange)="ruleCategoryChanged(editableRule, $event)"
+            >
+              @for (category of termCategories; track category) {
+                <ion-select-option [value]="category">{{ category }}</ion-select-option>
+              }
+            </ion-select>
+          </ion-item>
+
+          <ion-item>
+            <ion-select
+              label="Kind"
+              labelPlacement="stacked"
+              [ngModel]="editableRule.catalogEntry.kind"
+              (ngModelChange)="ruleKindChanged(editableRule, $event)"
+            >
+              @for (entry of termsForCategory(editableRule.selectedCategory); track entry.kind) {
+                <ion-select-option [value]="entry.kind">{{ entry.label }}</ion-select-option>
+              }
+            </ion-select>
+          </ion-item>
+
+          @switch (editableRule.catalogEntry.inputKind) {
+            @case ('freeText') {
+              <ion-item>
+                <ion-input
+                  label="Value"
+                  labelPlacement="stacked"
+                  [(ngModel)]="editableRule.freeTextValue"
+                  (ngModelChange)="updatePreview()"
+                ></ion-input>
+              </ion-item>
+            }
+            @case ('tagPicker') {
+              <ion-item>
+                <ion-select
+                  label="Tag"
+                  labelPlacement="stacked"
+                  placeholder="Select a tag..."
+                  [(ngModel)]="editableRule.freeTextValue"
+                  (ngModelChange)="updatePreview()"
+                >
+                  @for (tag of userTags; track tag) {
+                    <ion-select-option [value]="tag">{{ tag }}</ion-select-option>
+                  }
+                </ion-select>
+              </ion-item>
+            }
+            @case ('enum') {
+              <ion-item>
+                <ion-select
+                  label="Value"
+                  labelPlacement="stacked"
+                  [(ngModel)]="editableRule.enumValue"
+                  (ngModelChange)="updatePreview()"
+                >
+                  @for (option of editableRule.catalogEntry.enumOptions ?? []; track option) {
+                    <ion-select-option [value]="option">{{ option }}</ion-select-option>
+                  }
+                </ion-select>
+              </ion-item>
+            }
+            @case ('keywordEnum') {
+              <ion-item>
+                <ion-select
+                  label="Value"
+                  labelPlacement="stacked"
+                  [(ngModel)]="editableRule.enumValue"
+                  (ngModelChange)="updatePreview()"
+                >
+                  @for (option of editableRule.catalogEntry.enumOptions ?? []; track option) {
+                    <ion-select-option [value]="option">{{ option }}</ion-select-option>
+                  }
+                </ion-select>
+              </ion-item>
+            }
+            @case ('numericRange') {
+              <ion-item>
+                <ion-select
+                  label="Field"
+                  labelPlacement="stacked"
+                  [(ngModel)]="editableRule.numericField"
+                  (ngModelChange)="updatePreview()"
+                >
+                  @for (option of editableRule.catalogEntry.fieldOptions ?? []; track option) {
+                    <ion-select-option [value]="option">{{ option }}</ion-select-option>
+                  }
+                </ion-select>
+              </ion-item>
+              <ion-item>
+                <ion-checkbox
+                  [(ngModel)]="editableRule.numericUseRange"
+                  (ngModelChange)="updatePreview()"
+                >
+                  Range
+                </ion-checkbox>
+              </ion-item>
+              @if (editableRule.numericUseRange) {
+                <ion-item>
+                  <ion-input
+                    type="number"
+                    label="Min"
+                    labelPlacement="stacked"
+                    [(ngModel)]="editableRule.numericMin"
+                    (ngModelChange)="updatePreview()"
+                  ></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input
+                    type="number"
+                    label="Max"
+                    labelPlacement="stacked"
+                    [(ngModel)]="editableRule.numericMax"
+                    (ngModelChange)="updatePreview()"
+                  ></ion-input>
+                </ion-item>
+              } @else {
+                <ion-item>
+                  <ion-input
+                    type="number"
+                    label="Value"
+                    labelPlacement="stacked"
+                    [(ngModel)]="editableRule.numericExact"
+                    (ngModelChange)="updatePreview()"
+                  ></ion-input>
+                </ion-item>
+              }
+            }
+            @case ('statRating') {
+              <ion-item>
+                <ion-select
+                  label="Field"
+                  labelPlacement="stacked"
+                  [(ngModel)]="editableRule.statRatingField"
+                  (ngModelChange)="updatePreview()"
+                >
+                  @for (option of editableRule.catalogEntry.fieldOptions ?? []; track option) {
+                    <ion-select-option [value]="option">{{ option }}</ion-select-option>
+                  }
+                </ion-select>
+              </ion-item>
+              <ion-item>
+                <ion-input
+                  type="number"
+                  label="Value (0-4)"
+                  labelPlacement="stacked"
+                  [min]="0"
+                  [max]="4"
+                  [(ngModel)]="editableRule.statRatingValue"
+                  (ngModelChange)="updatePreview()"
+                ></ion-input>
+              </ion-item>
+            }
+            @case ('smallEnumNumber') {
+              <ion-item>
+                <ion-input
+                  type="number"
+                  [label]="
+                    'Value (' +
+                    (editableRule.catalogEntry.smallEnumRange?.min ?? 0) +
+                    '-' +
+                    (editableRule.catalogEntry.smallEnumRange?.max ?? 0) +
+                    ')'
+                  "
+                  labelPlacement="stacked"
+                  [min]="editableRule.catalogEntry.smallEnumRange?.min ?? 0"
+                  [max]="editableRule.catalogEntry.smallEnumRange?.max ?? 0"
+                  [(ngModel)]="editableRule.smallEnumValue"
+                  (ngModelChange)="updatePreview()"
+                ></ion-input>
+              </ion-item>
+            }
+          }
+
+          <ion-item>
+            <ion-toggle [(ngModel)]="editableRule.rule.negate" (ngModelChange)="updatePreview()">
+              Negate
+            </ion-toggle>
+          </ion-item>
+
+          <ion-button fill="clear" color="danger" (click)="removeRule(editableGroup, editableRule)">
+            <ion-icon slot="icon-only" name="trash"></ion-icon>
+          </ion-button>
+        </div>
+      }
+
+      <div class="preset-editor-group-actions">
+        <ion-button size="small" fill="outline" (click)="addRule(editableGroup)">
+          Add Rule
+        </ion-button>
+        @if (groups.length > 1) {
+          <ion-button size="small" fill="clear" color="danger" (click)="removeGroup(editableGroup)">
+            Remove Group
+          </ion-button>
+        }
+      </div>
+    </div>
+  }
+
+  <div class="preset-editor-add-group">
+    <ion-button size="small" (click)="addGroup()">Add Group (OR)</ion-button>
+  </div>
+
+  <div class="preset-editor-preview">
+    <span class="preset-editor-preview-label">Preview</span>
+    <div class="preset-editor-preview-value">{{ previewString ?? '(no rules yet)' }}</div>
+  </div>
+
+  @if (hasUnsafeNegatedTagBeforeOr) {
+    <div class="preset-editor-warning">
+      A negated tag rule (e.g. "Negate" on a User Tag or Has Any Tag) appears in a group that isn't
+      the last one. In-game, the search bar's comma (OR) stops working correctly once a negated tag
+      appears before it — everything after that comma gets ignored, even though the rest of this
+      preset's OR logic is otherwise correct. Move negated tag rules to the last group only, or
+      expect this preset to only match its first group's results in-game.
+    </div>
+  }
+
+  <div class="preset-editor-footer">
+    <ion-button fill="outline" (click)="cancelClicked()">Cancel</ion-button>
+    <ion-button [disabled]="!name" (click)="saveClicked()">Save</ion-button>
+  </div>
+</ion-content>
