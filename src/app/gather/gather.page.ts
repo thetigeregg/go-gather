@@ -6,6 +6,8 @@ import {
   IonTitle,
   IonContent,
   IonAccordionGroup,
+  IonButtons,
+  IonMenuButton,
 } from '@ionic/angular/standalone';
 import { UserSettings } from '@go-gather/shared';
 import { PokeDataService } from '../core/services/poke-data.service';
@@ -18,7 +20,16 @@ import { PokeGroupComponent } from '../features/poke-group/poke-group.component'
   selector: 'app-gather',
   templateUrl: 'gather.page.html',
   styleUrls: ['gather.page.scss'],
-  imports: [IonHeader, IonToolbar, IonTitle, IonContent, IonAccordionGroup, PokeGroupComponent],
+  imports: [
+    IonHeader,
+    IonToolbar,
+    IonTitle,
+    IonContent,
+    IonAccordionGroup,
+    IonButtons,
+    IonMenuButton,
+    PokeGroupComponent,
+  ],
 })
 export class GatherPage implements OnInit {
   private readonly pokeDataService = inject(PokeDataService);
