@@ -2,6 +2,8 @@
   <ion-toolbar>
     <ion-title>{{ headerText || 'GO Gather' }}</ion-title>
     <ion-buttons slot="end">
+      <ion-button (click)="exportBundle()">Export</ion-button>
+      <ion-button (click)="triggerImport()">Import</ion-button>
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
   </ion-toolbar>

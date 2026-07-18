@@ -71,14 +71,14 @@ See [`MIGRATION-CHECKLIST.md` Phase 4](../../go-gather-next/docs/migration/MIGRA
 
 - [x] Port domain services, re-pointed at `StorageEngine` — see [progress notes](progress/phase-5-domain-services.md)
 - [x] Rebuild components/pages in the order `SCREEN-AND-FEATURE-MAP.md` specifies — chunked into 5 groups (see [progress notes](progress/phase-5-gather-page.md) for the chunking), all complete: 1) gather page core ✅, 2) side menu/filters ✅ (see [progress notes](progress/phase-5-side-menu.md)), 3) settings page ✅ (see [progress notes](progress/phase-5-settings-page.md)), 4) search strings page ✅ (see [progress notes](progress/phase-5-search-strings-page.md)), 5) preset queries ✅ (see [progress notes](progress/phase-5-preset-queries.md))
-- [ ] Rebuild export/import via Capacitor filesystem/file-picker/share plugins
+- [x] Rebuild export/import via Capacitor filesystem/file-picker/share plugins — see [progress notes](progress/phase-5-export-import.md)
 - [ ] Full feature parity verified running as a web app, before touching native
 
 ## Phase 6 — Native iOS Shell
 
-See [`MIGRATION-CHECKLIST.md` Phase 5](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-5--native-ios-shell) and [`IOS-CAPACITOR-SETUP.md`](../../go-gather-next/docs/migration/IOS-CAPACITOR-SETUP.md). This is where the Ruby toolchain pin actually gets added (no `ios/` directory exists before this phase): `ios/.ruby-version` = `3.3`, `ios/Gemfile` with `fastlane '~> 2.230'`, matching game-shelf.
+See [`MIGRATION-CHECKLIST.md` Phase 5](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-5--native-ios-shell) and [`IOS-CAPACITOR-SETUP.md`](../../go-gather-next/docs/migration/IOS-CAPACITOR-SETUP.md). The Ruby toolchain pin (`ios/.ruby-version` = `3.3`, `ios/Gemfile` with `fastlane '~> 2.230'`, matching game-shelf) still belongs to this phase, but `npx cap add ios` itself happened early — during Phase 5's export/import work, once native filesystem/share/file-picker plugins needed a real `ios/` project to sync into. See [progress notes](progress/phase-5-export-import.md) for the `PrivacyInfo.xcprivacy` addition this pulled forward too.
 
-- [ ] `npx cap add ios`, configure `capacitor.config.ts`
+- [x] `npx cap add ios`, configure `capacitor.config.ts` — done ahead of schedule, see note above
 - [ ] `SqliteStorageEngine` + `ImageFileStore`, contract tests extended to run against it
 - [ ] Dual dev/prod Xcode targets, signing scaffolding
 - [ ] Build and run on a personal device, verify native feature parity
