@@ -72,4 +72,30 @@ describe('LocalUserDataRepository', () => {
     const all = await repository.listProgress();
     expect(all.map((entry) => entry.catalogEntryId).sort()).toEqual(['a', 'b']);
   });
+
+  it('bulkSetCaught writes all entries and enqueues one outbox row per entry, in a single transaction', async () => {
+    await repository.bulkSetCaught([
+      { catalogEntryId: 'x', caught: true },
+      { catalogEntryId: 'y', caught: false },
+    ]);
+
+    const all = await repository.listProgress();
+    expect(all.map((entry) => entry.catalogEntryId).sort()).toEqual(['x', 'y']);
+
+    const outbox = await db.outbox.toArray();
+    expect(outbox).toHaveLength(2);
+    expect(outbox.every((entry) => entry.entityType === 'progress')).toBe(true);
+
+    expect(syncNow).toHaveBeenCalledTimes(1);
+  });
+
+  it("bulkSetCaught doesn't clear progress entries absent from the given list", async () => {
+    await repository.setCaught('pre-existing', true);
+    syncNow.mockClear();
+
+    await repository.bulkSetCaught([{ catalogEntryId: 'new-entry', caught: true }]);
+
+    const all = await repository.listProgress();
+    expect(all.map((entry) => entry.catalogEntryId).sort()).toEqual(['new-entry', 'pre-existing']);
+  });
 });

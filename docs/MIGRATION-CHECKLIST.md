@@ -69,7 +69,7 @@ See [`MIGRATION-CHECKLIST.md` Phase 3](../../go-gather-next/docs/migration/MIGRA
 
 See [`MIGRATION-CHECKLIST.md` Phase 4](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-4--port-services--rebuild-ui-web-only-ioniccapacitor-not-required-yet) and [`SCREEN-AND-FEATURE-MAP.md`](../../go-gather-next/docs/migration/SCREEN-AND-FEATURE-MAP.md) for the full component build order (lowest-risk first, preset query editor last).
 
-- [ ] Port domain services, re-pointed at `StorageEngine`
+- [x] Port domain services, re-pointed at `StorageEngine` — see [progress notes](progress/phase-5-domain-services.md)
 - [ ] Rebuild components/pages in the order `SCREEN-AND-FEATURE-MAP.md` specifies
 - [ ] Rebuild export/import via Capacitor filesystem/file-picker/share plugins
 - [ ] Full feature parity verified running as a web app, before touching native

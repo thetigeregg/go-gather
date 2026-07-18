@@ -41,6 +41,28 @@ export class LocalUserDataRepository {
     );
   }
 
+  /**
+   * Bulk import (e.g. restoring an export bundle). Upserts only the given
+   * entries — does not clear existing local progress first, unlike the old
+   * server's full delete+reinsert `PUT /api/progress`. Local-first means we
+   * shouldn't wipe local state that might be newer than the import bundle.
+   * All rows are written and enqueued in one transaction, so
+   * `SyncService.pushOutbox()` batches them into a single push.
+   */
+  async bulkSetCaught(entries: { catalogEntryId: string; caught: boolean }[]): Promise<void> {
+    await this.withOutboxTransaction(['progress'], () =>
+      Promise.all(
+        entries.map((item) => {
+          const updatedAt = new Date().toISOString();
+          const entry: ProgressEntry = { ...item, updatedAt };
+          return this.engine
+            .putProgress(entry)
+            .then(() => this.queueUpsert('progress', entry, updatedAt));
+        })
+      ).then(() => undefined)
+    );
+  }
+
   async updateSettings(settings: UserSettings): Promise<void> {
     const clientTimestamp = new Date().toISOString();
 
