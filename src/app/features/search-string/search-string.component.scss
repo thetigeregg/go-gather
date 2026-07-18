@@ -1,0 +1,22 @@
+.search-string-container {
+  padding: 8px 16px;
+}
+
+.search-string-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+
+  label {
+    font-weight: 600;
+  }
+}
+
+ion-textarea {
+  margin-top: 4px;
+  --background: var(--ion-color-light, #f4f5f8);
+  --padding-start: 8px;
+  --padding-end: 8px;
+  border-radius: 4px;
+}

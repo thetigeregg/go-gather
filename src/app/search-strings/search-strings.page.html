@@ -1,10 +1,32 @@
 <ion-header>
   <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/gather"></ion-back-button>
+    </ion-buttons>
     <ion-title>Search Strings</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
-  <p>Placeholder — replaces SearchStringsDialogComponent in Phase 5.</p>
-  <ion-button routerLink="/tabs/gather">Back to Gather</ion-button>
+  @if (defaultConfig) {
+    <app-search-string [config]="defaultConfig"></app-search-string>
+  }
+
+  @if (shinyConfig) {
+    <app-search-string [config]="shinyConfig"></app-search-string>
+  }
+
+  @if (altRegionConfigs) {
+    <app-multi-search-string
+      [configs]="altRegionConfigs"
+      groupName="Alternate Region Search Strings"
+    ></app-multi-search-string>
+  }
+
+  @if (genderConfigs) {
+    <app-multi-search-string
+      [configs]="genderConfigs"
+      groupName="Gender Search Strings"
+    ></app-multi-search-string>
+  }
 </ion-content>

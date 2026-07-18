@@ -1,0 +1,15 @@
+<div class="multi-search-string">
+  <div class="search-string-header">
+    <span>{{ groupName }}</span>
+  </div>
+
+  <div class="configs-container">
+    @for (config of configs; track config.name; let last = $last) {
+      <app-search-string [config]="config"></app-search-string>
+
+      @if (!last) {
+        <hr class="config-divider" />
+      }
+    }
+  </div>
+</div>
