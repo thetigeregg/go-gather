@@ -13,7 +13,7 @@ initSchema();
 const app = buildApp();
 
 app
-  .listen({ port: PORT, host: '127.0.0.1' })
+  .listen({ port: PORT, host: '0.0.0.0' })
   .then(() => {
     console.log(`go-gather API listening on http://localhost:${PORT}`);
   })

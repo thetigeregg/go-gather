@@ -18,7 +18,13 @@ const jsTsFiles = ['**/*.{js,mjs,cjs,jsx,mjsx,ts,tsx,mtsx}'];
 const tsFiles = ['**/*.{ts,tsx,mts,cts}'];
 
 export default defineConfig([
-  globalIgnores(['dist/**/*', 'coverage/**/*', '.angular/**/*']),
+  globalIgnores([
+    'dist/**/*',
+    'coverage/**/*',
+    '.angular/**/*',
+    'www/**/*',
+    'ios/App/App/public/**/*',
+  ]),
 
   {
     ...importX.flatConfigs.recommended,

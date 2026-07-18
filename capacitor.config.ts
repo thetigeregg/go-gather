@@ -5,6 +5,9 @@ const config: CapacitorConfig = {
   appName: 'GO Gather',
   webDir: 'www',
   plugins: {
+    CapacitorHttp: {
+      enabled: true,
+    },
     CapacitorSQLite: {
       iosDatabaseLocation: 'Library/CapacitorDatabase',
       iosIsEncryption: false,
