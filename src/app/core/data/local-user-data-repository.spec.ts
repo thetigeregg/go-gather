@@ -5,7 +5,7 @@ import { DEFAULT_SETTINGS } from '@go-gather/shared';
 import { AppDb } from './app-db';
 import { DexieStorageEngine } from './dexie-storage-engine';
 import { LocalUserDataRepository } from './local-user-data-repository';
-import { STORAGE_ENGINE } from './storage-engine';
+import { StorageEngineFactory } from './storage-engine.factory';
 import { SYNC_OUTBOX_WRITER, SyncOutboxWriter } from './sync-outbox-writer';
 
 vi.mock('./storage-transaction-context', () => import('./storage-transaction-context.node'));
@@ -15,7 +15,7 @@ describe('LocalUserDataRepository', () => {
   let repository: LocalUserDataRepository;
   let syncNow: ReturnType<typeof vi.fn>;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     syncNow = vi.fn().mockResolvedValue(undefined);
     const outboxWriter: SyncOutboxWriter = {
       enqueueOperation: vi.fn().mockResolvedValue(undefined),
@@ -27,12 +27,13 @@ describe('LocalUserDataRepository', () => {
       providers: [
         AppDb,
         DexieStorageEngine,
-        { provide: STORAGE_ENGINE, useExisting: DexieStorageEngine },
+        StorageEngineFactory,
         { provide: SYNC_OUTBOX_WRITER, useValue: outboxWriter },
       ],
     });
 
     db = TestBed.inject(AppDb);
+    await TestBed.inject(StorageEngineFactory).initialize();
     repository = TestBed.inject(LocalUserDataRepository);
   });
 

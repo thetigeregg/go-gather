@@ -4,7 +4,7 @@ import { vi } from 'vitest';
 import type { CatalogEntry } from '@go-gather/shared';
 import { AppDb } from '../data/app-db';
 import { DexieStorageEngine } from '../data/dexie-storage-engine';
-import { STORAGE_ENGINE } from '../data/storage-engine';
+import { StorageEngineFactory } from '../data/storage-engine.factory';
 import { PokeDataService } from './poke-data.service';
 
 vi.mock(
@@ -42,18 +42,15 @@ describe('PokeDataService', () => {
   let engine: DexieStorageEngine;
   let service: PokeDataService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      providers: [
-        AppDb,
-        DexieStorageEngine,
-        { provide: STORAGE_ENGINE, useExisting: DexieStorageEngine },
-      ],
+      providers: [AppDb, DexieStorageEngine, StorageEngineFactory],
     });
 
     db = TestBed.inject(AppDb);
     engine = TestBed.inject(DexieStorageEngine);
+    await TestBed.inject(StorageEngineFactory).initialize();
     service = TestBed.inject(PokeDataService);
   });
 

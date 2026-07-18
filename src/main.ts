@@ -6,7 +6,7 @@ import {
   PreloadAllModules,
 } from '@angular/router';
 import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http';
-import { inject, provideAppInitializer } from '@angular/core';
+import { inject, provideAppInitializer, provideZoneChangeDetection } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { IonicRouteStrategy, provideIonicAngular } from '@ionic/angular/standalone';
 
@@ -21,6 +21,7 @@ import { UserDataService } from './app/core/services/user-data.service';
 
 bootstrapApplication(AppComponent, {
   providers: [
+    provideZoneChangeDetection(),
     { provide: RouteReuseStrategy, useClass: IonicRouteStrategy },
     provideIonicAngular({ mode: 'ios' }),
     provideRouter(routes, withPreloading(PreloadAllModules)),

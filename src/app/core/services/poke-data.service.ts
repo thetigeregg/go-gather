@@ -1,7 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { Observable, from, map, shareReplay } from 'rxjs';
 import { CatalogEntry } from '@go-gather/shared';
-import { STORAGE_ENGINE } from '../data/storage-engine';
+import { StorageEngine } from '../data/storage-engine';
+import { StorageEngineFactory } from '../data/storage-engine.factory';
 import { environment } from '../../../environments/environment';
 
 /**
@@ -14,8 +15,16 @@ import { environment } from '../../../environments/environment';
   providedIn: 'root',
 })
 export class PokeDataService {
-  private readonly engine = inject(STORAGE_ENGINE);
+  private readonly storageEngineFactory = inject(StorageEngineFactory);
   private _catalog: readonly CatalogEntry[] = [];
+
+  // `STORAGE_ENGINE`'s DI factory throws until `StorageEngineFactory.initialize()`
+  // resolves, and this service is constructed inside the same
+  // `provideAppInitializer` callback that calls `initialize()` (see main.ts) —
+  // so the engine must be resolved lazily per-call, not eagerly at construction.
+  private get engine(): StorageEngine {
+    return this.storageEngineFactory.getEngine();
+  }
 
   get catalog(): readonly CatalogEntry[] {
     return this._catalog;

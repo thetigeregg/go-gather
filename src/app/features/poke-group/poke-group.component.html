@@ -1,0 +1,14 @@
+<ion-accordion [value]="generation.generationName">
+  <ion-item slot="header" color="light">
+    <ion-label>{{ headerText }}</ion-label>
+  </ion-item>
+
+  <div class="poke-list" slot="content">
+    @for (speciesGroup of generation.speciesList; track speciesGroup.speciesId) {
+      <app-gather-pokemon
+        [speciesGroup]="speciesGroup"
+        [userSettings]="userSettings"
+      ></app-gather-pokemon>
+    }
+  </div>
+</ion-accordion>

@@ -5,7 +5,7 @@ import { DEFAULT_SETTINGS, ExportBundle } from '@go-gather/shared';
 import { AppDb } from '../data/app-db';
 import { DexieStorageEngine } from '../data/dexie-storage-engine';
 import { LocalUserDataRepository } from '../data/local-user-data-repository';
-import { STORAGE_ENGINE } from '../data/storage-engine';
+import { StorageEngineFactory } from '../data/storage-engine.factory';
 import { UserDataService } from './user-data.service';
 
 vi.mock(
@@ -17,18 +17,14 @@ describe('UserDataService', () => {
   let db: AppDb;
   let service: UserDataService;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      providers: [
-        AppDb,
-        DexieStorageEngine,
-        { provide: STORAGE_ENGINE, useExisting: DexieStorageEngine },
-        LocalUserDataRepository,
-      ],
+      providers: [AppDb, DexieStorageEngine, StorageEngineFactory, LocalUserDataRepository],
     });
 
     db = TestBed.inject(AppDb);
+    await TestBed.inject(StorageEngineFactory).initialize();
     service = TestBed.inject(UserDataService);
   });
 

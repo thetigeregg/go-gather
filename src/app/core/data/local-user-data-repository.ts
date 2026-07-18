@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import type { ProgressEntry, UserSettings } from '@go-gather/shared';
-import { OutboxEntry, STORAGE_ENGINE, StorageEngine, StorageScope } from './storage-engine';
+import { OutboxEntry, StorageEngine, StorageScope } from './storage-engine';
+import { StorageEngineFactory } from './storage-engine.factory';
 import { SYNC_OUTBOX_WRITER, SyncOutboxWriter } from './sync-outbox-writer';
 
 /**
@@ -15,10 +16,18 @@ import { SYNC_OUTBOX_WRITER, SyncOutboxWriter } from './sync-outbox-writer';
  */
 @Injectable({ providedIn: 'root' })
 export class LocalUserDataRepository {
-  private readonly engine: StorageEngine = inject(STORAGE_ENGINE);
+  private readonly storageEngineFactory = inject(StorageEngineFactory);
   private readonly outboxWriter = inject<SyncOutboxWriter | null>(SYNC_OUTBOX_WRITER, {
     optional: true,
   });
+
+  // `STORAGE_ENGINE`'s DI factory throws until `StorageEngineFactory.initialize()`
+  // resolves, and this repository is constructed inside the same
+  // `provideAppInitializer` callback that calls `initialize()` (see main.ts) —
+  // so the engine must be resolved lazily per-call, not eagerly at construction.
+  private get engine(): StorageEngine {
+    return this.storageEngineFactory.getEngine();
+  }
 
   getProgress(catalogEntryId: string): Promise<ProgressEntry | undefined> {
     return this.engine.getProgress(catalogEntryId);

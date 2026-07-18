@@ -1,0 +1,102 @@
+:host {
+  display: flex;
+  justify-content: center;
+  width: 140px;
+  flex: 1;
+}
+
+.gather-entry-card:not(.caught) {
+  &::before {
+    border-color: #c4c4c4;
+  }
+}
+
+.gather-entry-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: none;
+  background: none;
+  padding: 0 6px;
+  margin: 0;
+  cursor: pointer;
+  position: relative;
+  width: 100%;
+
+  &:focus {
+    outline: none;
+  }
+
+  &:hover::before {
+    animation: borderExpand 2s infinite linear;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 105%;
+    height: 96%;
+    border: 3px solid var(--ion-color-primary-tint, #4c8dff);
+    border-radius: 8px;
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0;
+  }
+
+  .gather-entry-card-header {
+    // Fixed (not min-) height reserving exactly the 3-line clamp below, so
+    // every card in a row is the same height regardless of name length —
+    // a min-height here would let each card grow to fit its own text,
+    // leaving short-named siblings shorter than wrapped-name ones. Event
+    // costume names (e.g. "Pikachu (Gotour 2023 Bandana Noevolve)") can
+    // still exceed 3 lines at this width, so they fall back to a native
+    // `title` tooltip (see template) rather than being silently lost.
+    height: calc(1.1rem * 3);
+    line-height: 1.1rem;
+    padding-top: 18px;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: break-word;
+    font-size: 0.8rem;
+
+    &.hide-name {
+      visibility: hidden;
+    }
+
+    // When no sibling in this row has a distinct form name, nothing in the
+    // row needs the reserved 3-line space — collapse it instead of leaving
+    // blank space above every sprite in the row.
+    &.collapsed-name {
+      height: 0;
+      padding-top: 0;
+      margin-bottom: 0;
+    }
+  }
+
+  .gather-entry-card-content {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .gather-entry-card-footer {
+    margin-top: 4px;
+  }
+}
+
+@keyframes borderExpand {
+  0%,
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -46%) scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: translate(-50%, -46%) scale(1.03);
+  }
+}

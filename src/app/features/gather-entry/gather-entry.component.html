@@ -1,0 +1,36 @@
+<button
+  class="gather-entry-card"
+  type="button"
+  (click)="entryCardClicked()"
+  [class.caught]="caught"
+>
+  <div
+    class="gather-entry-card-header"
+    [class.hide-name]="entry.name === speciesName"
+    [class.collapsed-name]="!reserveNameSpace"
+    [title]="entry.name !== speciesName ? entry.name : null"
+  >
+    @if (
+      (userSettings.showGender || userSettings.showRegional || userSettings.showAlternate) &&
+      entry.name !== speciesName
+    ) {
+      {{ entry.name }}
+    }
+  </div>
+
+  <div class="gather-entry-card-content">
+    <img
+      [src]="spriteSrc"
+      width="100"
+      alt="Sprite of {{ entry.name }}"
+      loading="lazy"
+      (error)="onSpriteError()"
+    />
+  </div>
+
+  <div class="gather-entry-card-footer">
+    <ion-button fill="clear" size="small" (click)="onCaughtButtonClick($event)">
+      <ion-icon slot="icon-only" [name]="caughtButtonIcon"></ion-icon>
+    </ion-button>
+  </div>
+</button>

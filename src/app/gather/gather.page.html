@@ -1,14 +1,13 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Gather</ion-title>
+    <ion-title>{{ headerText || 'GO Gather' }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
-  <p>Placeholder — the catalog grid lands here in Phase 5.</p>
-
-  <!-- Temporary nav for Phase 1 route verification; replaced by the IonMenu side nav in Phase 5 -->
-  <ion-button routerLink="/settings">Settings</ion-button>
-  <ion-button routerLink="/search-strings">Search Strings</ion-button>
-  <ion-button routerLink="/preset-queries">Preset Queries</ion-button>
+  <ion-accordion-group [multiple]="true">
+    @for (generation of generationToPokemonMap; track generation.generationName) {
+      <app-poke-group [generation]="generation" [userSettings]="userSettings"></app-poke-group>
+    }
+  </ion-accordion-group>
 </ion-content>

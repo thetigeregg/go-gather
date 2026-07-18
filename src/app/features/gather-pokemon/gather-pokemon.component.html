@@ -1,0 +1,29 @@
+<ion-card class="gather-poke-card">
+  <ion-card-header>
+    <ion-card-title>
+      <span class="gather-poke-header">{{ speciesGroup.speciesName }}</span>
+      <span class="gather-poke-subheader">- #{{ speciesGroup.dexNr }}</span>
+    </ion-card-title>
+  </ion-card-header>
+
+  <ion-card-content>
+    <div class="poke-entry-list">
+      @for (row of entryRows; track $index; let lastRow = $last) {
+        <div class="poke-entry-row">
+          @for (entry of row.entries; track entry.id) {
+            <app-gather-entry
+              [entry]="entry"
+              [speciesName]="speciesGroup.speciesName"
+              [userSettings]="userSettings"
+              [reserveNameSpace]="row.hasNamedEntry"
+            ></app-gather-entry>
+          }
+        </div>
+
+        @if (!lastRow) {
+          <hr class="poke-entry-row-divider" />
+        }
+      }
+    </div>
+  </ion-card-content>
+</ion-card>
