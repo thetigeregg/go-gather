@@ -19,7 +19,7 @@ export class PokeGroupComponent implements OnInit, OnChanges, OnDestroy {
   @Input() generation!: Generation;
   @Input() userSettings!: UserSettings;
 
-  headerText = '';
+  countText = '';
 
   private progressChangeSubscription?: Subscription;
 
@@ -44,6 +44,6 @@ export class PokeGroupComponent implements OnInit, OnChanges, OnDestroy {
     const total = entries.length;
     const caught = entries.filter((entry) => this.userDataService.getItemState(entry.id)).length;
 
-    this.headerText = `${this.generation.generationName} (${String(caught)}/${String(total)})`;
+    this.countText = `${String(caught)}/${String(total)}`;
   }
 }

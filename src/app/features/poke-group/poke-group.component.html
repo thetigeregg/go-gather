@@ -1,6 +1,7 @@
 <ion-accordion [value]="generation.generationName">
   <ion-item slot="header" color="light">
-    <ion-label>{{ headerText }}</ion-label>
+    <ion-label>{{ generation.generationName }}</ion-label>
+    <ion-label slot="end">{{ countText }}</ion-label>
   </ion-item>
 
   <div class="poke-list" slot="content">

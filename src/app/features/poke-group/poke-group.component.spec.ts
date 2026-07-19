@@ -69,7 +69,7 @@ describe('PokeGroupComponent', () => {
     component.userSettings = { ...DEFAULT_SETTINGS } satisfies UserSettings;
   });
 
-  it('computes the generation name + caught/total header text on init', () => {
+  it('computes the caught/total count text on init', () => {
     const generation: Generation = {
       generationName: 'Generation 1',
       speciesList: [
@@ -86,10 +86,10 @@ describe('PokeGroupComponent', () => {
 
     fixture.detectChanges();
 
-    expect(component.headerText).toBe('Generation 1 (0/2)');
+    expect(component.countText).toBe('0/2');
   });
 
-  it('recomputes the header text when progress changes', () => {
+  it('recomputes the count text when progress changes', () => {
     const generation: Generation = {
       generationName: 'Generation 1',
       speciesList: [
@@ -105,11 +105,11 @@ describe('PokeGroupComponent', () => {
     component.ngOnChanges();
     fixture.detectChanges();
 
-    expect(component.headerText).toBe('Generation 1 (0/1)');
+    expect(component.countText).toBe('0/1');
 
     caughtIds.add('bulbasaur-regular');
     progressChange$.next();
 
-    expect(component.headerText).toBe('Generation 1 (1/1)');
+    expect(component.countText).toBe('1/1');
   });
 });
