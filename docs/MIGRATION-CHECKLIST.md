@@ -81,7 +81,7 @@ See [`MIGRATION-CHECKLIST.md` Phase 5](../../go-gather-next/docs/migration/MIGRA
 - [x] `npx cap add ios`, configure `capacitor.config.ts` — done ahead of schedule, see note above
 - [x] `SqliteStorageEngine` + `ImageFileStore`, contract tests extended to run against it — see [progress notes](progress/phase-6-sqlite-storage.md)
 - [x] Dual dev/prod Xcode targets, signing scaffolding — see [progress notes](progress/phase-6-ios-targets.md)
-- [ ] Build and run on a personal device, verify native feature parity
+- [x] Build and run on a personal device, verify native feature parity — see [progress notes](progress/phase-6-device-verification.md); found and fixed a real bug (`CapacitorHttp` was never enabled, blocking all native networking)
 
 ## Phase 7 — Build Configs & Environments
 
