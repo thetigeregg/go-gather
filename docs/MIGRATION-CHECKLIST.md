@@ -87,8 +87,8 @@ See [`MIGRATION-CHECKLIST.md` Phase 5](../../go-gather-next/docs/migration/MIGRA
 
 See [`MIGRATION-CHECKLIST.md` Phase 6](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-6--build-configs--environments) and [`BUILD-AND-ENV.md`](../../go-gather-next/docs/migration/BUILD-AND-ENV.md).
 
-- [ ] `angular.json` build configurations
-- [ ] Environment file layering (compile-time at minimum; runtime/iOS-generated layers only if a live backend is kept)
+- [x] `angular.json` build configurations — see [progress notes](progress/phase-7-build-configs-environments.md)
+- [x] Environment file layering (compile-time at minimum; runtime/iOS-generated layers only if a live backend is kept) — see [progress notes](progress/phase-7-build-configs-environments.md)
 
 ## Phase 8 — CI Completion: TestFlight & Release
 

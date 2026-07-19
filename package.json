@@ -17,7 +17,14 @@
     "lint": "eslint .",
     "prepare": "husky",
     "generate:ios-info-plists": "node scripts/generate-ios-info-plists.mjs",
-    "sync:ios:version": "node scripts/sync-ios-version.mjs"
+    "sync:ios:version": "node scripts/sync-ios-version.mjs",
+    "prebuild:ios": "node scripts/sync-ios-version.mjs --marketing-only && node scripts/generate-ios-info-plists.mjs",
+    "prebuild:ios:local": "node scripts/write-environment-ios.mjs local && npm run prebuild:ios",
+    "prebuild:ios:prod": "node scripts/write-environment-ios.mjs prod && npm run prebuild:ios",
+    "build:ios:local": "ng build --configuration ios-local",
+    "build:ios:prod": "ng build --configuration ios-prod",
+    "sync:ios:local": "npm run build:ios:local && npx cap sync ios",
+    "sync:ios:prod": "npm run build:ios:prod && npx cap sync ios"
   },
   "private": true,
   "dependencies": {

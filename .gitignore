@@ -23,6 +23,12 @@ log.txt
 /platforms
 /plugins
 
+# iOS environment layering (scripts/write-environment-ios.mjs generates these
+# just before an ios-local/ios-prod build; see .env.example)
+/src/environments/environment.ios.local.ts
+/src/environments/environment.ios.prod.ts
+/.env
+
 # Compiled output
 /dist
 /tmp
