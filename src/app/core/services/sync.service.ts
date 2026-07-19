@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { firstValueFrom } from 'rxjs';
+import { Observable, Subject, firstValueFrom } from 'rxjs';
 import type { CatalogEntry, ProgressEntry, UserSettings } from '@go-gather/shared';
 import { OutboxEntry } from '../data/storage-engine';
 import { StorageEngineFactory } from '../data/storage-engine.factory';
@@ -52,6 +52,7 @@ export class SyncService implements SyncOutboxWriter {
   private readonly http = inject(HttpClient);
   private readonly storageEngineFactory = inject(StorageEngineFactory);
   private syncInFlight = false;
+  private readonly _catalogSync$ = new Subject<void>();
 
   /**
    * Resolved lazily (not as a field initializer) since `SyncService` is
@@ -68,6 +69,15 @@ export class SyncService implements SyncOutboxWriter {
     void this.syncNow();
     window.setInterval(() => void this.syncNow(), SYNC_INTERVAL_MS);
     window.addEventListener('online', () => void this.syncNow());
+  }
+
+  /** Emits whenever `pullCatalog()` writes a new catalog to local storage —
+   * lets pages that already rendered a stale/empty catalog snapshot (e.g. the
+   * app's very first load, which always reads local storage before this
+   * service's first sync has had a chance to populate it) refresh themselves
+   * instead of being stuck until the next full page reload. */
+  listenForCatalogSync(): Observable<void> {
+    return this._catalogSync$.asObservable();
   }
 
   async enqueueOperation(request: SyncOutboxWriteRequest): Promise<void> {
@@ -194,5 +204,7 @@ export class SyncService implements SyncOutboxWriter {
         await this.engine.putSyncMeta({ key: CATALOG_VERSION_KEY, value: response.syncedAt });
       }
     });
+
+    this._catalogSync$.next();
   }
 }

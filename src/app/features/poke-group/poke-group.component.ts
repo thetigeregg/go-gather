@@ -16,6 +16,7 @@ export class PokeGroupComponent implements OnInit, OnChanges, OnDestroy {
   private readonly userDataService = inject(UserDataService);
 
   @Input() generation!: Generation;
+  @Input() expanded = false;
 
   countText = '';
 

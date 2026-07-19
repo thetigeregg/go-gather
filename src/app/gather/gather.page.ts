@@ -16,6 +16,7 @@ import { PokeDataService } from '../core/services/poke-data.service';
 import { UserDataService } from '../core/services/user-data.service';
 import { FilterService, Generation } from '../core/services/filter.service';
 import { SearchConfigService } from '../core/services/search-config.service';
+import { SyncService } from '../core/services/sync.service';
 import { PokeGroupComponent } from '../features/poke-group/poke-group.component';
 import { presentShareFile } from '../core/utils/share-file.util';
 import { pickJsonTextFile } from '../core/utils/pick-file.util';
@@ -41,11 +42,13 @@ export class GatherPage implements OnInit {
   private readonly userDataService = inject(UserDataService);
   private readonly filterService = inject(FilterService);
   private readonly searchConfigService = inject(SearchConfigService);
+  private readonly syncService = inject(SyncService);
   private readonly toastController = inject(ToastController);
 
   generationToPokemonMap: Generation[] = [];
   userSettings!: UserSettings;
   headerText = '';
+  expandedGenerations = new Set<string>();
 
   ngOnInit(): void {
     this.userSettings = this.userDataService.getUserSettings();
@@ -80,6 +83,36 @@ export class GatherPage implements OnInit {
       }
       this.updateHeaderText();
     });
+
+    // The app's very first load always reads the local catalog before
+    // SyncService's first pull has had a chance to populate it (see
+    // main.ts), so this page can render with an empty catalog. Re-fetch and
+    // re-group whenever a background sync actually writes a new catalog,
+    // instead of leaving the page stuck empty until a lucky reload.
+    this.syncService.listenForCatalogSync().subscribe(() => {
+      this.pokeDataService.loadCatalog().subscribe(() => {
+        this.generationToPokemonMap = this.filterService.groupPokemonByGeneration(
+          this.userDataService.getUserSettings()
+        );
+        this.updateHeaderText();
+      });
+    });
+  }
+
+  /** Ionic keeps every accordion's content in the DOM regardless of expand
+   * state, and this catalog runs to ~9,000 entries across all generations —
+   * rendering every generation's species/entries eagerly froze the main
+   * thread for tens of seconds. Track which generations are actually
+   * expanded so `app-poke-group` can render its content lazily. */
+  onAccordionChange(value: unknown): void {
+    const list = Array.isArray(value)
+      ? value
+      : value === undefined || value === null
+        ? []
+        : [value];
+    const normalized = list.filter((entry): entry is string => typeof entry === 'string');
+
+    this.expandedGenerations = new Set(normalized);
   }
 
   async exportBundle(): Promise<void> {

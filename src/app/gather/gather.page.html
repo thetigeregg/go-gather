@@ -10,9 +10,12 @@
 </ion-header>
 
 <ion-content>
-  <ion-accordion-group [multiple]="true">
+  <ion-accordion-group [multiple]="true" (ionChange)="onAccordionChange($event.detail.value)">
     @for (generation of generationToPokemonMap; track generation.generationName) {
-      <app-poke-group [generation]="generation"></app-poke-group>
+      <app-poke-group
+        [generation]="generation"
+        [expanded]="expandedGenerations.has(generation.generationName)"
+      ></app-poke-group>
     }
   </ion-accordion-group>
 </ion-content>
