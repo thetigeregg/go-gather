@@ -9,7 +9,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
+<ion-content>
   <ion-accordion-group [multiple]="true">
     @for (generation of generationToPokemonMap; track generation.generationName) {
       <app-poke-group [generation]="generation" [userSettings]="userSettings"></app-poke-group>
