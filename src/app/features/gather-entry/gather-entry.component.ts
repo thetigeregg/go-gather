@@ -1,12 +1,5 @@
 import { Component, Input, inject } from '@angular/core';
-import {
-  IonButton,
-  IonButtons,
-  IonIcon,
-  IonItem,
-  IonLabel,
-  IonThumbnail,
-} from '@ionic/angular/standalone';
+import { IonIcon, IonItem, IonLabel, IonThumbnail } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { checkmarkCircle, sparkles } from 'ionicons/icons';
 import { CatalogEntry } from '@go-gather/shared';
@@ -17,7 +10,7 @@ const SPRITE_PLACEHOLDER_URL = '/assets/sprite-placeholder.png';
 @Component({
   selector: 'app-gather-entry',
   standalone: true,
-  imports: [IonItem, IonThumbnail, IonLabel, IonButtons, IonButton, IonIcon],
+  imports: [IonItem, IonThumbnail, IonLabel, IonIcon],
   templateUrl: './gather-entry.component.html',
   styleUrl: './gather-entry.component.scss',
 })
@@ -49,16 +42,7 @@ export class GatherEntryComponent {
     this.spriteSrc = SPRITE_PLACEHOLDER_URL;
   }
 
-  onCaughtButtonClick(event: Event): void {
-    event.stopPropagation();
-    this.toggleCaught();
-  }
-
   entryCardClicked(): void {
-    this.toggleCaught();
-  }
-
-  private toggleCaught(): void {
     const newCaughtState = !this.caught;
     this.caught = newCaughtState;
 

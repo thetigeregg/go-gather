@@ -10,9 +10,5 @@
 
   <ion-label>{{ entry.name }}</ion-label>
 
-  <ion-buttons slot="end">
-    <ion-button fill="clear" (click)="onCaughtButtonClick($event)">
-      <ion-icon slot="icon-only" [name]="caughtButtonIcon"></ion-icon>
-    </ion-button>
-  </ion-buttons>
+  <ion-icon slot="end" [name]="caughtButtonIcon" [color]="caught ? 'primary' : 'medium'"></ion-icon>
 </ion-item>

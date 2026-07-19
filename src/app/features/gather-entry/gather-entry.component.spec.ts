@@ -1,5 +1,4 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { vi } from 'vitest';
 import { CatalogEntry } from '@go-gather/shared';
 import { GatherEntryComponent } from './gather-entry.component';
 import { UserDataService } from '../../core/services/user-data.service';
@@ -102,18 +101,6 @@ describe('GatherEntryComponent', () => {
 
     component.entryCardClicked();
 
-    expect(component.caught).toBe(true);
-    expect(calls).toEqual([['bulbasaur-regular', true]]);
-  });
-
-  it('onCaughtButtonClick toggles caught state and stops propagation', () => {
-    component.entry = makeEntry();
-    const event = new Event('click');
-    const stopSpy = vi.spyOn(event, 'stopPropagation');
-
-    component.onCaughtButtonClick(event);
-
-    expect(stopSpy).toHaveBeenCalled();
     expect(component.caught).toBe(true);
     expect(calls).toEqual([['bulbasaur-regular', true]]);
   });
