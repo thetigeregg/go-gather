@@ -1,7 +1,6 @@
 import { Component, Input, OnChanges, OnDestroy, OnInit, inject } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { IonAccordion, IonItem, IonLabel } from '@ionic/angular/standalone';
-import { UserSettings } from '@go-gather/shared';
 import { Generation } from '../../core/services/filter.service';
 import { UserDataService } from '../../core/services/user-data.service';
 import { GatherPokemonComponent } from '../gather-pokemon/gather-pokemon.component';
@@ -17,7 +16,6 @@ export class PokeGroupComponent implements OnInit, OnChanges, OnDestroy {
   private readonly userDataService = inject(UserDataService);
 
   @Input() generation!: Generation;
-  @Input() userSettings!: UserSettings;
 
   countText = '';
 

@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
-import { CatalogEntry, DEFAULT_SETTINGS, UserSettings } from '@go-gather/shared';
+import { CatalogEntry } from '@go-gather/shared';
 import { GatherEntryComponent } from './gather-entry.component';
 import { UserDataService } from '../../core/services/user-data.service';
 
@@ -66,8 +66,6 @@ describe('GatherEntryComponent', () => {
 
     fixture = TestBed.createComponent(GatherEntryComponent);
     component = fixture.componentInstance;
-    component.userSettings = { ...DEFAULT_SETTINGS } satisfies UserSettings;
-    component.speciesName = 'Bulbasaur';
   });
 
   it('reads initial caught state from UserDataService when the entry is set', () => {
@@ -90,14 +88,11 @@ describe('GatherEntryComponent', () => {
     expect(component.spriteSrc).toBe('/assets/sprite-placeholder.png');
   });
 
-  it('picks the caught-button icon based on shiny/female/default', () => {
+  it('picks the caught-button icon based on shiny/default', () => {
     component.entry = makeEntry({ isShiny: true });
     expect(component.caughtButtonIcon).toBe('sparkles');
 
-    component.entry = makeEntry({ isShiny: false, isFemale: true });
-    expect(component.caughtButtonIcon).toBe('female');
-
-    component.entry = makeEntry({ isShiny: false, isFemale: false });
+    component.entry = makeEntry({ isShiny: false });
     expect(component.caughtButtonIcon).toBe('checkmark-circle');
   });
 

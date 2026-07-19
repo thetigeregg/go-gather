@@ -6,10 +6,7 @@
 
   <div class="poke-list" slot="content">
     @for (speciesGroup of generation.speciesList; track speciesGroup.speciesId) {
-      <app-gather-pokemon
-        [speciesGroup]="speciesGroup"
-        [userSettings]="userSettings"
-      ></app-gather-pokemon>
+      <app-gather-pokemon [speciesGroup]="speciesGroup"></app-gather-pokemon>
     }
   </div>
 </ion-accordion>

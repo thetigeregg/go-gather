@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
-import { CatalogEntry, DEFAULT_SETTINGS, UserSettings } from '@go-gather/shared';
+import { CatalogEntry } from '@go-gather/shared';
 import { PokeGroupComponent } from './poke-group.component';
 import { Generation } from '../../core/services/filter.service';
 import { UserDataService } from '../../core/services/user-data.service';
@@ -66,7 +66,6 @@ describe('PokeGroupComponent', () => {
 
     fixture = TestBed.createComponent(PokeGroupComponent);
     component = fixture.componentInstance;
-    component.userSettings = { ...DEFAULT_SETTINGS } satisfies UserSettings;
   });
 
   it('computes the caught/total count text on init', () => {
