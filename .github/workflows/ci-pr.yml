@@ -37,5 +37,57 @@ jobs:
       - name: Unit tests
         run: npm run test
 
+      - name: Upload frontend coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          files: ./coverage/app/lcov.info
+          flags: frontend
+          name: frontend-coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
+
       - name: Build
         run: npm run build -- --configuration production
+
+  ios_prod_build_validation:
+    name: iOS prod build validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate ios-prod Angular build
+        env:
+          IOS_BACKEND_ORIGIN_PROD: https://ci.example.test
+        run: npm run build:ios:prod
+
+  docker_build_validation:
+    name: Docker Build Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build server image (no push)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: server/Dockerfile
+          push: false
+          provenance: false

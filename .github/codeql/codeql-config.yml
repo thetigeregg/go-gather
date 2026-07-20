@@ -1,8 +1,11 @@
 name: Repo CodeQL config
 
-# Fastify routes are protected by global @fastify/rate-limit registration plus
-# per-route applyRouteRateLimit(...) usage, but js/missing-rate-limiting does not
-# recognize this repo's established pattern and produces false positives.
+# Ported from game-shelf, where Fastify routes are actually protected by
+# @fastify/rate-limit. server/ here has no rate-limiting yet (no
+# @fastify/rate-limit dependency), so js/missing-rate-limiting is a real,
+# currently-valid finding, not a false positive. Suppressed anyway as a
+# deliberate, accepted tradeoff rather than an oversight — revisit if/when
+# real rate-limiting is added to server/src/api.ts.
 query-filters:
   - exclude:
       id: js/missing-rate-limiting
