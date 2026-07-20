@@ -70,4 +70,11 @@
     (valuesChange)="userTagsChanged($event)"
     placeholder="Add a tag..."
   ></app-chip-list-input>
+
+  <h4 class="settings-section-header">Data</h4>
+  <p class="settings-hint">
+    Export a backup of your progress and settings, or import a previously exported backup.
+  </p>
+  <ion-button (click)="exportBundle()">Export</ion-button>
+  <ion-button (click)="triggerImport()">Import</ion-button>
 </ion-content>

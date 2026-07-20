@@ -7,22 +7,18 @@ import {
   IonContent,
   IonAccordionGroup,
   IonButtons,
-  IonButton,
   IonMenuButton,
   IonIcon,
-  ToastController,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { menu, filter } from 'ionicons/icons';
-import { ExportBundle, UserSettings } from '@go-gather/shared';
+import { UserSettings } from '@go-gather/shared';
 import { PokeDataService } from '../core/services/poke-data.service';
 import { UserDataService } from '../core/services/user-data.service';
 import { FilterService, Generation } from '../core/services/filter.service';
 import { SearchConfigService } from '../core/services/search-config.service';
 import { SyncService } from '../core/services/sync.service';
 import { PokeGroupComponent } from '../features/poke-group/poke-group.component';
-import { presentShareFile } from '../core/utils/share-file.util';
-import { pickJsonTextFile } from '../core/utils/pick-file.util';
 
 @Component({
   selector: 'app-gather',
@@ -35,7 +31,6 @@ import { pickJsonTextFile } from '../core/utils/pick-file.util';
     IonContent,
     IonAccordionGroup,
     IonButtons,
-    IonButton,
     IonMenuButton,
     IonIcon,
     PokeGroupComponent,
@@ -47,7 +42,6 @@ export class GatherPage implements OnInit {
   private readonly filterService = inject(FilterService);
   private readonly searchConfigService = inject(SearchConfigService);
   private readonly syncService = inject(SyncService);
-  private readonly toastController = inject(ToastController);
 
   generationToPokemonMap: Generation[] = [];
   userSettings!: UserSettings;
@@ -121,100 +115,6 @@ export class GatherPage implements OnInit {
     const normalized = list.filter((entry): entry is string => typeof entry === 'string');
 
     this.expandedGenerations = new Set(normalized);
-  }
-
-  async exportBundle(): Promise<void> {
-    const bundle = this.userDataService.exportBundle();
-
-    // Includes time-of-day (not just the date) so multiple exports taken
-    // the same day don't overwrite each other / are easy to tell apart.
-    const timestamp = new Date()
-      .toISOString()
-      .replace(/:/g, '-')
-      .replace(/\.\d+Z$/, '');
-
-    await presentShareFile({
-      content: JSON.stringify(bundle, null, 2),
-      filename: `go-gather-backup-${timestamp}.json`,
-      mimeType: 'application/json',
-    });
-  }
-
-  async triggerImport(): Promise<void> {
-    const outcome = await pickJsonTextFile();
-
-    if (outcome.status === 'cancelled') {
-      return;
-    }
-
-    try {
-      const bundle = this.parseExportBundle(JSON.parse(outcome.text));
-
-      this.userDataService.importBundle(bundle).subscribe({
-        next: () => {
-          this.userSettings = this.userDataService.getUserSettings();
-          this.generationToPokemonMap = this.filterService.groupPokemonByGeneration(
-            this.userSettings
-          );
-          this.updateHeaderText();
-          void this.showToast('Import complete.');
-        },
-        error: (err: unknown) => {
-          console.error('Failed to import data', err);
-          void this.showToast('Failed to import data.');
-        },
-      });
-    } catch (err) {
-      console.error('Failed to read import file', err);
-      await this.showToast('Failed to read import file.');
-    }
-  }
-
-  /** Accepts either the current bundle format or a bare progress-entry array
-   * from before excluded patterns were included in exports, so an older
-   * backup file can still be imported. */
-  private parseExportBundle(parsed: unknown): ExportBundle {
-    if (Array.isArray(parsed)) {
-      return {
-        version: 1,
-        exportedAt: new Date().toISOString(),
-        progress: parsed as ExportBundle['progress'],
-        excludedNamePatterns: this.userDataService.getUserSettings().excludedNamePatterns,
-        excludedDexNumbers: this.userDataService.getUserSettings().excludedDexNumbers,
-        excludedShinyDexNumbers: this.userDataService.getUserSettings().excludedShinyDexNumbers,
-        excludedShinyNamePatterns: this.userDataService.getUserSettings().excludedShinyNamePatterns,
-        userTags: this.userDataService.getUserSettings().userTags,
-        presetQueries: this.userDataService.getUserSettings().presetQueries,
-      };
-    }
-
-    if (parsed && typeof parsed === 'object' && Array.isArray((parsed as ExportBundle).progress)) {
-      const bundle = parsed as ExportBundle;
-      // The `as ExportBundle` cast above only satisfies the type checker —
-      // parsed JSON from an arbitrary import file has no actual runtime
-      // guarantee these fields exist, so the `??` fallbacks below are real
-      // safety, not dead code, despite what the static types imply.
-      /* eslint-disable @typescript-eslint/no-unnecessary-condition */
-      return {
-        version: 1,
-        exportedAt: bundle.exportedAt ?? new Date().toISOString(),
-        progress: bundle.progress,
-        excludedNamePatterns: bundle.excludedNamePatterns ?? [],
-        excludedDexNumbers: bundle.excludedDexNumbers ?? [],
-        excludedShinyDexNumbers: bundle.excludedShinyDexNumbers ?? [],
-        excludedShinyNamePatterns: bundle.excludedShinyNamePatterns ?? [],
-        userTags: bundle.userTags ?? [],
-        presetQueries: bundle.presetQueries ?? [],
-      };
-      /* eslint-enable @typescript-eslint/no-unnecessary-condition */
-    }
-
-    throw new Error('Unrecognized backup file format');
-  }
-
-  private async showToast(message: string): Promise<void> {
-    const toast = await this.toastController.create({ message, duration: 1500 });
-    await toast.present();
   }
 
   private updateHeaderText(): void {
