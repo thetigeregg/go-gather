@@ -90,3 +90,7 @@
 - 738ee08 chore: update @typescript-eslint packages to version 8.65.0
 - 845660c chore(ci): bump actions/setup-node from 6 to 7
 - 227e2c4 feat(images): cache sprites for offline use and add long-lived HTTP cache header
+
+## v0.3.1 - 2026-07-20
+
+- 45f234a chore(docker): bump node from 24.14.0-slim to 24.18.0-slim in /server
