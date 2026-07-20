@@ -78,3 +78,9 @@
 ## v0.1.4 - 2026-07-20
 
 - 8cfadbe chore: add step to select specific Xcode version in TestFlight workflow
+
+## v0.2.0 - 2026-07-20
+
+- 83dd25c ci: add codecov, docker build/dependabot coverage, iOS build validation
+- 964360a feat(ios): add OTA live-update mechanism and CI pipeline
+- 658b5f4 ci(ios): add Fastlane + TestFlight CI pipeline for phase 8
