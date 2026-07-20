@@ -1,4 +1,17 @@
+const base = require('@thetigeregg/ncu-config');
+
+const ANGULAR_MAJOR = 21;
+
+const isAngularPackage = (name) => name.startsWith('@angular/') || name === 'angular-eslint';
+
 module.exports = {
-  ...require('@thetigeregg/ncu-config'),
+  ...base,
   reject: (name) => name === 'typescript',
+  filterResults: (packageName, { upgradedVersionSemver }) => {
+    if (!isAngularPackage(packageName)) {
+      return true;
+    }
+
+    return parseInt(upgradedVersionSemver?.major, 10) === ANGULAR_MAJOR;
+  },
 };
