@@ -12,7 +12,7 @@ import {
   IonLabel,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { settings, pricetags, searchCircle } from 'ionicons/icons';
+import { cog, pricetags, searchCircle } from 'ionicons/icons';
 
 @Component({
   selector: 'app-nav-menu',
@@ -34,6 +34,6 @@ import { settings, pricetags, searchCircle } from 'ionicons/icons';
 })
 export class NavMenuComponent {
   constructor() {
-    addIcons({ settings, pricetags, searchCircle });
+    addIcons({ cog, pricetags, searchCircle });
   }
 }
