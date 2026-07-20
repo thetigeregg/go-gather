@@ -11,7 +11,7 @@
   @if (defaultConfig || shinyConfig) {
     <ion-card>
       <ion-card-header>
-        <ion-card-title>Search Strings</ion-card-title>
+        <ion-card-title>General</ion-card-title>
       </ion-card-header>
       <ion-card-content>
         <ion-accordion-group [multiple]="true">
@@ -26,24 +26,24 @@
     </ion-card>
   }
 
-  @if (altRegionConfigs) {
+  @if (genderConfigs) {
     <ion-card>
       <ion-card-header>
-        <ion-card-title>Alternate Region Search Strings</ion-card-title>
+        <ion-card-title>Gender</ion-card-title>
       </ion-card-header>
       <ion-card-content>
-        <app-multi-search-string [configs]="altRegionConfigs"></app-multi-search-string>
+        <app-multi-search-string [configs]="genderConfigs"></app-multi-search-string>
       </ion-card-content>
     </ion-card>
   }
 
-  @if (genderConfigs) {
+  @if (altRegionConfigs) {
     <ion-card>
       <ion-card-header>
-        <ion-card-title>Gender Search Strings</ion-card-title>
+        <ion-card-title>Alternate Regions</ion-card-title>
       </ion-card-header>
       <ion-card-content>
-        <app-multi-search-string [configs]="genderConfigs"></app-multi-search-string>
+        <app-multi-search-string [configs]="altRegionConfigs"></app-multi-search-string>
       </ion-card-content>
     </ion-card>
   }
