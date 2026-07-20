@@ -1,6 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
 import { Subject, of } from 'rxjs';
 import { DEFAULT_SETTINGS, UserSettings } from '@go-gather/shared';
+import { IonSearchbar } from '@ionic/angular/standalone';
 import { GatherPage } from './gather.page';
 import { PokeDataService } from '../core/services/poke-data.service';
 import { UserDataService } from '../core/services/user-data.service';
@@ -176,5 +178,17 @@ describe('GatherPage', () => {
 
     expect(groupPokemonByGenerationCalls).toHaveLength(callsBefore + 1);
     expect(component.headerText).toBe('Regular Pokedex (1/1)');
+  });
+
+  describe('focusSearch', () => {
+    it('focuses the header searchbar', () => {
+      fixture.detectChanges();
+      const setFocusSpy = vi.fn().mockResolvedValue(undefined);
+      component.searchbarRef = { setFocus: setFocusSpy } as unknown as IonSearchbar;
+
+      component.focusSearch();
+
+      expect(setFocusSpy).toHaveBeenCalled();
+    });
   });
 });

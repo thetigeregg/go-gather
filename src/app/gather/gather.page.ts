@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, ViewChild, inject } from '@angular/core';
 import { forkJoin, tap } from 'rxjs';
 import {
   IonHeader,
@@ -10,9 +10,11 @@ import {
   IonMenuButton,
   IonIcon,
   IonSearchbar,
+  IonFab,
+  IonFabButton,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { menu, filter } from 'ionicons/icons';
+import { menu, filter, search } from 'ionicons/icons';
 import { UserSettings } from '@go-gather/shared';
 import { PokeDataService } from '../core/services/poke-data.service';
 import { UserDataService } from '../core/services/user-data.service';
@@ -36,6 +38,8 @@ import { POKEDEX_TYPE_LABELS } from '../features/side-menu/side-menu.component';
     IonMenuButton,
     IonIcon,
     IonSearchbar,
+    IonFab,
+    IonFabButton,
     PokeGroupComponent,
   ],
 })
@@ -46,6 +50,8 @@ export class GatherPage implements OnInit {
   private readonly searchConfigService = inject(SearchConfigService);
   private readonly syncService = inject(SyncService);
 
+  @ViewChild('searchbar') searchbarRef?: IonSearchbar;
+
   generationToPokemonMap: Generation[] = [];
   visibleGenerations: Generation[] = [];
   userSettings!: UserSettings;
@@ -54,7 +60,7 @@ export class GatherPage implements OnInit {
   searchTerm = '';
 
   constructor() {
-    addIcons({ menu, filter });
+    addIcons({ menu, filter, search });
   }
 
   ngOnInit(): void {
@@ -123,6 +129,10 @@ export class GatherPage implements OnInit {
   onSearchChange(term: string): void {
     this.searchTerm = term;
     this.applySearchFilter();
+  }
+
+  focusSearch(): void {
+    void this.searchbarRef?.setFocus();
   }
 
   private setGenerations(generations: Generation[]): void {
