@@ -29,7 +29,7 @@
     <div class="preset-editor-group">
       @for (editableRule of editableGroup.rules; track editableRule.rule.id) {
         <div class="preset-editor-rule">
-          <ion-item>
+          <ion-item class="preset-editor-rule-category">
             <ion-select
               label="Category"
               labelPlacement="stacked"
@@ -42,7 +42,7 @@
             </ion-select>
           </ion-item>
 
-          <ion-item>
+          <ion-item class="preset-editor-rule-kind">
             <ion-select
               label="Kind"
               labelPlacement="stacked"
