@@ -1,0 +1,179 @@
+name: iOS TestFlight
+
+on:
+  workflow_run:
+    workflows:
+      - "Release & Publish"
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+concurrency:
+  group: go-gather-ios-testflight-${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect_changes:
+    name: Detect native-shell changes
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.check.outputs.should_deploy }}
+      matched_paths: ${{ steps.check.outputs.matched_paths }}
+      skipped_reason: ${{ steps.check.outputs.skipped_reason }}
+      release_tag: ${{ steps.check.outputs.release_tag }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Evaluate native-shell changes
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+            echo "matched_paths=workflow_dispatch" >> "$GITHUB_OUTPUT"
+            echo "skipped_reason=" >> "$GITHUB_OUTPUT"
+            echo "release_tag=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          CURRENT=$(git tag --list 'v*' --sort=-v:refname | head -1)
+          if [ -z "$CURRENT" ]; then
+            echo "::warning::No release tag found; deploying unconditionally."
+            echo "should_deploy=true" >> "$GITHUB_OUTPUT"
+            echo "matched_paths=no-tag-found" >> "$GITHUB_OUTPUT"
+            echo "skipped_reason=" >> "$GITHUB_OUTPUT"
+            echo "release_tag=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          PREV=$(git tag --list 'v*' --sort=-v:refname | awk -v cur="$CURRENT" '$0==cur {getline; print; exit}')
+
+          node scripts/ios-testflight-should-deploy.mjs \
+            --base "$PREV" \
+            --head "$CURRENT" \
+            --github-output "$GITHUB_OUTPUT"
+
+          echo "release_tag=$CURRENT" >> "$GITHUB_OUTPUT"
+
+  skip_summary:
+    name: Skip summary
+    needs:
+      - detect_changes
+    if: >-
+      (github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success') &&
+      needs.detect_changes.outputs.should_deploy != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write skip summary
+        run: |
+          {
+            echo "## iOS TestFlight skipped"
+            echo
+            echo "No native-shell changes were detected for this release tag."
+            echo
+            if [ -n "${{ needs.detect_changes.outputs.skipped_reason }}" ]; then
+              echo "${{ needs.detect_changes.outputs.skipped_reason }}"
+            fi
+            echo
+            echo "Use **workflow_dispatch** on iOS TestFlight to force a build when needed (for example signing retries)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  testflight:
+    name: Build and Upload App PROD
+    needs:
+      - detect_changes
+    if: needs.detect_changes.outputs.should_deploy == 'true'
+    runs-on: macos-15
+    timeout-minutes: 60
+    environment: production
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.detect_changes.outputs.release_tag || github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ".ruby-version"
+          bundler-cache: true
+          working-directory: ios
+
+      - name: Validate iOS deploy configuration
+        env:
+          IOS_BACKEND_ORIGIN_PROD: ${{ secrets.IOS_BACKEND_ORIGIN_PROD }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+        run: |
+          for required in \
+            IOS_BACKEND_ORIGIN_PROD \
+            APP_STORE_CONNECT_API_KEY_ID \
+            APP_STORE_CONNECT_API_ISSUER_ID \
+            APP_STORE_CONNECT_API_KEY \
+            MATCH_PASSWORD \
+            MATCH_GIT_BASIC_AUTHORIZATION
+          do
+            if [ -z "${!required}" ]; then
+              echo "$required is required for TestFlight deploy." >&2
+              exit 1
+            fi
+          done
+
+      - name: Validate App Store Connect app
+        working-directory: ios
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        run: bundle exec fastlane validate_asc_app
+
+      - name: Validate match signing assets
+        working-directory: ios
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+        run: bundle exec fastlane validate_match
+
+      - name: Upload to TestFlight
+        working-directory: ios
+        env:
+          IOS_BACKEND_ORIGIN_PROD: ${{ secrets.IOS_BACKEND_ORIGIN_PROD }}
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_API_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+        run: bundle exec fastlane deploy_testflight

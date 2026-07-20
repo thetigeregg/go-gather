@@ -10,7 +10,7 @@ Source docs live in the sibling repo: [`go-gather-next/docs/README.md`](../../go
 
 - [x] Resolved in [`OPEN-DECISIONS.md`](../../go-gather-next/docs/migration/OPEN-DECISIONS.md): bundle ID (`io.github.thetigeregg.gogather`, `.dev` suffix variant), dialogs-vs-pages (routed pages), bundled-vs-fetched catalog (**fetched**, deviating from the doc's bundled recommendation), keep-a-backend (**yes** — auto-resolves the `SearchTermData` duplication and npm-workspaces rows to "keep as-is" too)
 - [ ] Still open, not blocking Phase 1 but needed before Phase 10: hosting target, GHCR image publishing (now in scope since a backend is being kept)
-- [ ] Still open, not blocking Phase 1 but needed before Phase 8: Apple Developer team ID, match certs storage repo, App Store Connect API key
+- [ ] Still open, not blocking Phase 1 but needed before Phase 8's live validation: App Store Connect API key, `MATCH_PASSWORD`, `MATCH_GIT_BASIC_AUTHORIZATION` (team ID `6V392K7X46` and the `thetigeregg/go-gather-match-certs` storage repo are resolved — see [progress notes](progress/phase-8-testflight-ci.md))
 - [ ] Still open, low priority: web-build-or-iOS-only (Product), native E2E/Maestro, Vitest `.ui.spec.ts` split — none block any phase
 
 ## Phase 0 — Tooling Bootstrap
@@ -94,8 +94,8 @@ See [`MIGRATION-CHECKLIST.md` Phase 6](../../go-gather-next/docs/migration/MIGRA
 
 See [`MIGRATION-CHECKLIST.md` Phases 7 & 8](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-7--dev-workflow--ci) and [`CI-CD-AND-DEPLOY.md`](../../go-gather-next/docs/migration/CI-CD-AND-DEPLOY.md). Phase 0 above already covers the PR-gate/lint/format/commit tooling — this phase is what's left: native release pipeline.
 
-- [ ] Signing decisions resolved (team ID, match certs repo, ASC API key)
-- [ ] Fastlane (`Fastfile`, `Matchfile`, `Appfile`) + `ios-testflight.yml` with native-shell-change gating
+- [ ] Signing decisions resolved (team ID, match certs repo, ASC API key) — team ID and match certs repo resolved; ASC API key still pending, see [progress notes](progress/phase-8-testflight-ci.md)
+- [x] Fastlane (`Fastfile`, `Matchfile`, `Appfile`) + `ios-testflight.yml` with native-shell-change gating — see [progress notes](progress/phase-8-testflight-ci.md)
 - [ ] Validate lanes pass, then a real `deploy_testflight` run confirmed installable on a device
 
 ## Phase 9 — OTA Live-Update
