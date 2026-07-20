@@ -1,5 +1,13 @@
 import { Component, Input, inject } from '@angular/core';
-import { IonButton, IonIcon, IonTextarea, ToastController } from '@ionic/angular/standalone';
+import {
+  IonAccordion,
+  IonItem,
+  IonLabel,
+  IonButton,
+  IonIcon,
+  IonTextarea,
+  ToastController,
+} from '@ionic/angular/standalone';
 import { Clipboard } from '@capacitor/clipboard';
 import { addIcons } from 'ionicons';
 import { copyOutline } from 'ionicons/icons';
@@ -12,7 +20,7 @@ export interface SearchStringConfig {
 @Component({
   selector: 'app-search-string',
   standalone: true,
-  imports: [IonButton, IonIcon, IonTextarea],
+  imports: [IonAccordion, IonItem, IonLabel, IonButton, IonIcon, IonTextarea],
   templateUrl: './search-string.component.html',
   styleUrl: './search-string.component.scss',
 })
@@ -21,19 +29,16 @@ export class SearchStringComponent {
 
   @Input() config!: SearchStringConfig;
 
-  expanded = false;
-
   constructor() {
     addIcons({ copyOutline });
   }
 
-  async copy(): Promise<void> {
+  // Stops the click from bubbling to the accordion header, which would
+  // otherwise toggle expand/collapse at the same time as copying.
+  async copy(event: Event): Promise<void> {
+    event.stopPropagation();
     await Clipboard.write({ string: this.config.value });
     await this.showCopyToast();
-  }
-
-  toggleExpanded(): void {
-    this.expanded = !this.expanded;
   }
 
   private async showCopyToast(): Promise<void> {

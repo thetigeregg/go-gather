@@ -31,19 +31,13 @@ describe('SearchStringComponent', () => {
     component.config = { name: 'Default (Non-Shiny)', value: '!shiny&+bulbasaur' };
   });
 
-  it('toggleExpanded flips the expanded flag', () => {
-    expect(component.expanded).toBe(false);
+  it('copy stops the click from bubbling, writes the config value to the clipboard, and shows a toast', async () => {
+    const stopPropagationSpy = vi.fn();
+    const event = { stopPropagation: stopPropagationSpy } as unknown as Event;
 
-    component.toggleExpanded();
-    expect(component.expanded).toBe(true);
+    await component.copy(event);
 
-    component.toggleExpanded();
-    expect(component.expanded).toBe(false);
-  });
-
-  it('copy writes the config value to the clipboard and shows a toast', async () => {
-    await component.copy();
-
+    expect(stopPropagationSpy).toHaveBeenCalled();
     // eslint-disable-next-line @typescript-eslint/unbound-method -- mocked static method, not called unbound
     expect(Clipboard.write).toHaveBeenCalledWith({ string: '!shiny&+bulbasaur' });
     expect(createSpy).toHaveBeenCalledWith({

@@ -7,26 +7,44 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-  @if (defaultConfig) {
-    <app-search-string [config]="defaultConfig"></app-search-string>
-  }
-
-  @if (shinyConfig) {
-    <app-search-string [config]="shinyConfig"></app-search-string>
+<ion-content>
+  @if (defaultConfig || shinyConfig) {
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Search Strings</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-accordion-group [multiple]="true">
+          @if (defaultConfig) {
+            <app-search-string [config]="defaultConfig"></app-search-string>
+          }
+          @if (shinyConfig) {
+            <app-search-string [config]="shinyConfig"></app-search-string>
+          }
+        </ion-accordion-group>
+      </ion-card-content>
+    </ion-card>
   }
 
   @if (altRegionConfigs) {
-    <app-multi-search-string
-      [configs]="altRegionConfigs"
-      groupName="Alternate Region Search Strings"
-    ></app-multi-search-string>
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Alternate Region Search Strings</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <app-multi-search-string [configs]="altRegionConfigs"></app-multi-search-string>
+      </ion-card-content>
+    </ion-card>
   }
 
   @if (genderConfigs) {
-    <app-multi-search-string
-      [configs]="genderConfigs"
-      groupName="Gender Search Strings"
-    ></app-multi-search-string>
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Gender Search Strings</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <app-multi-search-string [configs]="genderConfigs"></app-multi-search-string>
+      </ion-card-content>
+    </ion-card>
   }
 </ion-content>

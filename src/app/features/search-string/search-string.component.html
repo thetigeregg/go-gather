@@ -1,17 +1,13 @@
-<div class="search-string-container">
-  <div class="search-string-header">
-    <label>{{ config.name }}</label>
-    <ion-button size="small" (click)="copy()">
+<ion-accordion [value]="config.name">
+  <ion-item slot="header" color="light">
+    <ion-label>{{ config.name }}</ion-label>
+    <ion-button slot="end" size="small" (click)="copy($event)">
       <ion-icon slot="start" name="copy-outline"></ion-icon>
       Copy
     </ion-button>
-  </div>
+  </ion-item>
 
-  <ion-button fill="clear" size="small" (click)="toggleExpanded()">
-    {{ expanded ? 'Hide' : 'Show' }} search string
-  </ion-button>
-
-  @if (expanded) {
+  <div class="ion-padding" slot="content">
     <ion-textarea [readonly]="true" [autoGrow]="true" [value]="config.value"></ion-textarea>
-  }
-</div>
+  </div>
+</ion-accordion>

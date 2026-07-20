@@ -20,8 +20,7 @@ describe('MultiSearchStringComponent', () => {
     component = fixture.componentInstance;
   });
 
-  it('accepts the configs and groupName inputs', () => {
-    component.groupName = 'Gender Search Strings';
+  it('accepts the configs input', () => {
     component.configs = [
       { name: 'Male (Non-Shiny)', value: 'male-string' },
       { name: 'Female (Non-Shiny)', value: 'female-string' },

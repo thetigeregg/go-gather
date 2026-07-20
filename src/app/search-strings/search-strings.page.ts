@@ -6,6 +6,11 @@ import {
   IonContent,
   IonButtons,
   IonBackButton,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardContent,
+  IonAccordionGroup,
   ViewWillEnter,
 } from '@ionic/angular/standalone';
 import { PokedexType } from '@go-gather/shared';
@@ -50,6 +55,11 @@ const SHINY_LABELS: Record<PokedexType, string> = {
     IonContent,
     IonButtons,
     IonBackButton,
+    IonCard,
+    IonCardHeader,
+    IonCardTitle,
+    IonCardContent,
+    IonAccordionGroup,
     SearchStringComponent,
     MultiSearchStringComponent,
   ],
