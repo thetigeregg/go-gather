@@ -53,3 +53,11 @@
 - 1307d4a fix(devx): restore hook perms and repo scope after template sync
 - 998aa84 feat(tests): refactor component tests to use TestBed.overrideComponent for template handling
 - 498dcab Initial commit
+
+## v0.1.1 - 2026-07-20
+
+- 2eebdc7 refactor(config): update packageDirs comment
+- 196554e refactor(devx.config): add packageDirs to configuration for improved project structure
+- 8aca780 chore(dependencies): update zone.js and various devDependencies for improved compatibility
+- 5ad7ef1 refactor(ncu-config): enhance Angular package detection to include '@angular-devkit/'
+- 42a777b refactor(ncu-config): enhance Angular package filtering and update dependencies
