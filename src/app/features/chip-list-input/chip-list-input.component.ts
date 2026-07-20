@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { IonChip, IonIcon, IonInput, IonItem } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { close } from 'ionicons/icons';
+import { closeCircle } from 'ionicons/icons';
 
 /**
  * Free-text add/remove chip list — used for the settings page's excluded
@@ -26,7 +26,7 @@ export class ChipListInputComponent {
   draft = '';
 
   constructor() {
-    addIcons({ close });
+    addIcons({ closeCircle });
   }
 
   addFromDraft(): void {
