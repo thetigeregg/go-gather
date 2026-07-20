@@ -176,9 +176,15 @@ export function buildApp() {
     origin: ['http://localhost:4200', 'capacitor://localhost'],
   });
 
+  // Sprite filenames are content-stable — sync.ts's downloadImages() skips
+  // re-downloading a file that already exists, since sprites are immutable
+  // per filename — so it's safe to tell the browser to cache them forever.
   app.register(staticPlugin, {
     root: join(__dirname, '..', 'data', 'images'),
     prefix: '/images/',
+    setHeaders: (reply) => {
+      reply.header('Cache-Control', 'public, max-age=31536000, immutable');
+    },
   });
 
   app.register(staticPlugin, {
