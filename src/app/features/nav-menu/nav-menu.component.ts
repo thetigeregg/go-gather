@@ -10,6 +10,7 @@ import {
   IonItem,
   IonIcon,
   IonLabel,
+  IonMenuToggle,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { cog, pricetags, searchCircle } from 'ionicons/icons';
@@ -28,6 +29,7 @@ import { cog, pricetags, searchCircle } from 'ionicons/icons';
     IonItem,
     IonIcon,
     IonLabel,
+    IonMenuToggle,
   ],
   templateUrl: './nav-menu.component.html',
   styleUrl: './nav-menu.component.scss',
