@@ -1,5 +1,6 @@
 export default {
   projectName: 'go-gather',
+  packageDirs: ['.', 'server', 'shared'],
   editor: {
     command: 'code',
     args: ['--profile', 'Ionic'],
