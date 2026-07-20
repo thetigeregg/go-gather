@@ -9,8 +9,11 @@ import {
   IonButtons,
   IonButton,
   IonMenuButton,
+  IonIcon,
   ToastController,
 } from '@ionic/angular/standalone';
+import { addIcons } from 'ionicons';
+import { menu, filter } from 'ionicons/icons';
 import { ExportBundle, UserSettings } from '@go-gather/shared';
 import { PokeDataService } from '../core/services/poke-data.service';
 import { UserDataService } from '../core/services/user-data.service';
@@ -34,6 +37,7 @@ import { pickJsonTextFile } from '../core/utils/pick-file.util';
     IonButtons,
     IonButton,
     IonMenuButton,
+    IonIcon,
     PokeGroupComponent,
   ],
 })
@@ -49,6 +53,10 @@ export class GatherPage implements OnInit {
   userSettings!: UserSettings;
   headerText = '';
   expandedGenerations = new Set<string>();
+
+  constructor() {
+    addIcons({ menu, filter });
+  }
 
   ngOnInit(): void {
     this.userSettings = this.userDataService.getUserSettings();

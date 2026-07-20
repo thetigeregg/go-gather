@@ -6,91 +6,53 @@
   </ion-header>
 
   <ion-content>
-    <ion-accordion-group
-      [multiple]="true"
-      [value]="openSections"
-      (ionChange)="onAccordionChange($event.detail.value)"
-    >
-      <ion-accordion value="pokedexType">
-        <ion-item slot="header" color="light">
-          <ion-label>{{ pokedexTypeHeader }}</ion-label>
-        </ion-item>
-        <ion-list slot="content">
-          <ion-radio-group
-            [value]="userSettings.pokedexType"
-            (ionChange)="onPokedexTypeChange($event.detail.value)"
-          >
-            @for (option of pokedexTypeOptions; track option.value) {
-              <ion-item>
-                <ion-radio [value]="option.value">{{ option.label }}</ion-radio>
-              </ion-item>
-            }
-          </ion-radio-group>
-        </ion-list>
-      </ion-accordion>
-
-      <ion-accordion value="shinyFilter">
-        <ion-item slot="header" color="light">
-          <ion-label>{{ shinyFilterHeader }}</ion-label>
-        </ion-item>
-        <ion-list slot="content">
-          <ion-radio-group
-            [value]="userSettings.shinyFilter"
-            (ionChange)="onShinyFilterChange($event.detail.value)"
-          >
-            @for (option of shinyFilterOptions; track option.value) {
-              <ion-item>
-                <ion-radio [value]="option.value">{{ option.label }}</ion-radio>
-              </ion-item>
-            }
-          </ion-radio-group>
-        </ion-list>
-      </ion-accordion>
-
-      <ion-accordion value="regionFilter">
-        <ion-item slot="header" color="light">
-          <ion-label>{{ regionFilterHeader }}</ion-label>
-        </ion-item>
-        <ion-list slot="content">
-          <ion-radio-group
-            [value]="userSettings.regionFilter"
-            (ionChange)="onRegionFilterChange($event.detail.value)"
-          >
-            @for (option of regionFilterOptions; track option.value) {
-              <ion-item>
-                <ion-radio [value]="option.value">{{ option.label }}</ion-radio>
-              </ion-item>
-            }
-          </ion-radio-group>
-        </ion-list>
-      </ion-accordion>
-
-      <ion-accordion value="options">
-        <ion-item slot="header" color="light">
-          <ion-label>Options</ion-label>
-        </ion-item>
-        <ion-list slot="content">
-          @for (option of toggleOptions; track option.label) {
-            <ion-item [title]="option.tooltip">
-              <ion-toggle [checked]="option.isOn" (ionChange)="option.command()">
-                {{ option.label }}
-              </ion-toggle>
-            </ion-item>
+    <ion-list>
+      <ion-item lines="full">
+        <ion-select
+          label="Pokedex Type"
+          labelPlacement="stacked"
+          [value]="userSettings.pokedexType"
+          (ionChange)="onPokedexTypeChange($event.detail.value)"
+        >
+          @for (option of pokedexTypeOptions; track option.value) {
+            <ion-select-option [value]="option.value">{{ option.label }}</ion-select-option>
           }
-        </ion-list>
-      </ion-accordion>
+        </ion-select>
+      </ion-item>
 
-      <ion-accordion value="utilities">
-        <ion-item slot="header" color="light">
-          <ion-label>Utilities</ion-label>
+      <ion-item lines="full">
+        <ion-select
+          label="Shiny Filter"
+          labelPlacement="stacked"
+          [value]="userSettings.shinyFilter"
+          (ionChange)="onShinyFilterChange($event.detail.value)"
+        >
+          @for (option of shinyFilterOptions; track option.value) {
+            <ion-select-option [value]="option.value">{{ option.label }}</ion-select-option>
+          }
+        </ion-select>
+      </ion-item>
+
+      @for (option of toggleOptions; track option.label) {
+        <ion-item lines="full" [title]="option.tooltip">
+          <ion-toggle [checked]="option.isOn" (ionChange)="option.command()">
+            {{ option.label }}
+          </ion-toggle>
         </ion-item>
-        <ion-list slot="content">
-          <ion-item button routerLink="/search-strings">Search Strings</ion-item>
-          <ion-item button routerLink="/preset-queries">Preset Queries</ion-item>
-        </ion-list>
-      </ion-accordion>
-    </ion-accordion-group>
+      }
 
-    <ion-item button routerLink="/settings">Settings</ion-item>
+      <ion-item lines="full">
+        <ion-select
+          label="Region Filter"
+          labelPlacement="stacked"
+          [value]="userSettings.regionFilter"
+          (ionChange)="onRegionFilterChange($event.detail.value)"
+        >
+          @for (option of regionFilterOptions; track option.value) {
+            <ion-select-option [value]="option.value">{{ option.label }}</ion-select-option>
+          }
+        </ion-select>
+      </ion-item>
+    </ion-list>
   </ion-content>
 </ion-menu>
