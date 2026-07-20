@@ -1,0 +1,55 @@
+# Changelog
+
+## v0.1.0 - 2026-07-20
+
+- 4afaf3b refactor(preset-queries): implement copy functionality with toast notification for clipboard actions
+- cac169b refactor(toasts): update toast position to 'bottom' for consistency across components
+- 2815933 refactor(preset-queries): update rule item classes for better styling and organization
+- 99b9228 refactor(preset-queries): enhance UI with save button and improve layout for better usability
+- 298888c refactor(preset-queries): enhance UI with ion-cards and accordions for better organization
+- cbffedf refactor(search-strings): update card titles and configurations for clarity
+- 8989f5b refactor(search-strings): restructure into ion-cards with accordions
+- d200613 fix(chip-list-input): update close icon to close-circle for better visual consistency
+- 72076ee style(chip-list-input): adjust padding for ion-item and chip list
+- f7fdf9d style(settings): tighten spacing, add icons to data buttons
+- 6936de3 refactor(settings): restructure settings items as ion-cards
+- 1f1c0b1 feat(gather): add fab to focus header search
+- 902358f feat(gather): add searchbar toolbar to filter pokemon by name
+- b83828e fix(side-menu): target end menu for filter panel done button
+- 7a76faf feat(gather): show selected pokedex in header, add filter menu done button
+- 22d93fe feat(settings): add export and import functionality for user progress and settings
+- 1b185d7 style(theme): update primary color variables for improved theme consistency
+- 5fd19d4 fix(nav-menu): wrap menu items in ion-menu-toggle for better functionality
+- 142cd1a fix(nav-menu): update icon imports and reorder menu items
+- 0ab9a28 refactor(ui): split side menu into filters and nav menus
+- f8db27c style(gather): adjust margins for gather poke card and add padding to poke group list
+- 4f7b0d6 style(gather): tighten card header vertical padding
+- df9977d style(gather): move card divider from subtitle to list top border
+- 16cabd1 style(gather): use default card subtitle for pokemon header
+- 148307b style(gather): color and shrink entry catch icon by state
+- da14754 fix(gather): refresh catalog after sync and lazy-render accordion content
+- 517b8ac fix: update design
+- e1df5b9 feat(theme): override primary color and apply to page header
+- 1990c36 feat(gather): float generation counter to header end slot
+- 1b9f709 fix(gather): remove padding on page content
+- 3b99708 fix(gather): remove padding on accordion group content
+- dec828a feat(ios): add angular.json build configs and env-file layering
+- dbb34eb fix(ios): enable CapacitorHttp for native networking, add device signing
+- 45fa045 fix(server): change API host to 0.0.0.0 for external access
+- f603871 feat(ios): add dual dev/prod Xcode targets with signing scaffolding
+- 9715af5 feat(storage): add SqliteStorageEngine and ImageFileStore for iOS
+- 7b8609a fix(bootstrap): load search config before first render
+- 04e0013 feat(gather): rebuild export/import via capacitor plugins
+- 86d6849 feat(preset-queries): rebuild preset query builder as routed pages
+- dcc16a6 feat(search-strings): rebuild search strings page with clipboard copy
+- 66ae9cd feat(menu): rebuild side menu as Ionic filter drawer
+- f3cbf47 feat(menu): rebuild side menu as Ionic filter drawer
+- 25d7579 feat(gather): rebuild catalog grid on Ionic, fix bootstrap CD gap
+- 29ec775 feat(services): port domain services onto StorageEngine
+- b8a6947 feat(sync): add outbox-based local-first sync
+- 7635214 feat(search-engine): port search query engine with full test coverage
+- 6d8fa06 feat(storage): add StorageEngine abstraction with Dexie web engine
+- 5b78729 feat(app): scaffold routed page structure for Phase 1
+- 1307d4a fix(devx): restore hook perms and repo scope after template sync
+- 998aa84 feat(tests): refactor component tests to use TestBed.overrideComponent for template handling
+- 498dcab Initial commit
