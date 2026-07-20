@@ -4,11 +4,14 @@
       <ion-back-button defaultHref="/preset-queries"></ion-back-button>
     </ion-buttons>
     <ion-title>{{ pageTitle }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button [disabled]="!name" (click)="saveClicked()">Save</ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="ion-padding">
-  <ion-item>
+  <ion-item lines="none" class="preset-editor-name">
     <ion-input
       label="Name"
       labelPlacement="stacked"
@@ -204,24 +207,28 @@
             }
           }
 
-          <ion-item>
+          <ion-item class="preset-editor-rule-negate">
             <ion-toggle [(ngModel)]="editableRule.rule.negate" (ngModelChange)="updatePreview()">
               Negate
             </ion-toggle>
           </ion-item>
 
-          <ion-button fill="clear" color="danger" (click)="removeRule(editableGroup, editableRule)">
-            <ion-icon slot="icon-only" name="trash"></ion-icon>
+          <ion-button
+            class="preset-editor-rule-delete"
+            fill="clear"
+            color="danger"
+            (click)="removeRule(editableGroup, editableRule)"
+          >
+            <ion-icon slot="start" name="trash"></ion-icon>
+            Delete Rule
           </ion-button>
         </div>
       }
 
       <div class="preset-editor-group-actions">
-        <ion-button size="small" fill="outline" (click)="addRule(editableGroup)">
-          Add Rule
-        </ion-button>
+        <ion-button fill="outline" (click)="addRule(editableGroup)">Add Rule</ion-button>
         @if (groups.length > 1) {
-          <ion-button size="small" fill="clear" color="danger" (click)="removeGroup(editableGroup)">
+          <ion-button fill="clear" color="danger" (click)="removeGroup(editableGroup)">
             Remove Group
           </ion-button>
         }
@@ -230,7 +237,7 @@
   }
 
   <div class="preset-editor-add-group">
-    <ion-button size="small" (click)="addGroup()">Add Group (OR)</ion-button>
+    <ion-button (click)="addGroup()">Add Group (OR)</ion-button>
   </div>
 
   <div class="preset-editor-preview">
@@ -247,9 +254,4 @@
       expect this preset to only match its first group's results in-game.
     </div>
   }
-
-  <div class="preset-editor-footer">
-    <ion-button fill="outline" (click)="cancelClicked()">Cancel</ion-button>
-    <ion-button [disabled]="!name" (click)="saveClicked()">Save</ion-button>
-  </div>
 </ion-content>

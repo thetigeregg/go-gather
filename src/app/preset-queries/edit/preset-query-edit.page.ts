@@ -433,10 +433,6 @@ export class PresetQueryEditPage implements ViewWillEnter {
     void this.router.navigate(['/preset-queries']);
   }
 
-  cancelClicked(): void {
-    void this.router.navigate(['/preset-queries']);
-  }
-
   private buildPresetQuery(): PresetQuery {
     return {
       id: this.preset?.id ?? newId(),

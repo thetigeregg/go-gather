@@ -346,17 +346,6 @@ describe('PresetQueryEditPage', () => {
   });
 
   describe('save/cancel', () => {
-    it('cancelClicked navigates back to the list without writing anything', () => {
-      routeId = 'new';
-      setUp();
-      component.ionViewWillEnter();
-
-      component.cancelClicked();
-
-      expect(navigateSpy).toHaveBeenCalledWith(['/preset-queries']);
-      expect(updateUserSettingsCalls).toHaveLength(0);
-    });
-
     it('saveClicked appends a new preset and navigates back', () => {
       routeId = 'new';
       setUp();

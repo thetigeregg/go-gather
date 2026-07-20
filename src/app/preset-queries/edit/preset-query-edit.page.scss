@@ -1,3 +1,8 @@
+.preset-editor-name {
+  --padding-start: 0;
+  --inner-padding-start: 0;
+}
+
 .preset-editor-or-divider {
   text-align: center;
   font-weight: 600;
@@ -24,6 +29,15 @@
   ion-item {
     flex: 1 1 140px;
     min-width: 140px;
+  }
+
+  .preset-editor-rule-negate {
+    flex-basis: 100%;
+  }
+
+  .preset-editor-rule-delete {
+    flex-basis: 100%;
+    // margin: 0;
   }
 }
 
@@ -63,11 +77,4 @@
   padding: 16px;
   margin-bottom: 16px;
   font-size: 0.85rem;
-}
-
-.preset-editor-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 16px;
-  padding-bottom: 24px;
 }
