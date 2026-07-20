@@ -10,7 +10,7 @@ Source docs live in the sibling repo: [`go-gather-next/docs/README.md`](../../go
 
 - [x] Resolved in [`OPEN-DECISIONS.md`](../../go-gather-next/docs/migration/OPEN-DECISIONS.md): bundle ID (`io.github.thetigeregg.gogather`, `.dev` suffix variant), dialogs-vs-pages (routed pages), bundled-vs-fetched catalog (**fetched**, deviating from the doc's bundled recommendation), keep-a-backend (**yes** — auto-resolves the `SearchTermData` duplication and npm-workspaces rows to "keep as-is" too)
 - [ ] Still open, not blocking Phase 1 but needed before Phase 10: hosting target, GHCR image publishing (now in scope since a backend is being kept)
-- [ ] Still open, not blocking Phase 1 but needed before Phase 8's live validation: App Store Connect API key, `MATCH_PASSWORD`, `MATCH_GIT_BASIC_AUTHORIZATION` (team ID `6V392K7X46` and the `thetigeregg/go-gather-match-certs` storage repo are resolved — see [progress notes](progress/phase-8-testflight-ci.md))
+- [x] Resolved before Phase 8's live validation: App Store Connect API key, `MATCH_PASSWORD`, `MATCH_GIT_BASIC_AUTHORIZATION`, team ID `6V392K7X46`, `thetigeregg/go-gather-match-certs` storage repo — see [progress notes](progress/phase-8-testflight-ci.md)
 - [ ] Still open, low priority: web-build-or-iOS-only (Product), native E2E/Maestro, Vitest `.ui.spec.ts` split — none block any phase
 
 ## Phase 0 — Tooling Bootstrap
@@ -94,9 +94,9 @@ See [`MIGRATION-CHECKLIST.md` Phase 6](../../go-gather-next/docs/migration/MIGRA
 
 See [`MIGRATION-CHECKLIST.md` Phases 7 & 8](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-7--dev-workflow--ci) and [`CI-CD-AND-DEPLOY.md`](../../go-gather-next/docs/migration/CI-CD-AND-DEPLOY.md). Phase 0 above already covers the PR-gate/lint/format/commit tooling — this phase is what's left: native release pipeline.
 
-- [ ] Signing decisions resolved (team ID, match certs repo, ASC API key) — team ID and match certs repo resolved; ASC API key still pending, see [progress notes](progress/phase-8-testflight-ci.md)
+- [x] Signing decisions resolved (team ID, match certs repo, ASC API key) — see [progress notes](progress/phase-8-testflight-ci.md)
 - [x] Fastlane (`Fastfile`, `Matchfile`, `Appfile`) + `ios-testflight.yml` with native-shell-change gating — see [progress notes](progress/phase-8-testflight-ci.md)
-- [ ] Validate lanes pass, then a real `deploy_testflight` run confirmed installable on a device
+- [x] Validate lanes pass, then a real `deploy_testflight` run confirmed installable on a device — `validate_asc_app`/`validate_match`/`deploy_testflight` all succeeded via `workflow_dispatch`, real build uploaded to TestFlight (App Store Connect app 6792799100); see [progress notes](progress/phase-8-testflight-ci.md)
 
 ## Phase 9 — OTA Live-Update
 
@@ -118,5 +118,5 @@ Applies — a live backend is being kept (resolved, see Open Decisions gate abov
 - [x] Every item in [`current/FUNCTIONALITY.md`](../../go-gather-next/docs/current/FUNCTIONALITY.md) has a working equivalent, verified by manual walkthrough — see [progress notes](progress/phase-5-full-parity-verification.md)
 - [x] `StorageEngine` contract tests pass against both Dexie and SQLite engines — see [progress notes](progress/phase-6-sqlite-storage.md)
 - [ ] `search-engine/` has full unit test coverage
-- [ ] A TestFlight build has been successfully uploaded and installed on a real device
+- [ ] A TestFlight build has been successfully uploaded and installed on a real device — upload confirmed (see [progress notes](progress/phase-8-testflight-ci.md)); device install still needs manual confirmation via the TestFlight app
 - [ ] OTA live-update has been exercised at least once end-to-end
