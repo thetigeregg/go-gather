@@ -1,3 +1,8 @@
+ion-item {
+  --inner-padding-start: 0;
+  --padding-start: 0;
+}
+
 ion-input {
   --padding-start: 0;
 }
@@ -6,6 +11,7 @@ ion-input {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  padding-top: 12px;
 }
 
 ion-chip ion-icon {
