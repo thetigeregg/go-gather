@@ -2,6 +2,11 @@
   width: 100%;
 }
 
+ion-card-header {
+  padding-top: 14px;
+  padding-bottom: 8px;
+}
+
 ion-list {
   border-top: 0.55px solid var(--ion-item-border-color, var(--ion-border-color, #c8c7cc));
 }
