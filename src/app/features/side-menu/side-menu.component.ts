@@ -10,11 +10,14 @@ import {
   IonSelect,
   IonSelectOption,
   IonToggle,
+  IonFooter,
+  IonButton,
+  IonMenuToggle,
 } from '@ionic/angular/standalone';
 import { PokedexType, RegionFilter, ShinyFilter, UserSettings } from '@go-gather/shared';
 import { UserDataService } from '../../core/services/user-data.service';
 
-const POKEDEX_TYPE_LABELS: Record<PokedexType, string> = {
+export const POKEDEX_TYPE_LABELS: Record<PokedexType, string> = {
   regular: 'Regular Pokedex',
   mega: 'Mega Pokedex',
   max: 'GMax Pokedex',
@@ -95,6 +98,9 @@ interface ToggleOption {
     IonSelect,
     IonSelectOption,
     IonToggle,
+    IonFooter,
+    IonButton,
+    IonMenuToggle,
   ],
   templateUrl: './side-menu.component.html',
   styleUrl: './side-menu.component.scss',

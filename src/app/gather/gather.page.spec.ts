@@ -115,7 +115,7 @@ describe('GatherPage', () => {
     fixture.detectChanges();
 
     expect(component.generationToPokemonMap).toEqual(generations);
-    expect(component.headerText).toBe('GO Gather (0/1)');
+    expect(component.headerText).toBe('Regular Pokedex (0/1)');
     expect(groupPokemonByGenerationCalls).toHaveLength(1);
   });
 
@@ -135,7 +135,7 @@ describe('GatherPage', () => {
 
     progressChange$.next();
     expect(groupPokemonByGenerationCalls).toHaveLength(callsBefore);
-    expect(component.headerText).toBe('GO Gather (0/1)');
+    expect(component.headerText).toBe('Regular Pokedex (0/1)');
 
     userSettings = { ...userSettings, showUncaughtOnly: true };
     component.userSettings = userSettings;
@@ -143,6 +143,6 @@ describe('GatherPage', () => {
     progressChange$.next();
 
     expect(groupPokemonByGenerationCalls).toHaveLength(callsBefore + 1);
-    expect(component.headerText).toBe('GO Gather (1/1)');
+    expect(component.headerText).toBe('Regular Pokedex (1/1)');
   });
 });

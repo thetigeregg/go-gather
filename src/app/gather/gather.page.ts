@@ -19,6 +19,7 @@ import { FilterService, Generation } from '../core/services/filter.service';
 import { SearchConfigService } from '../core/services/search-config.service';
 import { SyncService } from '../core/services/sync.service';
 import { PokeGroupComponent } from '../features/poke-group/poke-group.component';
+import { POKEDEX_TYPE_LABELS } from '../features/side-menu/side-menu.component';
 
 @Component({
   selector: 'app-gather',
@@ -123,7 +124,8 @@ export class GatherPage implements OnInit {
     );
     const total = entries.length;
     const caught = entries.filter((entry) => this.userDataService.getItemState(entry.id)).length;
+    const pokedexLabel = POKEDEX_TYPE_LABELS[this.userSettings.pokedexType];
 
-    this.headerText = `GO Gather (${String(caught)}/${String(total)})`;
+    this.headerText = `${pokedexLabel} (${String(caught)}/${String(total)})`;
   }
 }
