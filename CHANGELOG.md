@@ -84,3 +84,9 @@
 - 83dd25c ci: add codecov, docker build/dependabot coverage, iOS build validation
 - 964360a feat(ios): add OTA live-update mechanism and CI pipeline
 - 658b5f4 ci(ios): add Fastlane + TestFlight CI pipeline for phase 8
+
+## v0.3.0 - 2026-07-20
+
+- 738ee08 chore: update @typescript-eslint packages to version 8.65.0
+- 845660c chore(ci): bump actions/setup-node from 6 to 7
+- 227e2c4 feat(images): cache sprites for offline use and add long-lived HTTP cache header
