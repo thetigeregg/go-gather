@@ -115,8 +115,40 @@ describe('GatherPage', () => {
     fixture.detectChanges();
 
     expect(component.generationToPokemonMap).toEqual(generations);
+    expect(component.visibleGenerations).toEqual(generations);
     expect(component.headerText).toBe('Regular Pokedex (0/1)');
     expect(groupPokemonByGenerationCalls).toHaveLength(1);
+  });
+
+  describe('onSearchChange', () => {
+    it('narrows visibleGenerations to species matching the search term', () => {
+      fixture.detectChanges();
+
+      component.onSearchChange('bulba');
+
+      expect(component.visibleGenerations).toEqual(generations);
+
+      component.onSearchChange('charmander');
+
+      expect(component.visibleGenerations).toEqual([]);
+    });
+
+    it('does not affect the header count, which stays scoped to the full list', () => {
+      fixture.detectChanges();
+
+      component.onSearchChange('charmander');
+
+      expect(component.headerText).toBe('Regular Pokedex (0/1)');
+    });
+
+    it('restores the full list when the search term is cleared', () => {
+      fixture.detectChanges();
+
+      component.onSearchChange('charmander');
+      component.onSearchChange('');
+
+      expect(component.visibleGenerations).toEqual(generations);
+    });
   });
 
   it('re-filters and recomputes the header when user settings change', () => {

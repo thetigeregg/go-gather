@@ -12,11 +12,18 @@
       </ion-menu-button>
     </ion-buttons>
   </ion-toolbar>
+  <ion-toolbar color="primary">
+    <ion-searchbar
+      placeholder="Search Pokémon"
+      [value]="searchTerm"
+      (ionInput)="onSearchChange($event.detail.value ?? '')"
+    ></ion-searchbar>
+  </ion-toolbar>
 </ion-header>
 
 <ion-content>
   <ion-accordion-group [multiple]="true" (ionChange)="onAccordionChange($event.detail.value)">
-    @for (generation of generationToPokemonMap; track generation.generationName) {
+    @for (generation of visibleGenerations; track generation.generationName) {
       <app-poke-group
         [generation]="generation"
         [expanded]="expandedGenerations.has(generation.generationName)"

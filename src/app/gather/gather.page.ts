@@ -9,6 +9,7 @@ import {
   IonButtons,
   IonMenuButton,
   IonIcon,
+  IonSearchbar,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { menu, filter } from 'ionicons/icons';
@@ -34,6 +35,7 @@ import { POKEDEX_TYPE_LABELS } from '../features/side-menu/side-menu.component';
     IonButtons,
     IonMenuButton,
     IonIcon,
+    IonSearchbar,
     PokeGroupComponent,
   ],
 })
@@ -45,9 +47,11 @@ export class GatherPage implements OnInit {
   private readonly syncService = inject(SyncService);
 
   generationToPokemonMap: Generation[] = [];
+  visibleGenerations: Generation[] = [];
   userSettings!: UserSettings;
   headerText = '';
   expandedGenerations = new Set<string>();
+  searchTerm = '';
 
   constructor() {
     addIcons({ menu, filter });
@@ -61,8 +65,8 @@ export class GatherPage implements OnInit {
       this.userDataService.loadProgress(),
       this.searchConfigService.loadConfig(),
     ]).subscribe(() => {
-      this.generationToPokemonMap = this.filterService.groupPokemonByGeneration(
-        this.userDataService.getUserSettings()
+      this.setGenerations(
+        this.filterService.groupPokemonByGeneration(this.userDataService.getUserSettings())
       );
       this.updateHeaderText();
     });
@@ -71,7 +75,7 @@ export class GatherPage implements OnInit {
       .listenForUserSettingsChanges()
       .pipe(tap((newUserSettings) => (this.userSettings = newUserSettings)))
       .subscribe((userSettings) => {
-        this.generationToPokemonMap = this.filterService.groupPokemonByGeneration(userSettings);
+        this.setGenerations(this.filterService.groupPokemonByGeneration(userSettings));
         this.updateHeaderText();
       });
 
@@ -80,9 +84,7 @@ export class GatherPage implements OnInit {
     // wasted work — skip it unless that setting is actually in effect.
     this.userDataService.listenForProgressChanges().subscribe(() => {
       if (this.userSettings.showUncaughtOnly) {
-        this.generationToPokemonMap = this.filterService.groupPokemonByGeneration(
-          this.userSettings
-        );
+        this.setGenerations(this.filterService.groupPokemonByGeneration(this.userSettings));
       }
       this.updateHeaderText();
     });
@@ -94,8 +96,8 @@ export class GatherPage implements OnInit {
     // instead of leaving the page stuck empty until a lucky reload.
     this.syncService.listenForCatalogSync().subscribe(() => {
       this.pokeDataService.loadCatalog().subscribe(() => {
-        this.generationToPokemonMap = this.filterService.groupPokemonByGeneration(
-          this.userDataService.getUserSettings()
+        this.setGenerations(
+          this.filterService.groupPokemonByGeneration(this.userDataService.getUserSettings())
         );
         this.updateHeaderText();
       });
@@ -116,6 +118,37 @@ export class GatherPage implements OnInit {
     const normalized = list.filter((entry): entry is string => typeof entry === 'string');
 
     this.expandedGenerations = new Set(normalized);
+  }
+
+  onSearchChange(term: string): void {
+    this.searchTerm = term;
+    this.applySearchFilter();
+  }
+
+  private setGenerations(generations: Generation[]): void {
+    this.generationToPokemonMap = generations;
+    this.applySearchFilter();
+  }
+
+  /** Narrows the accordion display to species matching the search term
+   * without affecting the header's caught/total counts, which stay scoped
+   * to the full pokedex-and-filters selection regardless of search. */
+  private applySearchFilter(): void {
+    const term = this.searchTerm.trim().toLowerCase();
+
+    if (!term) {
+      this.visibleGenerations = this.generationToPokemonMap;
+      return;
+    }
+
+    this.visibleGenerations = this.generationToPokemonMap
+      .map((generation) => ({
+        ...generation,
+        speciesList: generation.speciesList.filter((group) =>
+          group.speciesName.toLowerCase().includes(term)
+        ),
+      }))
+      .filter((generation) => generation.speciesList.length > 0);
   }
 
   private updateHeaderText(): void {
