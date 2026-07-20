@@ -74,3 +74,7 @@
 - 8ba16ef chore: update @thetigeregg packages to latest versions
 - 4a88951 chore(nvm): update Node.js version to 24.15.0
 - 56271fb ci(ios): add Fastlane + TestFlight CI scaffolding for phase 8
+
+## v0.1.4 - 2026-07-20
+
+- 8cfadbe chore: add step to select specific Xcode version in TestFlight workflow
