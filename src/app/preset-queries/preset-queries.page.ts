@@ -13,19 +13,18 @@ import {
   IonCardHeader,
   IonCardTitle,
   IonCardContent,
-  IonAccordionGroup,
+  IonTextarea,
   AlertController,
+  ToastController,
   ViewWillEnter,
 } from '@ionic/angular/standalone';
+import { Clipboard } from '@capacitor/clipboard';
 import { addIcons } from 'ionicons';
-import { add } from 'ionicons/icons';
+import { add, copyOutline } from 'ionicons/icons';
 import { PresetQuery } from '@go-gather/shared';
 import { compilePresetQuery } from '../core/search-engine/preset-query.compiler';
 import { UserDataService } from '../core/services/user-data.service';
-import {
-  SearchStringComponent,
-  SearchStringConfig,
-} from '../features/search-string/search-string.component';
+import { SearchStringConfig } from '../features/search-string/search-string.component';
 
 interface PresetQueryRow {
   preset: PresetQuery;
@@ -49,19 +48,19 @@ interface PresetQueryRow {
     IonCardHeader,
     IonCardTitle,
     IonCardContent,
-    IonAccordionGroup,
-    SearchStringComponent,
+    IonTextarea,
   ],
 })
 export class PresetQueriesPage implements ViewWillEnter {
   private readonly userDataService = inject(UserDataService);
   private readonly router = inject(Router);
   private readonly alertController = inject(AlertController);
+  private readonly toastController = inject(ToastController);
 
   rows: PresetQueryRow[] = [];
 
   constructor() {
-    addIcons({ add });
+    addIcons({ add, copyOutline });
   }
 
   ionViewWillEnter(): void {
@@ -74,6 +73,18 @@ export class PresetQueriesPage implements ViewWillEnter {
 
   editPreset(preset: PresetQuery): void {
     void this.router.navigate(['/preset-queries', preset.id, 'edit']);
+  }
+
+  async copy(value: string): Promise<void> {
+    await Clipboard.write({ string: value });
+
+    const toast = await this.toastController.create({
+      message: 'Copied!',
+      duration: 1000,
+      position: 'bottom',
+    });
+
+    await toast.present();
   }
 
   async deletePreset(preset: PresetQuery): Promise<void> {

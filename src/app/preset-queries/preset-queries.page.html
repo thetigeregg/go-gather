@@ -23,9 +23,11 @@
         <ion-card-title>{{ row.preset.name }}</ion-card-title>
       </ion-card-header>
       <ion-card-content>
-        <ion-accordion-group>
-          <app-search-string [config]="row.config"></app-search-string>
-        </ion-accordion-group>
+        <ion-button expand="block" (click)="copy(row.config.value)">
+          <ion-icon slot="start" name="copy-outline"></ion-icon>
+          Copy
+        </ion-button>
+        <ion-textarea [readonly]="true" [autoGrow]="true" [value]="row.config.value"></ion-textarea>
       </ion-card-content>
       <ion-button fill="clear" (click)="editPreset(row.preset)">Edit</ion-button>
       <ion-button fill="clear" color="danger" (click)="deletePreset(row.preset)">Delete</ion-button>

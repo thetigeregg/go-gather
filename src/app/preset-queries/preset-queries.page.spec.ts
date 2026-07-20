@@ -2,10 +2,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { Router } from '@angular/router';
 import { DEFAULT_SETTINGS, PresetQuery, UserSettings } from '@go-gather/shared';
-import { AlertController } from '@ionic/angular/standalone';
+import { AlertController, ToastController } from '@ionic/angular/standalone';
+import { Clipboard } from '@capacitor/clipboard';
 import { PresetQueriesPage } from './preset-queries.page';
 import { UserDataService } from '../core/services/user-data.service';
-import { SearchStringComponent } from '../features/search-string/search-string.component';
+
+vi.mock('@capacitor/clipboard', () => ({
+  Clipboard: { write: vi.fn().mockResolvedValue(undefined) },
+}));
 
 function makePreset(overrides: Partial<PresetQuery> = {}): PresetQuery {
   return {
@@ -30,6 +34,8 @@ describe('PresetQueriesPage', () => {
   let alertCreateSpy: ReturnType<typeof vi.fn>;
   let alertPresentSpy: ReturnType<typeof vi.fn>;
   let lastAlertButtons: { text: string; role?: string; handler?: () => void }[];
+  let toastPresentSpy: ReturnType<typeof vi.fn>;
+  let toastCreateSpy: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     userSettings = { ...DEFAULT_SETTINGS, presetQueries: [makePreset()] };
@@ -41,6 +47,10 @@ describe('PresetQueriesPage', () => {
       lastAlertButtons = options.buttons;
       return Promise.resolve({ present: alertPresentSpy });
     });
+    toastPresentSpy = vi.fn().mockResolvedValue(undefined);
+    toastCreateSpy = vi.fn().mockResolvedValue({ present: toastPresentSpy });
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- mocked static method, not called unbound
+    vi.mocked(Clipboard.write).mockClear();
 
     TestBed.configureTestingModule({
       providers: [
@@ -56,13 +66,11 @@ describe('PresetQueriesPage', () => {
         },
         { provide: Router, useValue: { navigate: navigateSpy } },
         { provide: AlertController, useValue: { create: alertCreateSpy } },
+        { provide: ToastController, useValue: { create: toastCreateSpy } },
       ],
     });
     TestBed.overrideComponent(PresetQueriesPage, {
       set: { template: '<div></div>', styleUrls: [] },
-    });
-    TestBed.overrideComponent(SearchStringComponent, {
-      set: { template: '<div></div>', styleUrl: undefined },
     });
     await TestBed.compileComponents();
 
@@ -140,5 +148,18 @@ describe('PresetQueriesPage', () => {
 
     expect(updateUserSettingsCalls).toEqual([{ presetQueries: [] }]);
     expect(component.rows).toHaveLength(0);
+  });
+
+  it('copy writes the value to the clipboard and shows a toast', async () => {
+    await component.copy('!shiny&+bulbasaur');
+
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- mocked static method, not called unbound
+    expect(Clipboard.write).toHaveBeenCalledWith({ string: '!shiny&+bulbasaur' });
+    expect(toastCreateSpy).toHaveBeenCalledWith({
+      message: 'Copied!',
+      duration: 1000,
+      position: 'bottom',
+    });
+    expect(toastPresentSpy).toHaveBeenCalled();
   });
 });
