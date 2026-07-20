@@ -18,7 +18,6 @@
     "prepare": "husky",
     "deps:angular:update": "ng update @angular/core @angular/cli",
     "deps:angular:ecosystem": "ng update angular-eslint",
-    "deps:update:workspaces": "ncu -i --workspaces --format group,repo && npm install",
     "generate:ios-info-plists": "node scripts/generate-ios-info-plists.mjs",
     "sync:ios:version": "node scripts/sync-ios-version.mjs",
     "prebuild:ios": "node scripts/sync-ios-version.mjs --marketing-only && node scripts/generate-ios-info-plists.mjs",
