@@ -66,3 +66,11 @@
 
 - 77ee494 chore: update dependencies for fastify and related packages
 - 93daa3f refactor(package.json): remove unused deps:check:workspaces script
+
+## v0.1.3 - 2026-07-20
+
+- b11beaf chore: add CodeQL configuration to exclude false positives for missing rate limiting
+- 4cd6772 chore(devx): drop manual workspace ncu workaround, use devx v5 native support
+- 8ba16ef chore: update @thetigeregg packages to latest versions
+- 4a88951 chore(nvm): update Node.js version to 24.15.0
+- 56271fb ci(ios): add Fastlane + TestFlight CI scaffolding for phase 8
