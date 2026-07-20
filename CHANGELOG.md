@@ -61,3 +61,8 @@
 - 8aca780 chore(dependencies): update zone.js and various devDependencies for improved compatibility
 - 5ad7ef1 refactor(ncu-config): enhance Angular package detection to include '@angular-devkit/'
 - 42a777b refactor(ncu-config): enhance Angular package filtering and update dependencies
+
+## v0.1.2 - 2026-07-20
+
+- 77ee494 chore: update dependencies for fastify and related packages
+- 93daa3f refactor(package.json): remove unused deps:check:workspaces script
