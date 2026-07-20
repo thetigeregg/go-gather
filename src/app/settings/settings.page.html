@@ -8,73 +8,112 @@
 </ion-header>
 
 <ion-content class="ion-padding">
-  <h4 class="settings-section-header">Excluded Patterns</h4>
-  <p class="settings-hint">
-    Pokemon whose name matches any pattern below are hidden from the list. Patterns are
-    case-insensitive regular expressions, e.g.
-    <code>\(Copy \d&#123;4&#125;\)</code>
-    hides "(Copy 2019)".
-  </p>
-  <app-chip-list-input
-    [values]="patterns"
-    (valuesChange)="patternsChanged($event)"
-    placeholder="Add a pattern..."
-  ></app-chip-list-input>
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Excluded Name Patterns</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p class="settings-hint">
+        Pokemon whose name matches any pattern below are hidden from the list. Patterns are
+        case-insensitive regular expressions, e.g.
+        <code>\(Copy \d&#123;4&#125;\)</code>
+        hides "(Copy 2019)".
+      </p>
+      <app-chip-list-input
+        [values]="patterns"
+        (valuesChange)="patternsChanged($event)"
+        placeholder="Add a pattern..."
+      ></app-chip-list-input>
+    </ion-card-content>
+  </ion-card>
 
-  <p class="settings-hint">
-    National dex numbers to hide entirely — useful for species pokemon-go-api lists that Niantic
-    hasn't actually released in-game yet, e.g.
-    <code>493</code>
-    for Arceus.
-  </p>
-  <app-chip-list-input
-    [values]="dexNumbers"
-    (valuesChange)="dexNumbersChanged($event)"
-    placeholder="Add a dex number..."
-  ></app-chip-list-input>
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Excluded Dex Numbers</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p class="settings-hint">
+        National dex numbers to hide entirely — useful for species pokemon-go-api lists that Niantic
+        hasn't actually released in-game yet, e.g.
+        <code>493</code>
+        for Arceus.
+      </p>
+      <app-chip-list-input
+        [values]="dexNumbers"
+        (valuesChange)="dexNumbersChanged($event)"
+        placeholder="Add a dex number..."
+      ></app-chip-list-input>
+    </ion-card-content>
+  </ion-card>
 
-  <p class="settings-hint">
-    National dex numbers whose
-    <strong>shiny</strong>
-    entries are hidden — useful for species that are released but whose shiny form isn't out yet,
-    e.g.
-    <code>25</code>
-    for Pikachu.
-  </p>
-  <app-chip-list-input
-    [values]="shinyDexNumbers"
-    (valuesChange)="shinyDexNumbersChanged($event)"
-    placeholder="Add a dex number..."
-  ></app-chip-list-input>
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Excluded Shiny Dex Numbers</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p class="settings-hint">
+        National dex numbers whose
+        <strong>shiny</strong>
+        entries are hidden — useful for species that are released but whose shiny form isn't out
+        yet, e.g.
+        <code>25</code>
+        for Pikachu.
+      </p>
+      <app-chip-list-input
+        [values]="shinyDexNumbers"
+        (valuesChange)="shinyDexNumbersChanged($event)"
+        placeholder="Add a dex number..."
+      ></app-chip-list-input>
+    </ion-card-content>
+  </ion-card>
 
-  <p class="settings-hint">
-    Forms whose
-    <strong>shiny</strong>
-    variant is hidden — useful when a specific costume or regional form is released but its shiny
-    hasn't been yet. Patterns are case-insensitive regular expressions matched against the form's
-    name; the non-shiny form stays visible.
-  </p>
-  <app-chip-list-input
-    [values]="shinyPatterns"
-    (valuesChange)="shinyPatternsChanged($event)"
-    placeholder="Add a pattern..."
-  ></app-chip-list-input>
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Excluded Shiny Patterns</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p class="settings-hint">
+        Forms whose
+        <strong>shiny</strong>
+        variant is hidden — useful when a specific costume or regional form is released but its
+        shiny hasn't been yet. Patterns are case-insensitive regular expressions matched against the
+        form's name; the non-shiny form stays visible.
+      </p>
+      <app-chip-list-input
+        [values]="shinyPatterns"
+        (valuesChange)="shinyPatternsChanged($event)"
+        placeholder="Add a pattern..."
+      ></app-chip-list-input>
+    </ion-card-content>
+  </ion-card>
 
-  <h4 class="settings-section-header">User Tags</h4>
-  <p class="settings-hint">
-    Custom tags you've assigned to Pokemon in-game. Kept here as a reference list — add a tag below
-    exactly as it appears in-game to find Pokemon tagged with it.
-  </p>
-  <app-chip-list-input
-    [values]="userTags"
-    (valuesChange)="userTagsChanged($event)"
-    placeholder="Add a tag..."
-  ></app-chip-list-input>
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>User Tags</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p class="settings-hint">
+        Custom tags you've assigned to Pokemon in-game. Kept here as a reference list — add a tag
+        below exactly as it appears in-game to find Pokemon tagged with it.
+      </p>
+      <app-chip-list-input
+        [values]="userTags"
+        (valuesChange)="userTagsChanged($event)"
+        placeholder="Add a tag..."
+      ></app-chip-list-input>
+    </ion-card-content>
+  </ion-card>
 
-  <h4 class="settings-section-header">Data</h4>
-  <p class="settings-hint">
-    Export a backup of your progress and settings, or import a previously exported backup.
-  </p>
-  <ion-button (click)="exportBundle()">Export</ion-button>
-  <ion-button (click)="triggerImport()">Import</ion-button>
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Data</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p class="settings-hint">
+        Export a backup of your progress and settings, or import a previously exported backup.
+      </p>
+      <ion-button size="small" fill="outline" (click)="exportBundle()">Export</ion-button>
+      <ion-button size="small" fill="outline" (click)="triggerImport()">Import</ion-button>
+    </ion-card-content>
+  </ion-card>
 </ion-content>

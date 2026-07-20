@@ -7,6 +7,10 @@ import {
   IonButtons,
   IonBackButton,
   IonButton,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardContent,
   ToastController,
   ViewWillEnter,
 } from '@ionic/angular/standalone';
@@ -28,6 +32,10 @@ import { pickJsonTextFile } from '../core/utils/pick-file.util';
     IonButtons,
     IonBackButton,
     IonButton,
+    IonCard,
+    IonCardHeader,
+    IonCardTitle,
+    IonCardContent,
     ChipListInputComponent,
   ],
 })
