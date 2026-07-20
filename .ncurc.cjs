@@ -2,7 +2,8 @@ const base = require('@thetigeregg/ncu-config');
 
 const ANGULAR_MAJOR = 21;
 
-const isAngularPackage = (name) => name.startsWith('@angular/') || name === 'angular-eslint';
+const isAngularPackage = (name) =>
+  name.startsWith('@angular/') || name.startsWith('@angular-devkit/') || name === 'angular-eslint';
 
 module.exports = {
   ...base,
