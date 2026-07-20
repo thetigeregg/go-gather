@@ -43,7 +43,7 @@ describe('SearchStringComponent', () => {
     expect(createSpy).toHaveBeenCalledWith({
       message: 'Copied!',
       duration: 1000,
-      position: 'middle',
+      position: 'bottom',
     });
     expect(presentSpy).toHaveBeenCalled();
   });

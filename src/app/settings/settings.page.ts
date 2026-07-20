@@ -176,7 +176,11 @@ export class SettingsPage implements ViewWillEnter {
   }
 
   private async showToast(message: string): Promise<void> {
-    const toast = await this.toastController.create({ message, duration: 1500 });
+    const toast = await this.toastController.create({
+      message,
+      duration: 1500,
+      position: 'bottom',
+    });
     await toast.present();
   }
 

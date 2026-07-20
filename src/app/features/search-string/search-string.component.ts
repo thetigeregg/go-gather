@@ -45,7 +45,7 @@ export class SearchStringComponent {
     const toast = await this.toastController.create({
       message: 'Copied!',
       duration: 1000,
-      position: 'middle',
+      position: 'bottom',
     });
 
     await toast.present();
