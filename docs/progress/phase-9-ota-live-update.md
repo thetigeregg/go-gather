@@ -1,0 +1,53 @@
+# Phase 9 — OTA Live-Update
+
+Blueprinted on game-shelf's `docs/ios-live-update.md` implementation: `@capawesome/capacitor-live-update`, a self-hosted signed-bundle + manifest mechanism, RSA-SHA256 signing, and CI gating that mirrors Phase 8's native-shell-change detection (`ios-testflight-should-deploy.mjs`).
+
+## Scope decisions (confirmed with the user before implementation)
+
+- **Build the full mechanism**, not a partial/deferred version: keys, scripts, server route, Angular client, and CI wiring all land in this phase.
+- **Wire full CI automation now, following game-shelf's pattern**: no real production deploy exists for `server/` yet (no Dockerfile existed before this phase). Rather than SSH/rsync to a host, CI Dockerizes `server/` and publishes to GHCR via the default `GITHUB_TOKEN` — the user self-hosts/pulls the published image separately, matching how game-shelf's own images reach its NAS. This pulls forward a slice of Phase 10 (Backend Deploy) scope — just "build+push image to GHCR," not "run it in production."
+- **Build-number sync automation**: restored via a minimal GitHub App (mirroring game-shelf's `AUTOCOMMIT` app), since the default `GITHUB_TOKEN` cannot call the "set repo variable" API. This reintroduces GitHub-App infra that Phase 0 deliberately avoided — the user explicitly chose full automation over a manual step or a standing PAT.
+- **GHCR package visibility**: public (simplest self-hosting later, no pull-side auth needed).
+
+## What was built
+
+- **Keys**: RSA keypair generated (`openssl genrsa`/`openssl rsa -pubout`), private key at `~/.config/go-gather/ios/live-update-private.pem` (never committed), public key committed at `config/ios-live-update-public.pem`. `capacitor.config.ts` wires `LiveUpdate: { autoUpdateStrategy: 'none', readyTimeout: 10000, publicKey: readLiveUpdatePublicKey() }`. `@capawesome/capacitor-live-update ^8.3.0` added as a dependency.
+- **`scripts/ios-live-update-common.mjs`** — ported verbatim from game-shelf (pure crypto/manifest logic, zero go-gather-specific content): checksum, RSA-SHA256 sign/verify, bundle-id/manifest builders, `normalizeBackendOrigin` (enforces https), `shouldStageLiveUpdateManifest` (exact-match native-build-number gate).
+- **`scripts/sign-ios-live-update-bundle.mjs`** — ported verbatim: CLI signer, `resolvePrivateKeyPem` (inline PEM or file path).
+- **`scripts/build-ios-live-update-artifacts.mjs`** — adapted orchestrator: writes the prod environment via go-gather's actual `write-environment-ios.mjs` exports (`loadDotEnv()` + `generateEnvironmentIos`, not game-shelf's `dotenv.mjs`/`writeEnvironmentIos` which don't exist here), runs `npm run build:ios:prod:ota`, zips the output, signs it, writes `manifest.json` + `.zip` + `.headers.json` under `ota/ios/{nativeBuildNumber}/`.
+- **`scripts/ios-live-update-should-deploy.mjs`** — adapted CI gate: replaces game-shelf's 6-image `matchesImagePath` abstraction with a direct check (`src/**` or one of 4 OTA-relevant script/config files). Hard-skips when native-shell changed, exactly mirroring `ios-testflight-should-deploy.mjs`'s control flow.
+- **`scripts/server-image-should-deploy.mjs`** (new — no game-shelf equivalent, needed because go-gather has one deployable image, not six) — simple path-prefix check (`server/**`/`shared/**`).
+- **New npm scripts**: `prebuild:ios:prod:ota`, `build:ios:prod:ota` (`ng build --configuration ios-prod --output-path www/ios-ota`).
+- **`server/src/api.ts`**: new `/ota/` static route (second `@fastify/static` registration alongside the existing `/images/` one), with `decorateReply: false` (avoids `FST_ERR_DEC_ALREADY_PRESENT` from double-registering the plugin) and a `setHeaders` callback applying `no-store, no-cache, must-revalidate` only to `manifest.json`. CORS origin list widened to include `capacitor://localhost` (defense-in-depth; `CapacitorHttp: { enabled: true }` already bypasses browser CORS on-device).
+- **`server/Dockerfile`** (new) — multi-stage, root-context build. Base image `node:24.14.0-slim` (Debian/glibc, not Alpine) for `better-sqlite3` native-addon compatibility. Stage 1 builds the web app and conditionally the OTA artifacts (`BUILD_IOS_LIVE_UPDATE=true` build-arg, BuildKit secret mounts for the private key/backend origin); stage 2 is the runtime image.
+- **Angular client**: `live-update.logic.ts` (pure logic, `resolveBackendOriginFromApiUrl` — renamed from game-shelf's `resolveBackendOriginFromGameApiBaseUrl` since go-gather's environment has `apiUrl` not `gameApiBaseUrl`) + `live-update.service.ts` (ported with `DebugLogService` calls replaced by direct `console.info`/`console.error`, since go-gather has no such service). Wired into `main.ts` (a new, independent `provideAppInitializer` entry — safe to run in parallel with the storage-engine chain since `isEnabled()` short-circuits to a no-op on web/dev) and `app.component.ts` (previously a bare shell with no lifecycle hooks — added `markReady()` on init and a `staged$` subscription presenting an Ionic alert to reload).
+- **CI**: `release-publish.yml` gained `detect_server_image_changes`, `detect_ios_live_update`, `validate_ios_signing_key` (ported verbatim), and `publish_server_image` (GHCR login via default `GITHUB_TOKEN`, two conditional `docker/build-push-action` variants). `ios-testflight.yml`'s `deploy_testflight` step gained an `id`, followed by a GitHub App token mint + `gh variable set IOS_OTA_NATIVE_BUILD_NUMBER`. `ios/fastlane/Fastfile`'s `deploy_testflight` lane restored the `GITHUB_OUTPUT`/`ios_native_build_number` write dropped in Phase 8.
+
+## Real bugs found and fixed during implementation (not assumed away)
+
+1. **`server/package.json` had `tsx` in `devDependencies`** while `"start": "tsx src/index.ts"` — a genuine pre-existing bug that would silently break under any `--omit=dev` install (confirmed by direct inspection before writing the Dockerfile). Moved to `dependencies`.
+2. **`--output-path www/ios-ota` still nests output under `browser/`.** The initial assumption (based on `angular.json`'s base target having `outputPath.browser: ""`) was that passing an explicit `--output-path` CLI override would inherit that empty-string setting and produce unnested output. A real Docker build proved this wrong: Angular's CLI `--output-path <string>` override only sets `outputPath.base`, not `outputPath.browser`, so it falls back to the builder's own default and nests under `browser/` — exactly like game-shelf's original path. Fixed `resolveDefaultOtaWebDir()` to append `/browser` after all, matching game-shelf's literal implementation (the earlier "correction" in the plan was itself incorrect).
+3. **`husky`'s `prepare` script breaks any `--omit=dev` Docker install.** `npm ci --omit=dev` never installs `husky` (a devDependency), so the root `"prepare": "husky"` lifecycle script fails with `husky: not found`. Fixed with `--ignore-scripts` — but that in turn skips `better-sqlite3`'s own install script (which fetches/builds its native binding), causing a `Could not locate the bindings file` crash at runtime. Fixed by adding an explicit `npm rebuild better-sqlite3` immediately after the `--ignore-scripts` install, in the runtime stage only.
+4. **`@fastify/static`'s `setHeaders` callback receives a `FastifyReply`, not a raw `http.ServerResponse`** — using `res.setHeader(...)` failed ESLint's `no-unsafe-call`/`no-unsafe-member-access` checks because the type didn't resolve as expected. Fixed by using `reply.header(...)` (the idiomatic Fastify API), matching the plugin's actual TypeScript definitions.
+
+## Verification performed
+
+1. `npm run lint` — passes (1 pre-existing unrelated warning in `server/src/db.ts`).
+2. `npm run test` — 312/312 pass (35 test files), including new specs for `live-update.logic.ts`/`live-update.service.ts` and an updated `app.component.spec.ts`.
+3. `npm run test:scripts` — 102/102 pass, including new/updated tests for all 5 new/changed `.mjs` scripts.
+4. `npm run build` — Angular production build succeeds.
+5. **Local signed-bundle dry run inside a real Docker build**: `docker build -f server/Dockerfile --build-arg BUILD_IOS_LIVE_UPDATE=true --build-arg IOS_OTA_NATIVE_BUILD_NUMBER=1 --secret id=IOS_LIVE_UPDATE_PRIVATE_KEY,... --secret id=IOS_BACKEND_ORIGIN_PROD,...` — produced a real `manifest.json` + signed `.zip` + `.headers.json`. Independently verified the RSA signature with `openssl dgst -sha256 -verify` against the real public key (`Verified OK`), and confirmed the zip's actual structure (`browser/` subfolder — see bug #2 above).
+6. **Docker build verification (plain path, no OTA)**: built and ran the image, confirmed `better-sqlite3` loads (a real `/api/catalog` query returned valid JSON), `/images/` serves a known file with default cache headers, and `/ota/ios/{build}/manifest.json` serves with correct `no-store, no-cache, must-revalidate` / `Pragma: no-cache` / `Expires: 0` headers.
+7. **OTA-build guard-rail check**: confirmed the Dockerfile's `BUILD_IOS_LIVE_UPDATE=true` path fails cleanly with a clear error (`IOS_LIVE_UPDATE_PRIVATE_KEY required`) when secrets aren't provided, rather than silently producing a broken image.
+8. **Gating-logic dry runs against real git history**: `node scripts/ios-live-update-should-deploy.mjs --base v0.1.3 --head v0.1.4` and `node scripts/server-image-should-deploy.mjs --base v0.1.3 --head v0.1.4` both correctly resolved to `should_deploy=false`/`should_publish=false` (that tag range only touched docs).
+
+## Remaining
+
+The real on-device end-to-end test (`docs/MIGRATION-CHECKLIST.md`'s "Done when" item) has not been run — it requires a fresh TestFlight bootstrap build (adding the `LiveUpdate` plugin is itself a native-shell change, so a new TestFlight upload is needed before any device has the plugin embedded), the GitHub App + `IOS_LIVE_UPDATE_PRIVATE_KEY` secret actually configured in the repo, and a real CI-published OTA bundle. Per this project's established pattern (matching Phase 8's real `deploy_testflight` run), this should only be attempted with the user's explicit go-ahead — not automatically.
+
+Also still open, needing the user's action:
+
+1. Create the GitHub App (mirroring game-shelf's `AUTOCOMMIT` app), provide its client ID and private key for `AUTOCOMMIT_CLIENT_ID`/`AUTOCOMMIT_APP_PRIVATE_KEY`.
+2. Provide the `IOS_LIVE_UPDATE_PRIVATE_KEY` secret value (the real private key generated in this phase).
+3. Bootstrap `IOS_OTA_NATIVE_BUILD_NUMBER` (either tell me the current App Store Connect build number, or let the first restored `deploy_testflight` run auto-sync it).
+4. Confirm the GHCR package name (`go-gather-server` used here) before first publish.

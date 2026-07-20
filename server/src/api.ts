@@ -173,12 +173,25 @@ export function buildApp() {
   const app = Fastify({ logger: true });
 
   app.register(cors, {
-    origin: ['http://localhost:4200'],
+    origin: ['http://localhost:4200', 'capacitor://localhost'],
   });
 
   app.register(staticPlugin, {
     root: join(__dirname, '..', 'data', 'images'),
     prefix: '/images/',
+  });
+
+  app.register(staticPlugin, {
+    root: join(__dirname, '..', 'ota'),
+    prefix: '/ota/',
+    decorateReply: false,
+    setHeaders: (reply, path) => {
+      if (path.endsWith('manifest.json')) {
+        reply.header('Cache-Control', 'no-store, no-cache, must-revalidate');
+        reply.header('Pragma', 'no-cache');
+        reply.header('Expires', '0');
+      }
+    },
   });
 
   // Enveloped with `syncedAt` (not a bare array) so the client can track

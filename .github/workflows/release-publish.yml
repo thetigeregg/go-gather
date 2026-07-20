@@ -17,6 +17,12 @@ jobs:
   release:
     name: Bump Version and Tag
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      major: ${{ steps.version.outputs.major }}
+      minor: ${{ steps.version.outputs.minor }}
+      tag: ${{ steps.version.outputs.tag }}
+      release_sha: ${{ steps.push.outputs.release_sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -42,18 +48,245 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
       - name: Commit, tag, and push release
+        id: push
         env:
           RELEASE_TAG: ${{ steps.version.outputs.tag }}
         run: |
           git add package.json package-lock.json CHANGELOG.md
           if git diff --cached --quiet; then
+            echo "release_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git commit -m "chore(release): ${RELEASE_TAG} [skip ci]"
           if git rev-parse -q --verify "refs/tags/${RELEASE_TAG}" >/dev/null; then
             git push origin HEAD:main
+            echo "release_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           git tag "${RELEASE_TAG}"
           git push origin HEAD:main
           git push origin "${RELEASE_TAG}"
+          echo "release_sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  detect_server_image_changes:
+    name: Detect server image changes
+    needs:
+      - release
+    runs-on: ubuntu-latest
+    outputs:
+      should_publish: ${{ steps.check.outputs.should_publish }}
+      matched_paths: ${{ steps.check.outputs.matched_paths }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.release.outputs.release_sha }}
+
+      - name: Evaluate server image changes
+        id: check
+        env:
+          CURRENT: ${{ needs.release.outputs.tag }}
+        run: |
+          PREV=$(git tag --list 'v*' --sort=-v:refname | awk -v cur="$CURRENT" '$0==cur {getline; print; exit}')
+          node scripts/server-image-should-deploy.mjs \
+            --base "$PREV" \
+            --head "$CURRENT" \
+            --github-output "$GITHUB_OUTPUT"
+
+  detect_ios_live_update:
+    name: Detect OTA live-update changes
+    needs:
+      - release
+    runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.live_update_check.outputs.should_deploy }}
+      matched_paths: ${{ steps.live_update_check.outputs.matched_paths }}
+      skipped_reason: ${{ steps.live_update_check.outputs.skipped_reason }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.release.outputs.release_sha }}
+
+      - name: Evaluate native-shell changes
+        id: native_check
+        env:
+          CURRENT: ${{ needs.release.outputs.tag }}
+        run: |
+          PREV=$(git tag --list 'v*' --sort=-v:refname | awk -v cur="$CURRENT" '$0==cur {getline; print; exit}')
+          node scripts/ios-testflight-should-deploy.mjs \
+            --base "$PREV" \
+            --head "$CURRENT" \
+            --github-output "$GITHUB_OUTPUT"
+
+      - name: Evaluate OTA live-update changes
+        id: live_update_check
+        env:
+          CURRENT: ${{ needs.release.outputs.tag }}
+        run: |
+          PREV=$(git tag --list 'v*' --sort=-v:refname | awk -v cur="$CURRENT" '$0==cur {getline; print; exit}')
+          NATIVE_ARGS=""
+          if [ "${{ steps.native_check.outputs.should_deploy }}" = "true" ]; then
+            NATIVE_ARGS="--native-shell-changed"
+          fi
+          node scripts/ios-live-update-should-deploy.mjs \
+            --base "$PREV" \
+            --head "$CURRENT" \
+            $NATIVE_ARGS \
+            --github-output "$GITHUB_OUTPUT"
+
+  ota_skip_summary:
+    name: OTA skip summary
+    needs:
+      - detect_ios_live_update
+    if: needs.detect_ios_live_update.outputs.should_deploy != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write skip summary
+        run: |
+          {
+            echo "## OTA live-update skipped"
+            echo
+            if [ -n "${{ needs.detect_ios_live_update.outputs.skipped_reason }}" ]; then
+              echo "${{ needs.detect_ios_live_update.outputs.skipped_reason }}"
+            else
+              echo "No src-relevant changes were detected for this release tag."
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  validate_ios_signing_key:
+    name: Validate iOS signing key
+    needs:
+      - release
+      - detect_ios_live_update
+    if: needs.detect_ios_live_update.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release.outputs.release_sha }}
+          sparse-checkout: .nvmrc
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+
+      - name: Validate signing key
+        env:
+          IOS_LIVE_UPDATE_PRIVATE_KEY: ${{ secrets.IOS_LIVE_UPDATE_PRIVATE_KEY }}
+        run: |
+          node -e "
+            const { createPrivateKey, createSign } = require('node:crypto');
+            const pem = process.env.IOS_LIVE_UPDATE_PRIVATE_KEY?.trim();
+            if (!pem) { console.error('IOS_LIVE_UPDATE_PRIVATE_KEY is not set'); process.exit(1); }
+            try {
+              const key = createPrivateKey(pem);
+              if (key.asymmetricKeyType !== 'rsa') {
+                console.error('Expected RSA key, got: ' + key.asymmetricKeyType);
+                process.exit(1);
+              }
+              const signer = createSign('RSA-SHA256');
+              signer.update(Buffer.from('validate'));
+              signer.end();
+              signer.sign(key, 'base64');
+              const bits = key.asymmetricKeyDetails?.modulusLength ?? 'unknown';
+              console.log('Key OK: rsa-' + bits);
+            } catch (e) {
+              console.error('Key validation failed: ' + (e instanceof Error ? e.message : String(e)));
+              process.exit(1);
+            }
+          "
+
+  publish_server_image:
+    name: Publish Server Docker Image
+    needs:
+      - release
+      - detect_server_image_changes
+      - detect_ios_live_update
+      - validate_ios_signing_key
+    if: >-
+      always() &&
+      needs.release.result == 'success' &&
+      needs.detect_server_image_changes.result == 'success' &&
+      needs.detect_ios_live_update.result == 'success' &&
+      (needs.detect_server_image_changes.outputs.should_publish == 'true' ||
+       needs.detect_ios_live_update.outputs.should_deploy == 'true') &&
+      (needs.validate_ios_signing_key.result == 'success' ||
+       needs.validate_ios_signing_key.result == 'skipped')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release.outputs.release_sha }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/go-gather-server
+          tags: |
+            type=raw,value=main
+            type=raw,value=${{ needs.release.outputs.tag }}
+            type=raw,value=${{ needs.release.outputs.version }}
+            type=raw,value=${{ needs.release.outputs.major }}.${{ needs.release.outputs.minor }}
+            type=raw,value=${{ needs.release.outputs.major }}
+            type=sha,format=short
+
+      - name: Write iOS signing key to temp file
+        if: needs.detect_ios_live_update.outputs.should_deploy == 'true'
+        env:
+          IOS_LIVE_UPDATE_PRIVATE_KEY: ${{ secrets.IOS_LIVE_UPDATE_PRIVATE_KEY }}
+        run: |
+          (umask 077; printf '%s' "$IOS_LIVE_UPDATE_PRIVATE_KEY" > "$RUNNER_TEMP/ios-signing-key.pem")
+
+      - name: Build and push (with iOS OTA)
+        if: needs.detect_ios_live_update.outputs.should_deploy == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: server/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=go-gather-server
+          cache-to: type=gha,mode=max,scope=go-gather-server
+          build-args: |
+            BUILD_IOS_LIVE_UPDATE=true
+            IOS_OTA_NATIVE_BUILD_NUMBER=${{ vars.IOS_OTA_NATIVE_BUILD_NUMBER }}
+          secrets: |
+            IOS_BACKEND_ORIGIN_PROD=${{ secrets.IOS_BACKEND_ORIGIN_PROD }}
+          secret-files: |
+            IOS_LIVE_UPDATE_PRIVATE_KEY=${{ runner.temp }}/ios-signing-key.pem
+
+      - name: Build and push
+        if: needs.detect_ios_live_update.outputs.should_deploy != 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: server/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=go-gather-server
+          cache-to: type=gha,mode=max,scope=go-gather-server
+          build-args: |
+            BUILD_IOS_LIVE_UPDATE=false

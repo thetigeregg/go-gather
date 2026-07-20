@@ -1,0 +1,12 @@
+node_modules
+server/node_modules
+shared/node_modules
+coverage
+.angular
+www
+dist
+ota
+server/ota
+server/data
+.git
+.DS_Store

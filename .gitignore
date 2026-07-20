@@ -23,6 +23,9 @@ log.txt
 /platforms
 /plugins
 
+# OTA live-update build artifacts (scripts/build-ios-live-update-artifacts.mjs)
+/ota
+
 # iOS environment layering (scripts/write-environment-ios.mjs generates these
 # just before an ios-local/ios-prod build; see .env.example)
 /src/environments/environment.ios.local.ts
@@ -48,6 +51,12 @@ server/data/*.db-wal
 server/data/*.db-shm
 server/data/images/
 !server/data/.gitkeep
+
+# OTA live-update artifacts served by the server (baked in at Docker build
+# time by build-ios-live-update-artifacts.mjs; see /ota above for the
+# repo-root default output location that gets copied in from there)
+server/ota/*
+!server/ota/.gitkeep
 
 # IDEs and editors
 .idea/

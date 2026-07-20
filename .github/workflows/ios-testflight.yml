@@ -103,6 +103,7 @@ jobs:
     environment: production
     permissions:
       contents: read
+      actions: write
 
     steps:
       - name: Checkout
@@ -171,6 +172,7 @@ jobs:
         run: bundle exec fastlane validate_match
 
       - name: Upload to TestFlight
+        id: testflight_upload
         working-directory: ios
         env:
           IOS_BACKEND_ORIGIN_PROD: ${{ secrets.IOS_BACKEND_ORIGIN_PROD }}
@@ -180,3 +182,28 @@ jobs:
           MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
           MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
         run: bundle exec fastlane deploy_testflight
+
+      - name: Create GitHub App token
+        id: variable_sync_token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.AUTOCOMMIT_CLIENT_ID }}
+          private-key: ${{ secrets.AUTOCOMMIT_APP_PRIVATE_KEY }}
+
+      - name: Sync IOS_OTA_NATIVE_BUILD_NUMBER
+        env:
+          GH_TOKEN: ${{ steps.variable_sync_token.outputs.token }}
+        run: |
+          BUILD_NUMBER="${{ steps.testflight_upload.outputs.ios_native_build_number }}"
+          if [ -z "$BUILD_NUMBER" ]; then
+            echo "ios_native_build_number output missing; skipping variable sync." >&2
+            exit 1
+          fi
+
+          gh variable set IOS_OTA_NATIVE_BUILD_NUMBER --body "$BUILD_NUMBER"
+
+          {
+            echo "## iOS OTA build number synced"
+            echo
+            echo "Set \`IOS_OTA_NATIVE_BUILD_NUMBER\` to \`$BUILD_NUMBER\` for the next OTA publish."
+          } >> "$GITHUB_STEP_SUMMARY"

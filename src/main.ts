@@ -15,6 +15,7 @@ import { AppComponent } from './app/app.component';
 import { STORAGE_ENGINE } from './app/core/data/storage-engine';
 import { StorageEngineFactory } from './app/core/data/storage-engine.factory';
 import { SYNC_OUTBOX_WRITER } from './app/core/data/sync-outbox-writer';
+import { LiveUpdateService } from './app/core/services/live-update.service';
 import { PokeDataService } from './app/core/services/poke-data.service';
 import { SearchConfigService } from './app/core/services/search-config.service';
 import { SyncService } from './app/core/services/sync.service';
@@ -58,6 +59,14 @@ bootstrapApplication(AppComponent, {
         .then(() => {
           syncService.initialize();
         });
+    }),
+    // Independent of the storage-engine chain above (LiveUpdateService.isEnabled()
+    // short-circuits to a no-op on web/dev and never reads STORAGE_ENGINE), so this
+    // runs unconditionally and in parallel rather than being sequenced after it.
+    provideAppInitializer(() => {
+      const liveUpdateService = inject(LiveUpdateService);
+      liveUpdateService.initializeResumeChecks();
+      return liveUpdateService.checkAndStageUpdate(true);
     }),
     {
       provide: STORAGE_ENGINE,

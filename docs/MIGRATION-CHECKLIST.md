@@ -102,9 +102,9 @@ See [`MIGRATION-CHECKLIST.md` Phases 7 & 8](../../go-gather-next/docs/migration/
 
 See [`MIGRATION-CHECKLIST.md` Phase 9](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-9--ota-live-update) and [`CI-CD-AND-DEPLOY.md#ota-live-update`](../../go-gather-next/docs/migration/CI-CD-AND-DEPLOY.md#ota-live-update).
 
-- [ ] RSA keypair + `LiveUpdate.publicKey` configured
-- [ ] Signed-bundle build script + manifest endpoint + `LiveUpdateService`
-- [ ] Verified: `src/**`-only change ships via OTA; native-shell change falls through to Phase 8 instead
+- [x] RSA keypair + `LiveUpdate.publicKey` configured — see [progress notes](progress/phase-9-ota-live-update.md)
+- [x] Signed-bundle build script + manifest endpoint + `LiveUpdateService` — see [progress notes](progress/phase-9-ota-live-update.md); verified via a real local Docker build (RSA signature independently confirmed with `openssl dgst -verify`)
+- [ ] Verified: `src/**`-only change ships via OTA; native-shell change falls through to Phase 8 instead — mechanism verified locally/in Docker; a real on-device end-to-end test still needs to run (requires a fresh TestFlight bootstrap build + real secrets, explicitly gated on the user's go-ahead)
 
 ## Phase 10 — Backend Deploy
 
@@ -119,4 +119,4 @@ Applies — a live backend is being kept (resolved, see Open Decisions gate abov
 - [x] `StorageEngine` contract tests pass against both Dexie and SQLite engines — see [progress notes](progress/phase-6-sqlite-storage.md)
 - [ ] `search-engine/` has full unit test coverage
 - [ ] A TestFlight build has been successfully uploaded and installed on a real device — upload confirmed (see [progress notes](progress/phase-8-testflight-ci.md)); device install still needs manual confirmation via the TestFlight app
-- [ ] OTA live-update has been exercised at least once end-to-end
+- [ ] OTA live-update has been exercised at least once end-to-end — mechanism built and verified via local Docker build (real signed bundle + manifest produced, signature independently verified); real on-device check/stage/apply still pending, see [progress notes](progress/phase-9-ota-live-update.md)
