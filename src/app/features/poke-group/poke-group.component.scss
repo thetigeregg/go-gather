@@ -3,4 +3,10 @@
   gap: 12px;
   justify-content: flex-start;
   flex-wrap: wrap;
+  padding-top: 12px;
+  padding-bottom: 12px;
+
+  app-gather-pokemon {
+    width: 100%;
+  }
 }
