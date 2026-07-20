@@ -1,5 +1,5 @@
 # --- Stage 1: web + OTA artifact builder (needs Angular/Ionic devDependencies) ---
-FROM node:24.14.0-slim AS builder
+FROM node:24.18.0-slim AS builder
 WORKDIR /app
 ENV HUSKY=0
 RUN apt-get update && apt-get install -y --no-install-recommends zip && rm -rf /var/lib/apt/lists/*
@@ -31,7 +31,7 @@ RUN --mount=type=secret,id=IOS_LIVE_UPDATE_PRIVATE_KEY,required=false \
   fi
 
 # --- Stage 2: runtime ---
-FROM node:24.14.0-slim
+FROM node:24.18.0-slim
 WORKDIR /app
 ENV TZ=UTC HUSKY=0
 
