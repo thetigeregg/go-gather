@@ -5,25 +5,30 @@
     </ion-buttons>
     <ion-title>Preset Queries</ion-title>
     <ion-buttons slot="end">
-      <ion-button (click)="newPreset()">New Preset</ion-button>
+      <ion-button (click)="newPreset()" aria-label="New Preset">
+        <ion-icon slot="icon-only" name="add"></ion-icon>
+      </ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
+<ion-content>
   @if (rows.length === 0) {
     <p class="preset-queries-empty">No presets yet — tap "New Preset" to create one.</p>
   }
 
   @for (row of rows; track row.preset.id) {
-    <div class="preset-query-row">
-      <app-search-string [config]="row.config"></app-search-string>
-      <div class="preset-query-row-actions">
-        <ion-button size="small" fill="outline" (click)="editPreset(row.preset)">Edit</ion-button>
-        <ion-button size="small" fill="outline" color="danger" (click)="deletePreset(row.preset)">
-          Delete
-        </ion-button>
-      </div>
-    </div>
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>{{ row.preset.name }}</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-accordion-group>
+          <app-search-string [config]="row.config"></app-search-string>
+        </ion-accordion-group>
+      </ion-card-content>
+      <ion-button fill="clear" (click)="editPreset(row.preset)">Edit</ion-button>
+      <ion-button fill="clear" color="danger" (click)="deletePreset(row.preset)">Delete</ion-button>
+    </ion-card>
   }
 </ion-content>

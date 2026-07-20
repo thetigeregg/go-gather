@@ -8,9 +8,17 @@ import {
   IonButton,
   IonButtons,
   IonBackButton,
+  IonIcon,
+  IonCard,
+  IonCardHeader,
+  IonCardTitle,
+  IonCardContent,
+  IonAccordionGroup,
   AlertController,
   ViewWillEnter,
 } from '@ionic/angular/standalone';
+import { addIcons } from 'ionicons';
+import { add } from 'ionicons/icons';
 import { PresetQuery } from '@go-gather/shared';
 import { compilePresetQuery } from '../core/search-engine/preset-query.compiler';
 import { UserDataService } from '../core/services/user-data.service';
@@ -36,6 +44,12 @@ interface PresetQueryRow {
     IonButton,
     IonButtons,
     IonBackButton,
+    IonIcon,
+    IonCard,
+    IonCardHeader,
+    IonCardTitle,
+    IonCardContent,
+    IonAccordionGroup,
     SearchStringComponent,
   ],
 })
@@ -45,6 +59,10 @@ export class PresetQueriesPage implements ViewWillEnter {
   private readonly alertController = inject(AlertController);
 
   rows: PresetQueryRow[] = [];
+
+  constructor() {
+    addIcons({ add });
+  }
 
   ionViewWillEnter(): void {
     this.refreshRows();

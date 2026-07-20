@@ -1,15 +1,4 @@
 .preset-queries-empty {
+  margin: 16px;
   color: var(--ion-color-medium, #92949c);
-}
-
-.preset-query-row {
-  border-bottom: 1px solid var(--ion-color-light-shade, #d7d8da);
-  padding-bottom: 8px;
-  margin-bottom: 8px;
-
-  .preset-query-row-actions {
-    display: flex;
-    gap: 8px;
-    padding: 0 16px 8px;
-  }
 }
