@@ -1,8 +1,11 @@
+ion-input {
+  --padding-start: 0;
+}
+
 .chip-list {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  padding: 4px 16px 12px;
 }
 
 ion-chip ion-icon {

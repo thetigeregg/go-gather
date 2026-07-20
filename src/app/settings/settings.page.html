@@ -7,7 +7,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
+<ion-content>
   <ion-card>
     <ion-card-header>
       <ion-card-title>Excluded Name Patterns</ion-card-title>
@@ -112,8 +112,16 @@
       <p class="settings-hint">
         Export a backup of your progress and settings, or import a previously exported backup.
       </p>
-      <ion-button size="small" fill="outline" (click)="exportBundle()">Export</ion-button>
-      <ion-button size="small" fill="outline" (click)="triggerImport()">Import</ion-button>
+      <div class="data-actions">
+        <ion-button fill="outline" (click)="exportBundle()">
+          <ion-icon slot="start" name="share" color="primary"></ion-icon>
+          Export
+        </ion-button>
+        <ion-button fill="outline" (click)="triggerImport()">
+          <ion-icon slot="start" name="download" color="primary"></ion-icon>
+          Import
+        </ion-button>
+      </div>
     </ion-card-content>
   </ion-card>
 </ion-content>

@@ -11,9 +11,12 @@ import {
   IonCardHeader,
   IonCardTitle,
   IonCardContent,
+  IonIcon,
   ToastController,
   ViewWillEnter,
 } from '@ionic/angular/standalone';
+import { addIcons } from 'ionicons';
+import { download, share } from 'ionicons/icons';
 import { ExportBundle } from '@go-gather/shared';
 import { UserDataService } from '../core/services/user-data.service';
 import { ChipListInputComponent } from '../features/chip-list-input/chip-list-input.component';
@@ -36,6 +39,7 @@ import { pickJsonTextFile } from '../core/utils/pick-file.util';
     IonCardHeader,
     IonCardTitle,
     IonCardContent,
+    IonIcon,
     ChipListInputComponent,
   ],
 })
@@ -48,6 +52,10 @@ export class SettingsPage implements ViewWillEnter {
   shinyDexNumbers: string[] = [];
   shinyPatterns: string[] = [];
   userTags: string[] = [];
+
+  constructor() {
+    addIcons({ download, share });
+  }
 
   ionViewWillEnter(): void {
     this.refreshFromUserSettings();

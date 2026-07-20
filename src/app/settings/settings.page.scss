@@ -4,3 +4,14 @@
   font-size: 0.85rem;
   color: var(--ion-color-medium, #92949c);
 }
+
+.data-actions {
+  display: flex;
+  gap: 8px;
+
+  ion-button {
+    flex: 1 1 50%;
+    width: 50%;
+    margin: 0;
+  }
+}
