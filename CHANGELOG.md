@@ -107,3 +107,9 @@
 ## v0.3.4 - 2026-07-21
 
 - 3864aec fix: add production environment to validate iOS signing key and publish server image jobs
+
+## v0.3.5 - 2026-07-21
+
+- f1aa387 test(settings): add temporary OTA live-update end-to-end test marker
+- b891a54 fix: update migration checklist to confirm full unit test coverage for search-engine
+- 87f30ce fix: confirm TestFlight build installs correctly on real device and address related bugs
