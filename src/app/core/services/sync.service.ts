@@ -1,7 +1,13 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, Subject, firstValueFrom } from 'rxjs';
-import type { CatalogEntry, ProgressEntry, UserSettings } from '@go-gather/shared';
+import type {
+  CatalogEntry,
+  PogoEvent,
+  ProgressEntry,
+  Season,
+  UserSettings,
+} from '@go-gather/shared';
 import { OutboxEntry } from '../data/storage-engine';
 import { StorageEngineFactory } from '../data/storage-engine.factory';
 import { SyncOutboxWriteRequest, SyncOutboxWriter } from '../data/sync-outbox-writer';
@@ -9,11 +15,23 @@ import { environment } from '../../../environments/environment';
 
 const SYNC_INTERVAL_MS = 30_000;
 const CATALOG_VERSION_KEY = 'catalogVersion';
+const CALENDAR_EVENTS_VERSION_KEY = 'calendarEventsVersion';
+const SEASON_VERSION_KEY = 'seasonVersion';
 const PULL_CURSOR_KEY = 'progressSettingsCursor';
 
 interface CatalogResponse {
   syncedAt: string | null;
   entries: CatalogEntry[];
+}
+
+interface CalendarEventsResponse {
+  syncedAt: string | null;
+  entries: PogoEvent[];
+}
+
+interface CalendarSeasonResponse {
+  syncedAt: string | null;
+  season: Season | null;
 }
 
 interface SyncPushResult {
@@ -53,6 +71,8 @@ export class SyncService implements SyncOutboxWriter {
   private readonly storageEngineFactory = inject(StorageEngineFactory);
   private syncInFlight = false;
   private readonly _catalogSync$ = new Subject<void>();
+  private readonly _calendarEventsSync$ = new Subject<void>();
+  private readonly _seasonSync$ = new Subject<void>();
 
   /**
    * Resolved lazily (not as a field initializer) since `SyncService` is
@@ -78,6 +98,16 @@ export class SyncService implements SyncOutboxWriter {
    * instead of being stuck until the next full page reload. */
   listenForCatalogSync(): Observable<void> {
     return this._catalogSync$.asObservable();
+  }
+
+  /** Same rationale as listenForCatalogSync(), for the Calendar tab's events. */
+  listenForCalendarEventsSync(): Observable<void> {
+    return this._calendarEventsSync$.asObservable();
+  }
+
+  /** Same rationale as listenForCatalogSync(), for the Season "Daily Discovery" data. */
+  listenForSeasonSync(): Observable<void> {
+    return this._seasonSync$.asObservable();
   }
 
   async enqueueOperation(request: SyncOutboxWriteRequest): Promise<void> {
@@ -117,6 +147,8 @@ export class SyncService implements SyncOutboxWriter {
       await this.pushOutbox();
       await this.pullChanges();
       await this.pullCatalog();
+      await this.pullCalendarEvents();
+      await this.pullSeason();
     } catch {
       // Best-effort: failures are retried on the next interval/online/write
       // trigger. No connectivity-status tracking yet (Phase 5+ concern).
@@ -206,5 +238,54 @@ export class SyncService implements SyncOutboxWriter {
     });
 
     this._catalogSync$.next();
+  }
+
+  private async pullCalendarEvents(): Promise<void> {
+    const response = await firstValueFrom(
+      this.http.get<CalendarEventsResponse>(`${environment.apiUrl}/api/calendar-events`)
+    );
+
+    const currentVersion = await this.engine.getSyncMeta(CALENDAR_EVENTS_VERSION_KEY);
+    if (response.syncedAt && response.syncedAt === currentVersion?.value) {
+      return;
+    }
+
+    await this.engine.runInTransaction(['calendarEvents', 'syncMeta'], async () => {
+      await this.engine.clearCalendarEvents();
+      await this.engine.bulkPutCalendarEvents(response.entries);
+      if (response.syncedAt) {
+        await this.engine.putSyncMeta({
+          key: CALENDAR_EVENTS_VERSION_KEY,
+          value: response.syncedAt,
+        });
+      }
+    });
+
+    this._calendarEventsSync$.next();
+  }
+
+  private async pullSeason(): Promise<void> {
+    const response = await firstValueFrom(
+      this.http.get<CalendarSeasonResponse>(`${environment.apiUrl}/api/calendar-season`)
+    );
+
+    const currentVersion = await this.engine.getSyncMeta(SEASON_VERSION_KEY);
+    if (response.syncedAt && response.syncedAt === currentVersion?.value) {
+      return;
+    }
+
+    const season = response.season;
+    if (!season) {
+      return;
+    }
+
+    await this.engine.runInTransaction(['season', 'syncMeta'], async () => {
+      await this.engine.putSeason(season);
+      if (response.syncedAt) {
+        await this.engine.putSyncMeta({ key: SEASON_VERSION_KEY, value: response.syncedAt });
+      }
+    });
+
+    this._seasonSync$.next();
   }
 }

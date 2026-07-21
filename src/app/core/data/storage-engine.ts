@@ -1,5 +1,11 @@
 import { InjectionToken } from '@angular/core';
-import type { CatalogEntry, ProgressEntry, UserSettings } from '@go-gather/shared';
+import type {
+  CatalogEntry,
+  PogoEvent,
+  ProgressEntry,
+  Season,
+  UserSettings,
+} from '@go-gather/shared';
 
 /**
  * Logical stores that can participate in a storage transaction.
@@ -10,7 +16,14 @@ import type { CatalogEntry, ProgressEntry, UserSettings } from '@go-gather/share
  * `local-user-data-repository.ts` and `sync.service.ts`.
  */
 export type StorageScope =
-  'catalog' | 'progress' | 'settings' | 'imageCache' | 'syncMeta' | 'outbox';
+  | 'catalog'
+  | 'progress'
+  | 'settings'
+  | 'imageCache'
+  | 'syncMeta'
+  | 'outbox'
+  | 'calendarEvents'
+  | 'season';
 
 /**
  * A queued local write awaiting push-sync to the backend. Only `'upsert'` —
@@ -115,6 +128,18 @@ export interface StorageEngine {
   putOutboxEntry(entry: OutboxEntry): Promise<void>;
   bulkDeleteOutbox(opIds: string[]): Promise<void>;
   clearOutbox(): Promise<void>;
+
+  // Calendar events — read-only external data (Pokemon GO community events),
+  // replaced wholesale on refresh same as catalog.
+  getCalendarEvent(id: string): Promise<PogoEvent | undefined>;
+  listCalendarEvents(): Promise<PogoEvent[]>;
+  putCalendarEvent(event: PogoEvent): Promise<void>;
+  bulkPutCalendarEvents(events: PogoEvent[]): Promise<void>;
+  clearCalendarEvents(): Promise<void>;
+
+  // Season "Daily Discovery" data (single row, same shape as settings)
+  getSeason(): Promise<Season | undefined>;
+  putSeason(season: Season): Promise<void>;
 }
 
 export const STORAGE_ENGINE = new InjectionToken<StorageEngine>('STORAGE_ENGINE');

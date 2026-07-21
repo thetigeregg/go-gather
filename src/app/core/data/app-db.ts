@@ -1,10 +1,19 @@
 import Dexie, { Table } from 'dexie';
 import { Injectable } from '@angular/core';
-import type { CatalogEntry, ProgressEntry, UserSettings } from '@go-gather/shared';
+import type {
+  CatalogEntry,
+  PogoEvent,
+  ProgressEntry,
+  Season,
+  UserSettings,
+} from '@go-gather/shared';
 import type { ImageCacheRecord, OutboxEntry, SyncMetaEntry } from './storage-engine';
 
 /** The single `settings` row is always keyed `id: 1`. */
 export type SettingsRow = { id: 1 } & UserSettings;
+
+/** The single `season` row is always keyed `id: 1`, same singleton pattern as SettingsRow. */
+export type SeasonRow = { id: 1 } & Season;
 
 @Injectable({ providedIn: 'root' })
 export class AppDb extends Dexie {
@@ -14,6 +23,8 @@ export class AppDb extends Dexie {
   imageCache!: Table<ImageCacheRecord, string>;
   syncMeta!: Table<SyncMetaEntry, string>;
   outbox!: Table<OutboxEntry, string>;
+  calendarEvents!: Table<PogoEvent, string>;
+  season!: Table<SeasonRow, number>;
 
   constructor() {
     super('go-gather');
@@ -25,6 +36,8 @@ export class AppDb extends Dexie {
       imageCache: 'key',
       syncMeta: 'key',
       outbox: 'opId, createdAt',
+      calendarEvents: 'eventID, eventType, start',
+      season: 'id',
     });
   }
 }

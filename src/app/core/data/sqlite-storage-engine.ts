@@ -1,4 +1,10 @@
-import type { CatalogEntry, ProgressEntry, UserSettings } from '@go-gather/shared';
+import type {
+  CatalogEntry,
+  PogoEvent,
+  ProgressEntry,
+  Season,
+  UserSettings,
+} from '@go-gather/shared';
 import { SqliteConnection, SqliteStatement } from './sqlite-connection';
 import {
   ImageCacheRecord,
@@ -14,6 +20,7 @@ import {
 
 const BULK_BATCH_SIZE = 500;
 const SETTINGS_ROW_ID = 1;
+const SEASON_ROW_ID = 1;
 
 interface PayloadRow {
   payload: string;
@@ -209,6 +216,50 @@ export class SqliteStorageEngine implements StorageEngine {
     await this.connection.run('DELETE FROM outbox', []);
   }
 
+  async getCalendarEvent(id: string): Promise<PogoEvent | undefined> {
+    const rows = await this.connection.query<PayloadRow>(
+      'SELECT payload FROM calendar_events WHERE event_id = ?',
+      [id]
+    );
+    return this.firstEntity(rows) as PogoEvent | undefined;
+  }
+
+  async listCalendarEvents(): Promise<PogoEvent[]> {
+    const rows = await this.connection.query<PayloadRow>('SELECT payload FROM calendar_events', []);
+    return rows.map((row) => this.parseEntity(row) as PogoEvent);
+  }
+
+  async putCalendarEvent(event: PogoEvent): Promise<void> {
+    await this.connection.run(this.calendarEventUpsertStatement(), this.calendarEventValues(event));
+  }
+
+  async bulkPutCalendarEvents(events: PogoEvent[]): Promise<void> {
+    const statement = this.calendarEventUpsertStatement();
+    await this.executeBatched(
+      events.map((event) => ({ statement, values: this.calendarEventValues(event) }))
+    );
+  }
+
+  async clearCalendarEvents(): Promise<void> {
+    await this.connection.run('DELETE FROM calendar_events', []);
+  }
+
+  async getSeason(): Promise<Season | undefined> {
+    const rows = await this.connection.query<PayloadRow>(
+      'SELECT payload FROM season WHERE id = ?',
+      [SEASON_ROW_ID]
+    );
+    return this.firstEntity(rows) as Season | undefined;
+  }
+
+  async putSeason(season: Season): Promise<void> {
+    await this.connection.run(
+      `INSERT INTO season (id, payload) VALUES (?, ?)
+       ON CONFLICT(id) DO UPDATE SET payload = excluded.payload`,
+      [SEASON_ROW_ID, JSON.stringify(season)]
+    );
+  }
+
   private catalogUpsertStatement(): string {
     return `INSERT INTO catalog (id, dex_nr, pokedex_type, species_id, payload) VALUES (?, ?, ?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET
@@ -231,6 +282,14 @@ export class SqliteStorageEngine implements StorageEngine {
         payload = excluded.payload`;
   }
 
+  private calendarEventUpsertStatement(): string {
+    return `INSERT INTO calendar_events (event_id, event_type, start, payload) VALUES (?, ?, ?, ?)
+      ON CONFLICT(event_id) DO UPDATE SET
+        event_type = excluded.event_type,
+        start = excluded.start,
+        payload = excluded.payload`;
+  }
+
   private catalogValues(entry: CatalogEntry): unknown[] {
     return [entry.id, entry.dexNr, entry.pokedexType, entry.speciesId, JSON.stringify(entry)];
   }
@@ -241,6 +300,10 @@ export class SqliteStorageEngine implements StorageEngine {
 
   private outboxValues(entry: OutboxEntry): unknown[] {
     return [entry.opId, entry.entityType, entry.createdAt, JSON.stringify(entry)];
+  }
+
+  private calendarEventValues(event: PogoEvent): unknown[] {
+    return [event.eventID, event.eventType, event.start, JSON.stringify(event)];
   }
 
   /** Excludes `blob` — native never stores image bytes in SQLite, only the

@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "sync": "tsx src/sync.ts",
+    "sync:calendar-events": "tsx src/sync-calendar-events.ts",
+    "sync:season": "tsx src/sync-season.ts",
     "start": "tsx src/index.ts",
     "dev": "tsx watch --exclude 'data/**' src/index.ts"
   },

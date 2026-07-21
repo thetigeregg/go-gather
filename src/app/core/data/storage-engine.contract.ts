@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { CatalogEntry, ProgressEntry, UserSettings } from '@go-gather/shared';
+import type {
+  CatalogEntry,
+  PogoEvent,
+  ProgressEntry,
+  Season,
+  UserSettings,
+} from '@go-gather/shared';
 import { DEFAULT_SETTINGS } from '@go-gather/shared';
 import type { ImageCacheRecord, OutboxEntry, StorageEngine, SyncMetaEntry } from './storage-engine';
 
@@ -64,6 +70,34 @@ export function makeContractSyncMetaEntry(overrides: Partial<SyncMetaEntry> = {}
   return {
     key: 'catalogVersion',
     value: '1',
+    ...overrides,
+  };
+}
+
+export function makeContractCalendarEvent(overrides: Partial<PogoEvent> = {}): PogoEvent {
+  return {
+    eventID: 'community-day-january-2026',
+    name: 'Community Day: January 2026',
+    eventType: 'community-day',
+    heading: 'Community Day',
+    link: 'https://leekduck.com/events/community-day-january-2026/',
+    image: 'https://example.com/community-day.png',
+    start: '2026-01-11T14:00:00.000',
+    end: '2026-01-11T17:00:00.000',
+    ...overrides,
+  };
+}
+
+export function makeContractSeason(overrides: Partial<Season> = {}): Season {
+  return {
+    name: 'Forever Forward',
+    eventID: 'season-23-forever-forward',
+    link: 'https://leekduck.com/events/season-23-forever-forward/',
+    start: '2026-06-02T10:00:00.000',
+    end: '2026-09-08T10:00:00.000',
+    note: null,
+    dailyBonuses: [],
+    seasonBonuses: [],
     ...overrides,
   };
 }
@@ -242,6 +276,53 @@ export function describeStorageEngineContract(
       });
     });
 
+    describe('calendarEvents', () => {
+      it('putCalendarEvent stores a row and getCalendarEvent retrieves it', async () => {
+        await engine.putCalendarEvent(makeContractCalendarEvent());
+
+        const stored = await engine.getCalendarEvent('community-day-january-2026');
+        expect(stored?.name).toBe('Community Day: January 2026');
+      });
+
+      it('putCalendarEvent replaces an existing row by eventID', async () => {
+        await engine.putCalendarEvent(makeContractCalendarEvent());
+        await engine.putCalendarEvent(makeContractCalendarEvent({ name: 'Updated title' }));
+
+        const stored = await engine.getCalendarEvent('community-day-january-2026');
+        expect(stored?.name).toBe('Updated title');
+        expect((await engine.listCalendarEvents()).length).toBe(1);
+      });
+
+      it('bulkPutCalendarEvents stores many rows and clearCalendarEvents empties the store', async () => {
+        const events = Array.from({ length: 5 }, (_, index) =>
+          makeContractCalendarEvent({ eventID: `event-${String(index)}` })
+        );
+
+        await engine.bulkPutCalendarEvents(events);
+        expect((await engine.listCalendarEvents()).length).toBe(5);
+
+        await engine.clearCalendarEvents();
+        expect(await engine.listCalendarEvents()).toEqual([]);
+      });
+    });
+
+    describe('season', () => {
+      it('putSeason stores the singleton row and getSeason retrieves it', async () => {
+        await engine.putSeason(makeContractSeason({ name: 'Forever Forward' }));
+
+        const stored = await engine.getSeason();
+        expect(stored?.name).toBe('Forever Forward');
+      });
+
+      it('putSeason replaces the existing row rather than adding a second one', async () => {
+        await engine.putSeason(makeContractSeason({ name: 'Season A' }));
+        await engine.putSeason(makeContractSeason({ name: 'Season B' }));
+
+        const stored = await engine.getSeason();
+        expect(stored?.name).toBe('Season B');
+      });
+    });
+
     describe('transactions', () => {
       it('commits writes across scopes', async () => {
         await engine.runInTransaction(['catalog', 'syncMeta'], async () => {
@@ -251,6 +332,23 @@ export function describeStorageEngineContract(
 
         expect((await engine.listCatalog()).length).toBe(1);
         expect(await engine.getSyncMeta('catalogVersion')).toBeDefined();
+      });
+
+      it('commits a calendar-events refresh atomically with its version stamp (mirrors the catalog pull pattern)', async () => {
+        await engine.runInTransaction(['calendarEvents', 'syncMeta'], async () => {
+          await engine.bulkPutCalendarEvents([makeContractCalendarEvent()]);
+          await engine.putSyncMeta(
+            makeContractSyncMetaEntry({
+              key: 'calendarEventsVersion',
+              value: '2026-01-01T00:00:00.000Z',
+            })
+          );
+        });
+
+        expect((await engine.listCalendarEvents()).length).toBe(1);
+        expect((await engine.getSyncMeta('calendarEventsVersion'))?.value).toBe(
+          '2026-01-01T00:00:00.000Z'
+        );
       });
 
       it('rolls back all writes when the action throws', async () => {

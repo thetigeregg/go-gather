@@ -30,12 +30,13 @@ See [`MIGRATION-CHECKLIST.md` Phase 0](../../pogo-cal/docs/migration/MIGRATION-C
 
 See [`MIGRATION-CHECKLIST.md` Phase 1](../../pogo-cal/docs/migration/MIGRATION-CHECKLIST.md#phase-1--event-data-service) and [`SCREEN-AND-FEATURE-MAP.md`](../../pogo-cal/docs/migration/SCREEN-AND-FEATURE-MAP.md).
 
-- [ ] Build a new route on this repo's `server/` (e.g. `server/src/calendar-events.ts`) that fetches the scraped feed server-side, mirroring the existing catalog-sync pipeline
-- [ ] Add a calendar `StorageScope`, `StorageEngine` CRUD methods, a Dexie table, a `SqliteStorageEngine` table, and extend the shared contract test suite
-- [ ] Build `calendar-events.service.ts`: fetch from this repo's own `server/` route via `HttpClient` (not the third-party feed directly), cache through `StorageEngine`, same refresh cadence intent as the source
-- [ ] Port per-event metadata derivation, cached once per fetch/refresh, not recomputed per render
-- [ ] Port the Season data fetch (resolved in scope) alongside the main event feed
-- [ ] Full unit test coverage — zero prior coverage exists for this subsystem, matching this repo's own search-engine-port precedent for previously-untested logic
+- [x] Built `server/src/sync-calendar-events.ts` (`npm run sync:calendar-events`) + `GET /api/calendar-events`, mirroring the catalog-sync pipeline's shape — as a **separate** script from the Pokemon-catalog sync (resolved during this phase, see `OPEN-DECISIONS.md`); the feed already matches `PogoEvent` field-for-field so no flattening transform was needed
+- [x] Added the `calendarEvents` and `season` `StorageScope`s, `StorageEngine` CRUD methods, Dexie tables (`app-db.ts`), `SqliteStorageEngine` tables, and extended the shared contract test suite (`storage-engine.contract.ts`)
+- [x] Built the fetch/cache/read pipeline as a **split** (resolved during this phase, not one `calendar-events.service.ts`): `SyncService.pullCalendarEvents()`/`pullSeason()` own the `HttpClient` fetch + freshness check + write (mirroring `pullCatalog()`); the new `CalendarEventsService` (`src/app/core/services/calendar-events.service.ts`) is a thin `StorageEngine`-only reader (the `PokeDataService` analog)
+- [x] Ported per-event metadata derivation (`calendar-event-metadata.util.ts`), cached once per fetch/refresh, not recomputed per render
+- [x] Ported synthetic sub-event generation (`generateEventRaidHourSubEvents()`/`generateEventSpotlightSubEvents()`, `calendar-sub-events.util.ts`) — resolved in scope during this phase, run client-side at load time
+- [x] Built `server/src/sync-season.ts` (`npm run sync:season`) + `GET /api/calendar-season` — resolved fully separate from events (own route/table/sync script/`StorageScope`), not bundled
+- [x] Full unit test coverage — 100% on the date/name/type-info utils, 99% (statements) on the sub-events util, matching this repo's own search-engine-port precedent for previously-untested logic — see [progress notes](progress/phase-1-event-data-service.md)
 
 ## Phase 2 — Filter Service & Menu
 

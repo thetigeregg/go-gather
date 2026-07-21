@@ -65,6 +65,17 @@ export const SQLITE_UPGRADE_STATEMENTS: { toVersion: number; statements: string[
         payload TEXT NOT NULL
       );`,
       `CREATE INDEX IF NOT EXISTS idx_outbox_created_at ON outbox (created_at);`,
+      `CREATE TABLE IF NOT EXISTS calendar_events (
+        event_id TEXT PRIMARY KEY,
+        event_type TEXT NOT NULL,
+        start TEXT NOT NULL,
+        payload TEXT NOT NULL
+      );`,
+      `CREATE INDEX IF NOT EXISTS idx_calendar_events_event_type ON calendar_events (event_type);`,
+      `CREATE TABLE IF NOT EXISTS season (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        payload TEXT NOT NULL
+      );`,
     ],
   },
 ];

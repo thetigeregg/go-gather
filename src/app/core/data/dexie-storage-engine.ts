@@ -1,7 +1,13 @@
 import { Injectable, inject } from '@angular/core';
 import Dexie, { Table, Transaction } from 'dexie';
-import type { CatalogEntry, ProgressEntry, UserSettings } from '@go-gather/shared';
-import { AppDb, SettingsRow } from './app-db';
+import type {
+  CatalogEntry,
+  PogoEvent,
+  ProgressEntry,
+  Season,
+  UserSettings,
+} from '@go-gather/shared';
+import { AppDb, SeasonRow, SettingsRow } from './app-db';
 import {
   ImageCacheRecord,
   OutboxEntry,
@@ -26,9 +32,12 @@ const SCOPE_TABLE_NAMES: Record<StorageScope, string> = {
   imageCache: 'imageCache',
   syncMeta: 'syncMeta',
   outbox: 'outbox',
+  calendarEvents: 'calendarEvents',
+  season: 'season',
 };
 
 const SETTINGS_ROW_ID = 1;
+const SEASON_ROW_ID = 1;
 
 /**
  * IndexedDB-backed storage engine used on the web, delegating to the Dexie
@@ -159,6 +168,34 @@ export class DexieStorageEngine implements StorageEngine {
     return this.outboxTable.clear();
   }
 
+  getCalendarEvent(id: string): Promise<PogoEvent | undefined> {
+    return this.calendarEventsTable.get(id);
+  }
+
+  listCalendarEvents(): Promise<PogoEvent[]> {
+    return this.calendarEventsTable.toArray();
+  }
+
+  putCalendarEvent(event: PogoEvent): Promise<void> {
+    return this.calendarEventsTable.put(event).then(() => undefined);
+  }
+
+  bulkPutCalendarEvents(events: PogoEvent[]): Promise<void> {
+    return this.calendarEventsTable.bulkPut(events).then(() => undefined);
+  }
+
+  clearCalendarEvents(): Promise<void> {
+    return this.calendarEventsTable.clear();
+  }
+
+  getSeason(): Promise<Season | undefined> {
+    return this.seasonTable.get(SEASON_ROW_ID);
+  }
+
+  putSeason(season: Season): Promise<void> {
+    return this.seasonTable.put({ id: SEASON_ROW_ID, ...season }).then(() => undefined);
+  }
+
   private get catalogTable(): Table<CatalogEntry, string> {
     return this.resolveTable('catalog', this.db.catalog);
   }
@@ -181,6 +218,14 @@ export class DexieStorageEngine implements StorageEngine {
 
   private get outboxTable(): Table<OutboxEntry, string> {
     return this.resolveTable('outbox', this.db.outbox);
+  }
+
+  private get calendarEventsTable(): Table<PogoEvent, string> {
+    return this.resolveTable('calendarEvents', this.db.calendarEvents);
+  }
+
+  private get seasonTable(): Table<SeasonRow, number> {
+    return this.resolveTable('season', this.db.season);
   }
 
   private resolveTable<T, K>(scopeName: StorageScope, fallback: Table<T, K>): Table<T, K> {

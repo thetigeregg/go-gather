@@ -86,6 +86,15 @@ describe('SyncService', () => {
     const catalogReq = await waitForRequest(httpMock, 'http://localhost:3000/api/catalog');
     catalogReq.flush({ syncedAt: null, entries: [] });
 
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/calendar-events')).flush({
+      syncedAt: null,
+      entries: [],
+    });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/calendar-season')).flush({
+      syncedAt: null,
+      season: null,
+    });
+
     await syncPromise;
 
     expect(await engine.listOutboxOrderedByCreatedAt()).toEqual([]);
@@ -115,6 +124,14 @@ describe('SyncService', () => {
     (await waitForRequest(httpMock, 'http://localhost:3000/api/catalog')).flush({
       syncedAt: null,
       entries: [],
+    });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/calendar-events')).flush({
+      syncedAt: null,
+      entries: [],
+    });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/calendar-season')).flush({
+      syncedAt: null,
+      season: null,
     });
 
     await syncPromise;
@@ -158,6 +175,14 @@ describe('SyncService', () => {
       syncedAt: '2026-01-01T00:00:00.000Z',
       entries: [catalogEntry],
     });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/calendar-events')).flush({
+      syncedAt: null,
+      entries: [],
+    });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/calendar-season')).flush({
+      syncedAt: null,
+      season: null,
+    });
     await syncPromise;
 
     expect((await engine.listCatalog()).length).toBe(1);
@@ -173,8 +198,132 @@ describe('SyncService', () => {
       syncedAt: '2026-01-01T00:00:00.000Z',
       entries: [],
     });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/calendar-events')).flush({
+      syncedAt: null,
+      entries: [],
+    });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/calendar-season')).flush({
+      syncedAt: null,
+      season: null,
+    });
     await syncPromise;
 
     expect((await engine.listCatalog()).length).toBe(1);
+  });
+
+  it('replaces the local calendar events when the server syncedAt changes, and skips when unchanged', async () => {
+    const calendarEvent = {
+      eventID: 'community-day-january-2026',
+      name: 'Community Day: January 2026',
+      eventType: 'community-day',
+      heading: 'Community Day',
+      link: 'https://leekduck.com/events/community-day-january-2026/',
+      image: 'https://example.com/community-day.png',
+      start: '2026-01-11T14:00:00.000',
+      end: '2026-01-11T17:00:00.000',
+    };
+
+    let syncPromise = syncService.syncNow();
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/sync/pull')).flush({
+      cursor: '0',
+      changes: [],
+    });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/catalog')).flush({
+      syncedAt: null,
+      entries: [],
+    });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/calendar-events')).flush({
+      syncedAt: '2026-01-01T00:00:00.000Z',
+      entries: [calendarEvent],
+    });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/calendar-season')).flush({
+      syncedAt: null,
+      season: null,
+    });
+    await syncPromise;
+
+    expect((await engine.listCalendarEvents()).length).toBe(1);
+    expect((await engine.getSyncMeta('calendarEventsVersion'))?.value).toBe(
+      '2026-01-01T00:00:00.000Z'
+    );
+
+    // Second sync with the same syncedAt should not touch the calendar events again.
+    syncPromise = syncService.syncNow();
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/sync/pull')).flush({
+      cursor: '0',
+      changes: [],
+    });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/catalog')).flush({
+      syncedAt: null,
+      entries: [],
+    });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/calendar-events')).flush({
+      syncedAt: '2026-01-01T00:00:00.000Z',
+      entries: [],
+    });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/calendar-season')).flush({
+      syncedAt: null,
+      season: null,
+    });
+    await syncPromise;
+
+    expect((await engine.listCalendarEvents()).length).toBe(1);
+  });
+
+  it('replaces the local season when the server syncedAt changes, and skips when unchanged', async () => {
+    const season = {
+      name: 'Forever Forward',
+      eventID: 'season-23-forever-forward',
+      link: 'https://leekduck.com/events/season-23-forever-forward/',
+      start: '2026-06-02T10:00:00.000',
+      end: '2026-09-08T10:00:00.000',
+      note: null,
+      dailyBonuses: [],
+      seasonBonuses: [],
+    };
+
+    let syncPromise = syncService.syncNow();
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/sync/pull')).flush({
+      cursor: '0',
+      changes: [],
+    });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/catalog')).flush({
+      syncedAt: null,
+      entries: [],
+    });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/calendar-events')).flush({
+      syncedAt: null,
+      entries: [],
+    });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/calendar-season')).flush({
+      syncedAt: '2026-01-01T00:00:00.000Z',
+      season,
+    });
+    await syncPromise;
+
+    expect((await engine.getSeason())?.name).toBe('Forever Forward');
+    expect((await engine.getSyncMeta('seasonVersion'))?.value).toBe('2026-01-01T00:00:00.000Z');
+
+    // Second sync with the same syncedAt should not touch the season again.
+    syncPromise = syncService.syncNow();
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/sync/pull')).flush({
+      cursor: '0',
+      changes: [],
+    });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/catalog')).flush({
+      syncedAt: null,
+      entries: [],
+    });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/calendar-events')).flush({
+      syncedAt: null,
+      entries: [],
+    });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/calendar-season')).flush({
+      syncedAt: '2026-01-01T00:00:00.000Z',
+      season: { ...season, name: 'A Different Season Name' },
+    });
+    await syncPromise;
+
+    expect((await engine.getSeason())?.name).toBe('Forever Forward');
   });
 });

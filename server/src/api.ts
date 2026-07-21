@@ -4,7 +4,13 @@ import Fastify from 'fastify';
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { CatalogEntry, ImplicitlyExcludedSearchTerm, UserSettings } from '@go-gather/shared';
+import type {
+  CatalogEntry,
+  ImplicitlyExcludedSearchTerm,
+  PogoEvent,
+  Season,
+  UserSettings,
+} from '@go-gather/shared';
 import { db } from './db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -214,6 +220,36 @@ export function buildApp() {
     return {
       syncedAt: syncMetaRow?.value ?? null,
       entries: rows.map(catalogRowToEntry),
+    };
+  });
+
+  // Same enveloping rationale as /api/catalog above.
+  app.get('/api/calendar-events', () => {
+    const rows = db.prepare('SELECT payload FROM pokemon_go_events ORDER BY start').all() as {
+      payload: string;
+    }[];
+    const syncMetaRow = db
+      .prepare(`SELECT value FROM sync_meta WHERE key = 'calendarEventsSyncedAt'`)
+      .get() as { value: string } | undefined;
+
+    return {
+      syncedAt: syncMetaRow?.value ?? null,
+      entries: rows.map((row) => JSON.parse(row.payload) as PogoEvent),
+    };
+  });
+
+  // Season is a fully separate feed/table from calendar events (see
+  // sync-season.ts) — its own route and its own syncedAt envelope.
+  app.get('/api/calendar-season', () => {
+    const row = db.prepare('SELECT payload FROM pokemon_go_season WHERE id = 1').get() as
+      { payload: string } | undefined;
+    const syncMetaRow = db
+      .prepare(`SELECT value FROM sync_meta WHERE key = 'seasonSyncedAt'`)
+      .get() as { value: string } | undefined;
+
+    return {
+      syncedAt: syncMetaRow?.value ?? null,
+      season: row ? (JSON.parse(row.payload) as Season) : null,
     };
   });
 

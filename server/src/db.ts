@@ -88,6 +88,28 @@ export function initSchema(): void {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+
+    -- Pokemon GO community events (Calendar tab), synced from a scraped
+    -- feed by sync-calendar-events.ts. Unlike pokemon_catalog, PogoEvent's
+    -- extraData is deeply nested and varies by event type, so the full
+    -- entity is stored as a JSON payload column rather than decomposed into
+    -- flat columns — event_type/start/end are duplicated out as plain
+    -- columns only because GET /api/calendar-events orders by them.
+    CREATE TABLE IF NOT EXISTS pokemon_go_events (
+      event_id TEXT PRIMARY KEY,
+      event_type TEXT NOT NULL,
+      start TEXT NOT NULL,
+      end TEXT NOT NULL,
+      payload TEXT NOT NULL
+    );
+
+    -- Pokemon GO Season "Daily Discovery" data (Calendar tab), synced from a
+    -- separate feed by sync-season.ts. Single current-season row, same
+    -- singleton pattern as user_settings.
+    CREATE TABLE IF NOT EXISTS pokemon_go_season (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      payload TEXT NOT NULL
+    );
   `);
 
   // `CREATE TABLE IF NOT EXISTS` above is a no-op against a pre-existing
