@@ -16,7 +16,7 @@
     "test:scripts": "node --test \"scripts/*.test.mjs\"",
     "lint": "eslint .",
     "prepare": "husky",
-    "deps:angular:update": "ng update @angular/core @angular/cli",
+    "deps:angular:update": "ng update @angular/core @angular/cli @angular/cdk",
     "deps:angular:ecosystem": "ng update angular-eslint",
     "generate:ios-info-plists": "node scripts/generate-ios-info-plists.mjs",
     "sync:ios:version": "node scripts/sync-ios-version.mjs",
