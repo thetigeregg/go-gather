@@ -4,7 +4,14 @@
  * rendered height of its row type — verify/adjust these against devtools if
  * the Ionic theme or card layout changes.
  */
-export const GATHER_ROW_GENERATION_HEADER_PX = 56;
+/** Real rendered height of the app-generation-header-row's ion-item alone. */
+export const GATHER_GENERATION_HEADER_ITEM_PX = 56;
+
+/** Space reserved below the generation header row, before its first species card. */
+export const GATHER_GENERATION_HEADER_GAP_PX = 16;
+
+export const GATHER_ROW_GENERATION_HEADER_PX =
+  GATHER_GENERATION_HEADER_ITEM_PX + GATHER_GENERATION_HEADER_GAP_PX;
 
 /**
  * Height of an ion-card's header (ion-card-header + ion-card-subtitle) and

@@ -20,6 +20,14 @@
   margin-bottom: 12px;
 }
 
+// Same reasoning as the species-card gap above: the strategy's precomputed
+// offsets budget 12px below every generation header row
+// (GATHER_GENERATION_HEADER_GAP_PX), so a real 12px has to render here too,
+// applied on the wrapper rather than app-generation-header-row's own margin.
+.gather-row.generation-header-row {
+  margin-bottom: 16px;
+}
+
 .total-counter-toolbar {
   flex: 0 0 auto;
   border-bottom: 1px solid var(--ion-color-light-shade, #d7d8da);

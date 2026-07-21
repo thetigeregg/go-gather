@@ -44,6 +44,7 @@
         *cdkVirtualFor="let row of flatRows; trackBy: trackGatherRow"
         class="gather-row"
         [class.species-card-row]="row.kind === 'species-card'"
+        [class.generation-header-row]="row.kind === 'generation-header'"
       >
         @switch (row.kind) {
           @case ('generation-header') {
