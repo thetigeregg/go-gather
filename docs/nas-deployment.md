@@ -1,6 +1,6 @@
 # NAS Deployment (Synology + Docker + Tailscale)
 
-Mirrors game-shelf's self-hosting pattern, scaled down to go-gather's much simpler architecture: one deployable service (`server`, the Fastify API), SQLite instead of Postgres, no worker/scraper/backup containers.
+A self-hosted deployment on your own NAS via Docker + Tailscale. Architecture is intentionally minimal: one deployable service (`server`, the Fastify API), SQLite for storage, no separate worker/scraper/backup containers.
 
 ## 1. Persistent directory
 
@@ -52,7 +52,7 @@ This runs `server/`'s existing standalone catalog-sync script (`tsx src/sync.ts`
 
 ## 5. Publish over Tailscale
 
-Run on the Synology host (where Tailscale is installed), matching game-shelf's exact pattern:
+Run on the Synology host (where Tailscale is installed):
 
 ```bash
 tailscale serve --https=443 http://127.0.0.1:3000
@@ -88,4 +88,4 @@ There's no dedicated `/health` route yet — `docker-compose.yml`'s healthcheck 
 
 ## 9. Backups
 
-No automated backup service exists (unlike game-shelf's Postgres `backup` container) — back up `${NAS_DATA_ROOT}/server-data` directly (e.g. via Backrest/Restic, or your NAS's own snapshot/backup tooling) as part of your regular NAS backup routine.
+No automated backup service exists — back up `${NAS_DATA_ROOT}/server-data` directly (e.g. via Backrest/Restic, or your NAS's own snapshot/backup tooling) as part of your regular NAS backup routine.
