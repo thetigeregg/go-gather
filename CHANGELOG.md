@@ -99,3 +99,7 @@
 
 - 77d2893 docs: refine NAS deployment instructions for clarity and consistency
 - 7013d22 docs: add README, NAS deployment guide, and docker-compose for go-gather
+
+## v0.3.3 - 2026-07-21
+
+- 464337b fix: ensure LiveUpdateService does not block app bootstrap during OTA checks
