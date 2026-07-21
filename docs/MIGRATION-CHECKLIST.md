@@ -9,7 +9,7 @@ Source docs live in the sibling repo: [`go-gather-next/docs/README.md`](../../go
 ## Before starting: Open Decisions gate
 
 - [x] Resolved in [`OPEN-DECISIONS.md`](../../go-gather-next/docs/migration/OPEN-DECISIONS.md): bundle ID (`io.github.thetigeregg.gogather`, `.dev` suffix variant), dialogs-vs-pages (routed pages), bundled-vs-fetched catalog (**fetched**, deviating from the doc's bundled recommendation), keep-a-backend (**yes** — auto-resolves the `SearchTermData` duplication and npm-workspaces rows to "keep as-is" too)
-- [ ] Still open, not blocking Phase 1 but needed before Phase 10: hosting target, GHCR image publishing (now in scope since a backend is being kept)
+- [x] Resolved before Phase 10: hosting target (self-hosted Synology NAS + Docker + Tailscale, mirroring game-shelf), GHCR image publishing (already live via `release-publish.yml`'s `publish_server_image` job) — see [`docs/nas-deployment.md`](nas-deployment.md)
 - [x] Resolved before Phase 8's live validation: App Store Connect API key, `MATCH_PASSWORD`, `MATCH_GIT_BASIC_AUTHORIZATION`, team ID `6V392K7X46`, `thetigeregg/go-gather-match-certs` storage repo — see [progress notes](progress/phase-8-testflight-ci.md)
 - [ ] Still open, low priority: web-build-or-iOS-only (Product), native E2E/Maestro, Vitest `.ui.spec.ts` split — none block any phase
 
@@ -108,10 +108,10 @@ See [`MIGRATION-CHECKLIST.md` Phase 9](../../go-gather-next/docs/migration/MIGRA
 
 ## Phase 10 — Backend Deploy
 
-Applies — a live backend is being kept (resolved, see Open Decisions gate above). See [`MIGRATION-CHECKLIST.md` Phase 10](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-10--backend-deploy-only-if-a-live-backend-was-kept-per-open-decisionsmd) and [`CI-CD-AND-DEPLOY.md`](../../go-gather-next/docs/migration/CI-CD-AND-DEPLOY.md). Hosting target and GHCR publishing still need deciding before this phase starts.
+Applies — a live backend is being kept (resolved, see Open Decisions gate above). See [`MIGRATION-CHECKLIST.md` Phase 10](../../go-gather-next/docs/migration/MIGRATION-CHECKLIST.md#phase-10--backend-deploy-only-if-a-live-backend-was-kept-per-open-decisionsmd) and [`CI-CD-AND-DEPLOY.md`](../../go-gather-next/docs/migration/CI-CD-AND-DEPLOY.md). Hosting target and GHCR publishing are now resolved — see [`docs/nas-deployment.md`](nas-deployment.md).
 
-- [ ] Scaled-down hosting stack per the hosting-target decision
-- [ ] GHCR image publishing if containerized
+- [x] Scaled-down hosting stack per the hosting-target decision — single-service `docker-compose.yml` (repo root), self-hosted on a Synology NAS via Docker + Tailscale, mirroring game-shelf's pattern; see [`docs/nas-deployment.md`](nas-deployment.md)
+- [x] GHCR image publishing if containerized — `ghcr.io/thetigeregg/go-gather-server` already published via `release-publish.yml`'s `publish_server_image` job (Phase 9), confirmed live via `docker manifest inspect`
 
 ## Done when
 

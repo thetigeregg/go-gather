@@ -52,6 +52,10 @@ server/data/*.db-shm
 server/data/images/
 !server/data/.gitkeep
 
+# docker-compose.yml's default bind-mount target (NAS_DATA_ROOT default) —
+# local-only when running the compose stack from a repo checkout
+/nas-data
+
 # OTA live-update artifacts served by the server (baked in at Docker build
 # time by build-ios-live-update-artifacts.mjs; see /ota above for the
 # repo-root default output location that gets copied in from there)
