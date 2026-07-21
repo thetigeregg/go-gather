@@ -104,7 +104,7 @@ See [`MIGRATION-CHECKLIST.md` Phase 9](../../go-gather-next/docs/migration/MIGRA
 
 - [x] RSA keypair + `LiveUpdate.publicKey` configured — see [progress notes](progress/phase-9-ota-live-update.md)
 - [x] Signed-bundle build script + manifest endpoint + `LiveUpdateService` — see [progress notes](progress/phase-9-ota-live-update.md); verified via a real local Docker build (RSA signature independently confirmed with `openssl dgst -verify`)
-- [ ] Verified: `src/**`-only change ships via OTA; native-shell change falls through to Phase 8 instead — mechanism verified locally/in Docker; a real on-device end-to-end test still needs to run (requires a fresh TestFlight bootstrap build + real secrets, explicitly gated on the user's go-ahead)
+- [x] Verified: `src/**`-only change ships via OTA; native-shell change falls through to Phase 8 instead — confirmed twice, real end-to-end on-device (detect → download → stage → reload), no TestFlight rebuild needed; see [progress notes](progress/phase-9-ota-live-update.md)
 
 ## Phase 10 — Backend Deploy
 
@@ -119,4 +119,4 @@ Applies — a live backend is being kept (resolved, see Open Decisions gate abov
 - [x] `StorageEngine` contract tests pass against both Dexie and SQLite engines — see [progress notes](progress/phase-6-sqlite-storage.md)
 - [x] `search-engine/` has full unit test coverage — confirmed 100% statements/branches/functions/lines across all 5 files (`npx vitest run --coverage src/app/core/search-engine`); see [progress notes](progress/phase-3-search-engine.md)
 - [x] A TestFlight build has been successfully uploaded and installed on a real device — confirmed working end-to-end against the NAS-hosted backend over Tailscale; see [progress notes](progress/phase-8-testflight-ci.md)
-- [ ] OTA live-update has been exercised at least once end-to-end — mechanism built and verified via local Docker build (real signed bundle + manifest produced, signature independently verified); real on-device check/stage/apply still pending, see [progress notes](progress/phase-9-ota-live-update.md)
+- [x] OTA live-update has been exercised at least once end-to-end — confirmed twice on a real device via TestFlight build 3: detected, downloaded, staged, and applied a signed bundle from the NAS-hosted backend, no native rebuild involved; see [progress notes](progress/phase-9-ota-live-update.md)

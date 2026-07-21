@@ -41,13 +41,16 @@ Blueprinted on game-shelf's `docs/ios-live-update.md` implementation: `@capaweso
 7. **OTA-build guard-rail check**: confirmed the Dockerfile's `BUILD_IOS_LIVE_UPDATE=true` path fails cleanly with a clear error (`IOS_LIVE_UPDATE_PRIVATE_KEY required`) when secrets aren't provided, rather than silently producing a broken image.
 8. **Gating-logic dry runs against real git history**: `node scripts/ios-live-update-should-deploy.mjs --base v0.1.3 --head v0.1.4` and `node scripts/server-image-should-deploy.mjs --base v0.1.3 --head v0.1.4` both correctly resolved to `should_deploy=false`/`should_publish=false` (that tag range only touched docs).
 
-## Remaining
+## Real on-device end-to-end test — confirmed, twice
 
-The real on-device end-to-end test (`docs/MIGRATION-CHECKLIST.md`'s "Done when" item) has not been run — it requires a fresh TestFlight bootstrap build (adding the `LiveUpdate` plugin is itself a native-shell change, so a new TestFlight upload is needed before any device has the plugin embedded), the GitHub App + `IOS_LIVE_UPDATE_PRIVATE_KEY` secret actually configured in the repo, and a real CI-published OTA bundle. Per this project's established pattern (matching Phase 8's real `deploy_testflight` run), this should only be attempted with the user's explicit go-ahead — not automatically.
+The four "still open" items from this doc's original close (GitHub App creation, `IOS_LIVE_UPDATE_PRIVATE_KEY`, `IOS_OTA_NATIVE_BUILD_NUMBER` bootstrap, GHCR package name) were all resolved in a later session. Getting to a clean on-device confirmation surfaced two real, unrelated bugs along the way (both fixed, documented in `docs/progress/phase-8-testflight-ci.md`'s "Real-device install confirmed" section since they were found while validating that TestFlight build):
 
-Also still open, needing the user's action:
+1. `src/main.ts` returned (rather than voided) `LiveUpdateService.checkAndStageUpdate(true)`'s promise from its `provideAppInitializer`, so Angular's bootstrap waited on it — since the native `LiveUpdate.getVersionCode()` call it depends on has no timeout, this produced an indefinite white screen on the first-ever build to include the plugin. Fixed by voiding it, matching game-shelf's own `main.ts`.
+2. `release-publish.yml`'s `validate_ios_signing_key` and `publish_server_image` jobs didn't declare `environment: production`, so they couldn't see `IOS_LIVE_UPDATE_PRIVATE_KEY` (scoped to that environment) — the one real attempt to publish an OTA bundle before this fix crashed with "IOS_LIVE_UPDATE_PRIVATE_KEY is not set." Fixed by adding the environment gate to both jobs.
 
-1. Create the GitHub App (mirroring game-shelf's `AUTOCOMMIT` app), provide its client ID and private key for `AUTOCOMMIT_CLIENT_ID`/`AUTOCOMMIT_APP_PRIVATE_KEY`.
-2. Provide the `IOS_LIVE_UPDATE_PRIVATE_KEY` secret value (the real private key generated in this phase).
-3. Bootstrap `IOS_OTA_NATIVE_BUILD_NUMBER` (either tell me the current App Store Connect build number, or let the first restored `deploy_testflight` run auto-sync it).
-4. Confirm the GHCR package name (`go-gather-server` used here) before first publish.
+With both fixed, the mechanism was exercised for real, twice, using a temporary diagnostic marker on the Settings page (`src/app/settings/settings.page.html`) as an unambiguous visual signal:
+
+- **Cycle 1** (bundle `v0.3.5-b3`): pushed a `src/**`-only commit adding the marker. `detect_ios_live_update` correctly resolved `should_deploy=true`; `validate_ios_signing_key` and `publish_server_image`'s "Build and push (with iOS OTA)" step both succeeded — the first OTA-enabled image ever actually published. After refreshing the NAS deployment (`docker compose pull && docker compose up -d`) to pick up the new `:main` image, the manifest (`/ota/ios/3/manifest.json`) and bundle (`/ota/ios/3/v0.3.5-b3.zip`) were both confirmed reachable over Tailscale. On-device: force-quit + relaunch → forced OTA check ran without blocking the UI → "Update Ready" alert appeared → tapped Reload → **marker appeared in Settings**, confirming the OTA-fetched bundle (not the natively-bundled JS) was rendering.
+- **Cycle 2** (bundle `v0.3.6-b3`): pushed a second commit removing the marker, as both cleanup and a corroborating second real cycle. Same sequence — new manifest/bundle confirmed reachable after a second NAS refresh, on-device relaunch → Update Ready → Reload → **marker confirmed gone**.
+
+Both cycles used `nativeBuildNumber: "3"`, matching the currently-installed TestFlight build's `CURRENT_PROJECT_VERSION` throughout — no native rebuild was needed for either OTA update, exactly as designed.
