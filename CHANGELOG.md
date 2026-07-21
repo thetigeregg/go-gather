@@ -113,3 +113,7 @@
 - f1aa387 test(settings): add temporary OTA live-update end-to-end test marker
 - b891a54 fix: update migration checklist to confirm full unit test coverage for search-engine
 - 87f30ce fix: confirm TestFlight build installs correctly on real device and address related bugs
+
+## v0.3.6 - 2026-07-21
+
+- 78abcbc test(settings): remove OTA live-update test marker
