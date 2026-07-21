@@ -10,6 +10,16 @@
   -webkit-overflow-scrolling: touch;
 }
 
+// The virtual scroll strategy's precomputed row offsets budget 12px of
+// space after every species card (GATHER_CARD_GAP_PX in
+// gather-row-sizing.ts, matching the app's original .poke-list flex `gap`)
+// — that budget only holds if a real 12px actually renders here, so it's
+// applied on this page-level wrapper rather than app-gather-pokemon's own
+// margin, keeping that component's styling untouched.
+.gather-row.species-card-row {
+  margin-bottom: 12px;
+}
+
 .sticky-header-bar {
   flex: 0 0 auto;
   padding: 8px 16px;

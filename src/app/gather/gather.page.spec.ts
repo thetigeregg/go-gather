@@ -10,7 +10,7 @@ import { UserDataService } from '../core/services/user-data.service';
 import { FilterService, Generation } from '../core/services/filter.service';
 import { SearchConfigService } from '../core/services/search-config.service';
 import { GenerationHeaderRowComponent } from '../features/generation-header-row/generation-header-row.component';
-import { GatherEntryRowComponent } from '../features/gather-entry-row/gather-entry-row.component';
+import { GatherPokemonComponent } from '../features/gather-pokemon/gather-pokemon.component';
 import { GatherEntryComponent } from '../features/gather-entry/gather-entry.component';
 
 describe('GatherPage', () => {
@@ -102,7 +102,7 @@ describe('GatherPage', () => {
     TestBed.overrideComponent(GenerationHeaderRowComponent, {
       set: { template: '<div></div>', styleUrl: undefined },
     });
-    TestBed.overrideComponent(GatherEntryRowComponent, {
+    TestBed.overrideComponent(GatherPokemonComponent, {
       set: { template: '<div></div>', styleUrl: undefined },
     });
     TestBed.overrideComponent(GatherEntryComponent, {
@@ -185,7 +185,10 @@ describe('GatherPage', () => {
     it('flattens visibleGenerations into rows and points the sticky bar at the first row', () => {
       fixture.detectChanges();
 
-      expect(component.flatRows.map((row) => row.kind)).toEqual(['generation-header', 'entry']);
+      expect(component.flatRows.map((row) => row.kind)).toEqual([
+        'generation-header',
+        'species-card',
+      ]);
       expect(component.stickyGenerationName).toBe('Generation 1');
       expect(component.stickyGenerationCaught).toBe(0);
       expect(component.stickyGenerationTotal).toBe(1);
@@ -193,7 +196,7 @@ describe('GatherPage', () => {
       expect(component.stickySpeciesDexNr).toBeNull();
     });
 
-    it('updates the sticky bar to the species at the scrolled-to entry row', () => {
+    it('updates the sticky bar to the species at the scrolled-to card row', () => {
       fixture.detectChanges();
 
       component.onScrolledIndexChange(1);
@@ -208,6 +211,7 @@ describe('GatherPage', () => {
       const scrollToIndexSpy = vi.fn();
       component.viewportRef = {
         scrollToIndex: scrollToIndexSpy,
+        checkViewportSize: vi.fn(),
       } as unknown as CdkVirtualScrollViewport;
 
       component.onSearchChange('bulba');

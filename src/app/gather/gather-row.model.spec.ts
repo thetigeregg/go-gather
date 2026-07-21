@@ -1,5 +1,6 @@
 import { CatalogEntry } from '@go-gather/shared';
 import { flattenGenerations, trackGatherRow } from './gather-row.model';
+import { GATHER_ROW_GENERATION_HEADER_PX, speciesCardHeightPx } from './gather-row-sizing';
 import { Generation } from '../core/services/filter.service';
 
 function makeEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
@@ -29,10 +30,14 @@ function makeEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
 
 describe('flattenGenerations', () => {
   it('returns no rows for an empty generation list', () => {
-    expect(flattenGenerations([])).toEqual({ rows: [], generationHeaderIndexByRow: [] });
+    expect(flattenGenerations([])).toEqual({
+      rows: [],
+      rowSizes: [],
+      generationHeaderIndexByRow: [],
+    });
   });
 
-  it('emits a generation-header row followed by one entry row per species entry, in order', () => {
+  it('emits a generation-header row followed by one species-card row per species, in order', () => {
     const generations: Generation[] = [
       {
         generationName: 'Generation 1',
@@ -58,16 +63,19 @@ describe('flattenGenerations', () => {
 
     const { rows } = flattenGenerations(generations);
 
-    expect(rows.map((row) => row.kind)).toEqual(['generation-header', 'entry', 'entry', 'entry']);
+    expect(rows.map((row) => row.kind)).toEqual([
+      'generation-header',
+      'species-card',
+      'species-card',
+    ]);
     expect(rows.map((row) => row.key)).toEqual([
       'generation-header:Generation 1',
-      'bulbasaur-regular',
-      'bulbasaur-shiny',
-      'charmander-regular',
+      'bulbasaur',
+      'charmander',
     ]);
   });
 
-  it('tags the first and last entry of each species group', () => {
+  it('sizes each row from precomputed constants based on generation/species shape', () => {
     const generations: Generation[] = [
       {
         generationName: 'Generation 1',
@@ -79,43 +87,15 @@ describe('flattenGenerations', () => {
             entries: [
               makeEntry({ id: 'bulbasaur-regular' }),
               makeEntry({ id: 'bulbasaur-shiny', isShiny: true }),
-              makeEntry({ id: 'bulbasaur-costume' }),
             ],
           },
         ],
       },
     ];
 
-    const { rows } = flattenGenerations(generations);
-    const entryRows = rows.filter((row) => row.kind === 'entry');
+    const { rowSizes } = flattenGenerations(generations);
 
-    expect(entryRows.map((row) => [row.isFirstInSpecies, row.isLastInSpecies])).toEqual([
-      [true, false],
-      [false, false],
-      [false, true],
-    ]);
-  });
-
-  it('marks a species with a single entry as both first and last', () => {
-    const generations: Generation[] = [
-      {
-        generationName: 'Generation 1',
-        speciesList: [
-          {
-            dexNr: 1,
-            speciesId: 'bulbasaur',
-            speciesName: 'Bulbasaur',
-            entries: [makeEntry()],
-          },
-        ],
-      },
-    ];
-
-    const { rows } = flattenGenerations(generations);
-    const entryRow = rows.find((row) => row.kind === 'entry');
-
-    expect(entryRow?.isFirstInSpecies).toBe(true);
-    expect(entryRow?.isLastInSpecies).toBe(true);
+    expect(rowSizes).toEqual([GATHER_ROW_GENERATION_HEADER_PX, speciesCardHeightPx(2)]);
   });
 
   it('points every row at the index of the generation-header row above it', () => {
@@ -156,18 +136,15 @@ describe('trackGatherRow', () => {
   it('returns the row key', () => {
     expect(
       trackGatherRow(0, {
-        kind: 'entry',
-        key: 'bulbasaur-regular',
-        entry: makeEntry(),
+        kind: 'species-card',
+        key: 'bulbasaur',
         speciesGroup: {
           dexNr: 1,
           speciesId: 'bulbasaur',
           speciesName: 'Bulbasaur',
           entries: [makeEntry()],
         },
-        isFirstInSpecies: true,
-        isLastInSpecies: true,
       })
-    ).toBe('bulbasaur-regular');
+    ).toBe('bulbasaur');
   });
 });

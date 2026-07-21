@@ -1,6 +1,10 @@
 import { AfterViewInit, Component, OnInit, ViewChild, inject } from '@angular/core';
 import { forkJoin, tap } from 'rxjs';
-import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
+import {
+  CdkVirtualScrollViewport,
+  ScrollingModule,
+  VIRTUAL_SCROLL_STRATEGY,
+} from '@angular/cdk/scrolling';
 import {
   IonHeader,
   IonToolbar,
@@ -22,9 +26,9 @@ import { FilterService, Generation } from '../core/services/filter.service';
 import { SearchConfigService } from '../core/services/search-config.service';
 import { SyncService } from '../core/services/sync.service';
 import { GenerationHeaderRowComponent } from '../features/generation-header-row/generation-header-row.component';
-import { GatherEntryRowComponent } from '../features/gather-entry-row/gather-entry-row.component';
+import { GatherPokemonComponent } from '../features/gather-pokemon/gather-pokemon.component';
 import { GatherRow, flattenGenerations, trackGatherRow } from './gather-row.model';
-import { GATHER_ROW_ITEM_SIZE_PX } from './gather-row-sizing';
+import { PrecomputedSizeVirtualScrollStrategy } from './precomputed-size-virtual-scroll-strategy';
 import { POKEDEX_TYPE_LABELS } from '../features/side-menu/side-menu.component';
 
 @Component({
@@ -44,7 +48,11 @@ import { POKEDEX_TYPE_LABELS } from '../features/side-menu/side-menu.component';
     IonFabButton,
     ScrollingModule,
     GenerationHeaderRowComponent,
-    GatherEntryRowComponent,
+    GatherPokemonComponent,
+  ],
+  providers: [
+    PrecomputedSizeVirtualScrollStrategy,
+    { provide: VIRTUAL_SCROLL_STRATEGY, useExisting: PrecomputedSizeVirtualScrollStrategy },
   ],
 })
 export class GatherPage implements OnInit, AfterViewInit {
@@ -53,6 +61,7 @@ export class GatherPage implements OnInit, AfterViewInit {
   private readonly filterService = inject(FilterService);
   private readonly searchConfigService = inject(SearchConfigService);
   private readonly syncService = inject(SyncService);
+  private readonly virtualScrollStrategy = inject(PrecomputedSizeVirtualScrollStrategy);
 
   @ViewChild('searchbar') searchbarRef?: IonSearchbar;
   @ViewChild(CdkVirtualScrollViewport) viewportRef?: CdkVirtualScrollViewport;
@@ -65,7 +74,6 @@ export class GatherPage implements OnInit, AfterViewInit {
 
   flatRows: GatherRow[] = [];
   generationHeaderIndexByRow: number[] = [];
-  readonly rowItemSizePx = GATHER_ROW_ITEM_SIZE_PX;
   readonly trackGatherRow = trackGatherRow;
 
   stickyGenerationName = '';
@@ -170,7 +178,7 @@ export class GatherPage implements OnInit, AfterViewInit {
     }
 
     const row = this.flatRows[clampedIndex];
-    if (row.kind === 'entry') {
+    if (row.kind === 'species-card') {
       this.stickySpeciesName = row.speciesGroup.speciesName;
       this.stickySpeciesDexNr = row.speciesGroup.dexNr;
     } else {
@@ -204,6 +212,7 @@ export class GatherPage implements OnInit, AfterViewInit {
     const flattened = flattenGenerations(this.visibleGenerations);
     this.flatRows = flattened.rows;
     this.generationHeaderIndexByRow = flattened.generationHeaderIndexByRow;
+    this.virtualScrollStrategy.setItemSizes(flattened.rowSizes);
     this.onScrolledIndexChange(0);
     this.viewportRef?.scrollToIndex(0);
   }

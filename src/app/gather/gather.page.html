@@ -36,20 +36,23 @@
     }
 
     <cdk-virtual-scroll-viewport
-      [itemSize]="rowItemSizePx"
       class="gather-viewport"
       (scrolledIndexChange)="onScrolledIndexChange($event)"
     >
-      <ng-container *cdkVirtualFor="let row of flatRows; trackBy: trackGatherRow">
+      <div
+        *cdkVirtualFor="let row of flatRows; trackBy: trackGatherRow"
+        class="gather-row"
+        [class.species-card-row]="row.kind === 'species-card'"
+      >
         @switch (row.kind) {
           @case ('generation-header') {
             <app-generation-header-row [generation]="row.generation"></app-generation-header-row>
           }
-          @case ('entry') {
-            <app-gather-entry-row [row]="row"></app-gather-entry-row>
+          @case ('species-card') {
+            <app-gather-pokemon [speciesGroup]="row.speciesGroup"></app-gather-pokemon>
           }
         }
-      </ng-container>
+      </div>
     </cdk-virtual-scroll-viewport>
   </div>
 

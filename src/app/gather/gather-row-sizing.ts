@@ -1,13 +1,25 @@
 /**
- * Every row rendered inside the gather page's `cdk-virtual-scroll-viewport`
- * must be exactly this tall — `CdkFixedSizeVirtualScroll` computes each row's
- * scroll offset as `index * itemSize` without ever measuring the DOM, so any
- * row whose real rendered height drifts from this constant will overlap or
- * leave a gap. `GATHER_ROW_ENTRY_PX` must match the explicit height forced on
- * `app-gather-entry`'s `ion-item` in gather-entry.component.scss.
+ * Pixel heights used by `PrecomputedSizeVirtualScrollStrategy` to position
+ * rows without ever measuring the DOM. Each constant must match the real
+ * rendered height of its row type — verify/adjust these against devtools if
+ * the Ionic theme or card layout changes.
  */
-export const GATHER_ROW_GAP_PX = 6;
-export const GATHER_ROW_HEADER_PX = 20;
-export const GATHER_ROW_ENTRY_PX = 64;
-export const GATHER_ROW_ITEM_SIZE_PX =
-  GATHER_ROW_GAP_PX * 2 + GATHER_ROW_HEADER_PX + GATHER_ROW_ENTRY_PX;
+export const GATHER_ROW_GENERATION_HEADER_PX = 56;
+
+/**
+ * Height of an ion-card's header (ion-card-header + ion-card-subtitle) and
+ * of one app-gather-entry row within its ion-list — measured from the live
+ * app (not the same as the 64px --min-height forced on ion-item, since
+ * ion-item's `lines="full"` divider and ion-list's own top border add a
+ * little on top of that). Solved from two real measurements: a 2-entry
+ * card at 172px and a 4-entry card at 302px.
+ */
+export const GATHER_CARD_HEADER_PX = 42;
+export const GATHER_CARD_ENTRY_PX = 65;
+
+/** Matches the original .poke-list flex layout's `gap: 12px` between cards. */
+export const GATHER_CARD_GAP_PX = 12;
+
+export function speciesCardHeightPx(entryCount: number): number {
+  return GATHER_CARD_HEADER_PX + entryCount * GATHER_CARD_ENTRY_PX + GATHER_CARD_GAP_PX;
+}

@@ -12,7 +12,7 @@ import { Subscription } from 'rxjs';
 import { IonItem, IonLabel } from '@ionic/angular/standalone';
 import { Generation } from '../../core/services/filter.service';
 import { UserDataService } from '../../core/services/user-data.service';
-import { GATHER_ROW_ITEM_SIZE_PX } from '../../gather/gather-row-sizing';
+import { GATHER_ROW_GENERATION_HEADER_PX } from '../../gather/gather-row-sizing';
 
 @Component({
   selector: 'app-generation-header-row',
@@ -28,7 +28,7 @@ export class GenerationHeaderRowComponent implements OnInit, OnChanges, OnDestro
 
   @Input() generation!: Generation;
 
-  readonly rowHeightPx = GATHER_ROW_ITEM_SIZE_PX;
+  readonly rowHeightPx = GATHER_ROW_GENERATION_HEADER_PX;
   countText = '';
 
   private progressChangeSubscription?: Subscription;
