@@ -1,8 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CatalogEntry } from '@go-gather/shared';
-import { GatherPokemonComponent } from './gather-pokemon.component';
-import { SpeciesGroup } from '../../core/services/filter.service';
+import { GatherEntryRowComponent } from './gather-entry-row.component';
+import { GatherRow } from '../../gather/gather-row.model';
 import { UserDataService } from '../../core/services/user-data.service';
+import { ImageCacheService } from '../../core/services/image-cache.service';
 import { GatherEntryComponent } from '../gather-entry/gather-entry.component';
 
 function makeEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
@@ -30,20 +31,37 @@ function makeEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
   };
 }
 
-describe('GatherPokemonComponent', () => {
-  let fixture: ComponentFixture<GatherPokemonComponent>;
-  let component: GatherPokemonComponent;
+function makeRow(overrides: Partial<Extract<GatherRow, { kind: 'entry' }>> = {}) {
+  const entry = makeEntry();
+
+  return {
+    kind: 'entry' as const,
+    key: entry.id,
+    entry,
+    speciesGroup: {
+      dexNr: entry.dexNr,
+      speciesId: entry.speciesId,
+      speciesName: entry.speciesName,
+      entries: [entry],
+    },
+    isFirstInSpecies: true,
+    isLastInSpecies: true,
+    ...overrides,
+  };
+}
+
+describe('GatherEntryRowComponent', () => {
+  let fixture: ComponentFixture<GatherEntryRowComponent>;
+  let component: GatherEntryRowComponent;
 
   beforeEach(async () => {
     TestBed.configureTestingModule({
       providers: [
-        {
-          provide: UserDataService,
-          useValue: { getItemState: () => false },
-        },
+        { provide: UserDataService, useValue: { getItemState: () => false } },
+        { provide: ImageCacheService, useValue: { resolveImageUrl: () => Promise.resolve('') } },
       ],
     });
-    TestBed.overrideComponent(GatherPokemonComponent, {
+    TestBed.overrideComponent(GatherEntryRowComponent, {
       set: { template: '<div></div>', styleUrl: undefined },
     });
     TestBed.overrideComponent(GatherEntryComponent, {
@@ -51,24 +69,15 @@ describe('GatherPokemonComponent', () => {
     });
     await TestBed.compileComponents();
 
-    fixture = TestBed.createComponent(GatherPokemonComponent);
+    fixture = TestBed.createComponent(GatherEntryRowComponent);
     component = fixture.componentInstance;
   });
 
-  it('exposes the assigned species group', () => {
-    const speciesGroup: SpeciesGroup = {
-      dexNr: 1,
-      speciesId: 'bulbasaur',
-      speciesName: 'Bulbasaur',
-      entries: [
-        makeEntry({ id: 'bulbasaur-regular' }),
-        makeEntry({ id: 'bulbasaur-shiny', isShiny: true, name: 'Bulbasaur (Shiny)' }),
-      ],
-    };
-
-    component.speciesGroup = speciesGroup;
+  it('exposes the assigned row', () => {
+    const row = makeRow();
+    component.row = row;
     fixture.detectChanges();
 
-    expect(component.speciesGroup).toBe(speciesGroup);
+    expect(component.row).toBe(row);
   });
 });

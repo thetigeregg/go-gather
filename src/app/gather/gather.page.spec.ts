@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { Subject, of } from 'rxjs';
+import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { DEFAULT_SETTINGS, UserSettings } from '@go-gather/shared';
 import { IonSearchbar } from '@ionic/angular/standalone';
 import { GatherPage } from './gather.page';
@@ -8,8 +9,8 @@ import { PokeDataService } from '../core/services/poke-data.service';
 import { UserDataService } from '../core/services/user-data.service';
 import { FilterService, Generation } from '../core/services/filter.service';
 import { SearchConfigService } from '../core/services/search-config.service';
-import { PokeGroupComponent } from '../features/poke-group/poke-group.component';
-import { GatherPokemonComponent } from '../features/gather-pokemon/gather-pokemon.component';
+import { GenerationHeaderRowComponent } from '../features/generation-header-row/generation-header-row.component';
+import { GatherEntryRowComponent } from '../features/gather-entry-row/gather-entry-row.component';
 import { GatherEntryComponent } from '../features/gather-entry/gather-entry.component';
 
 describe('GatherPage', () => {
@@ -98,10 +99,10 @@ describe('GatherPage', () => {
       ],
     });
     TestBed.overrideComponent(GatherPage, { set: { template: '<div></div>', styleUrls: [] } });
-    TestBed.overrideComponent(PokeGroupComponent, {
+    TestBed.overrideComponent(GenerationHeaderRowComponent, {
       set: { template: '<div></div>', styleUrl: undefined },
     });
-    TestBed.overrideComponent(GatherPokemonComponent, {
+    TestBed.overrideComponent(GatherEntryRowComponent, {
       set: { template: '<div></div>', styleUrl: undefined },
     });
     TestBed.overrideComponent(GatherEntryComponent, {
@@ -178,6 +179,41 @@ describe('GatherPage', () => {
 
     expect(groupPokemonByGenerationCalls).toHaveLength(callsBefore + 1);
     expect(component.headerText).toBe('Regular Pokedex (1/1)');
+  });
+
+  describe('flatRows and the sticky header bar', () => {
+    it('flattens visibleGenerations into rows and points the sticky bar at the first row', () => {
+      fixture.detectChanges();
+
+      expect(component.flatRows.map((row) => row.kind)).toEqual(['generation-header', 'entry']);
+      expect(component.stickyGenerationName).toBe('Generation 1');
+      expect(component.stickyGenerationCaught).toBe(0);
+      expect(component.stickyGenerationTotal).toBe(1);
+      expect(component.stickySpeciesName).toBe('');
+      expect(component.stickySpeciesDexNr).toBeNull();
+    });
+
+    it('updates the sticky bar to the species at the scrolled-to entry row', () => {
+      fixture.detectChanges();
+
+      component.onScrolledIndexChange(1);
+
+      expect(component.stickyGenerationName).toBe('Generation 1');
+      expect(component.stickySpeciesName).toBe('Bulbasaur');
+      expect(component.stickySpeciesDexNr).toBe(1);
+    });
+
+    it('resets the viewport scroll position whenever the rows are rebuilt', () => {
+      fixture.detectChanges();
+      const scrollToIndexSpy = vi.fn();
+      component.viewportRef = {
+        scrollToIndex: scrollToIndexSpy,
+      } as unknown as CdkVirtualScrollViewport;
+
+      component.onSearchChange('bulba');
+
+      expect(scrollToIndexSpy).toHaveBeenCalledWith(0);
+    });
   });
 
   describe('focusSearch', () => {

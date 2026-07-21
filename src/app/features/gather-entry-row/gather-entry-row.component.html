@@ -1,0 +1,12 @@
+<div class="card-gap" [class.boundary]="row.isFirstInSpecies"></div>
+<div class="species-header-slot" [class.card-top]="row.isFirstInSpecies">
+  @if (row.isFirstInSpecies) {
+    <span class="species-name">
+      {{ row.speciesGroup.speciesName }} - #{{ row.speciesGroup.dexNr }}
+    </span>
+  }
+</div>
+<div class="entry-slot" [class.card-bottom]="row.isLastInSpecies">
+  <app-gather-entry [entry]="row.entry"></app-gather-entry>
+</div>
+<div class="card-gap" [class.boundary]="row.isLastInSpecies"></div>

@@ -1,0 +1,27 @@
+.gather-scroll-region {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.gather-viewport {
+  flex: 1 1 auto;
+  min-height: 0;
+  -webkit-overflow-scrolling: touch;
+}
+
+.sticky-header-bar {
+  flex: 0 0 auto;
+  padding: 8px 16px;
+  background: var(--ion-color-light, #f4f5f8);
+  border-bottom: 1px solid var(--ion-color-light-shade, #d7d8da);
+
+  .generation-line {
+    font-weight: 600;
+  }
+
+  .species-line {
+    font-size: 0.85rem;
+    color: var(--ion-color-medium);
+  }
+}

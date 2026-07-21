@@ -1,3 +1,11 @@
+// Forces a deterministic rendered height so it matches GATHER_ROW_ENTRY_PX in
+// gather-row-sizing.ts exactly — the virtual scroll viewport positions rows
+// by index * itemSize without measuring the DOM, so any drift here causes
+// visible row overlap.
+ion-item {
+  --min-height: 64px;
+}
+
 ion-item.caught {
   --background: rgba(var(--ion-color-primary-rgb), 0.08);
 }

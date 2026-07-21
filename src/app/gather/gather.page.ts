@@ -1,11 +1,11 @@
-import { Component, OnInit, ViewChild, inject } from '@angular/core';
+import { AfterViewInit, Component, OnInit, ViewChild, inject } from '@angular/core';
 import { forkJoin, tap } from 'rxjs';
+import { CdkVirtualScrollViewport, ScrollingModule } from '@angular/cdk/scrolling';
 import {
   IonHeader,
   IonToolbar,
   IonTitle,
   IonContent,
-  IonAccordionGroup,
   IonButtons,
   IonMenuButton,
   IonIcon,
@@ -21,7 +21,10 @@ import { UserDataService } from '../core/services/user-data.service';
 import { FilterService, Generation } from '../core/services/filter.service';
 import { SearchConfigService } from '../core/services/search-config.service';
 import { SyncService } from '../core/services/sync.service';
-import { PokeGroupComponent } from '../features/poke-group/poke-group.component';
+import { GenerationHeaderRowComponent } from '../features/generation-header-row/generation-header-row.component';
+import { GatherEntryRowComponent } from '../features/gather-entry-row/gather-entry-row.component';
+import { GatherRow, flattenGenerations, trackGatherRow } from './gather-row.model';
+import { GATHER_ROW_ITEM_SIZE_PX } from './gather-row-sizing';
 import { POKEDEX_TYPE_LABELS } from '../features/side-menu/side-menu.component';
 
 @Component({
@@ -33,17 +36,18 @@ import { POKEDEX_TYPE_LABELS } from '../features/side-menu/side-menu.component';
     IonToolbar,
     IonTitle,
     IonContent,
-    IonAccordionGroup,
     IonButtons,
     IonMenuButton,
     IonIcon,
     IonSearchbar,
     IonFab,
     IonFabButton,
-    PokeGroupComponent,
+    ScrollingModule,
+    GenerationHeaderRowComponent,
+    GatherEntryRowComponent,
   ],
 })
-export class GatherPage implements OnInit {
+export class GatherPage implements OnInit, AfterViewInit {
   private readonly pokeDataService = inject(PokeDataService);
   private readonly userDataService = inject(UserDataService);
   private readonly filterService = inject(FilterService);
@@ -51,13 +55,24 @@ export class GatherPage implements OnInit {
   private readonly syncService = inject(SyncService);
 
   @ViewChild('searchbar') searchbarRef?: IonSearchbar;
+  @ViewChild(CdkVirtualScrollViewport) viewportRef?: CdkVirtualScrollViewport;
 
   generationToPokemonMap: Generation[] = [];
   visibleGenerations: Generation[] = [];
   userSettings!: UserSettings;
   headerText = '';
-  expandedGenerations = new Set<string>();
   searchTerm = '';
+
+  flatRows: GatherRow[] = [];
+  generationHeaderIndexByRow: number[] = [];
+  readonly rowItemSizePx = GATHER_ROW_ITEM_SIZE_PX;
+  readonly trackGatherRow = trackGatherRow;
+
+  stickyGenerationName = '';
+  stickyGenerationCaught = 0;
+  stickyGenerationTotal = 0;
+  stickySpeciesName = '';
+  stickySpeciesDexNr: number | null = null;
 
   constructor() {
     addIcons({ menu, filter, search });
@@ -110,20 +125,14 @@ export class GatherPage implements OnInit {
     });
   }
 
-  /** Ionic keeps every accordion's content in the DOM regardless of expand
-   * state, and this catalog runs to ~9,000 entries across all generations —
-   * rendering every generation's species/entries eagerly froze the main
-   * thread for tens of seconds. Track which generations are actually
-   * expanded so `app-poke-group` can render its content lazily. */
-  onAccordionChange(value: unknown): void {
-    const list = Array.isArray(value)
-      ? value
-      : value === undefined || value === null
-        ? []
-        : [value];
-    const normalized = list.filter((entry): entry is string => typeof entry === 'string');
-
-    this.expandedGenerations = new Set(normalized);
+  /** Ionic's `ion-content` finishes sizing itself asynchronously (custom
+   * element upgrade + `--offset-top`/`--offset-bottom` calculation), which
+   * can happen after the CDK viewport's own ResizeObserver has already
+   * taken its first (too-small) measurement — leaving it rendering far
+   * fewer rows than the real viewport height needs. `checkViewportSize()`
+   * forces a re-measure once layout has actually settled. */
+  ngAfterViewInit(): void {
+    requestAnimationFrame(() => this.viewportRef?.checkViewportSize());
   }
 
   onSearchChange(term: string): void {
@@ -135,30 +144,68 @@ export class GatherPage implements OnInit {
     void this.searchbarRef?.setFocus();
   }
 
+  /** Updates the sticky "you are here" bar from the CDK viewport's currently
+   * scrolled-to row index, since a `position: sticky` header inside the
+   * virtualized list would get recycled away after a few rows of scroll. */
+  onScrolledIndexChange(index: number): void {
+    if (this.flatRows.length === 0) {
+      this.stickyGenerationName = '';
+      this.stickyGenerationCaught = 0;
+      this.stickyGenerationTotal = 0;
+      this.stickySpeciesName = '';
+      this.stickySpeciesDexNr = null;
+      return;
+    }
+
+    const clampedIndex = Math.min(Math.max(index, 0), this.flatRows.length - 1);
+    const headerRow = this.flatRows[this.generationHeaderIndexByRow[clampedIndex]];
+
+    if (headerRow.kind === 'generation-header') {
+      const entries = headerRow.generation.speciesList.flatMap((group) => group.entries);
+      this.stickyGenerationName = headerRow.generation.generationName;
+      this.stickyGenerationTotal = entries.length;
+      this.stickyGenerationCaught = entries.filter((entry) =>
+        this.userDataService.getItemState(entry.id)
+      ).length;
+    }
+
+    const row = this.flatRows[clampedIndex];
+    if (row.kind === 'entry') {
+      this.stickySpeciesName = row.speciesGroup.speciesName;
+      this.stickySpeciesDexNr = row.speciesGroup.dexNr;
+    } else {
+      this.stickySpeciesName = '';
+      this.stickySpeciesDexNr = null;
+    }
+  }
+
   private setGenerations(generations: Generation[]): void {
     this.generationToPokemonMap = generations;
     this.applySearchFilter();
   }
 
-  /** Narrows the accordion display to species matching the search term
-   * without affecting the header's caught/total counts, which stay scoped
-   * to the full pokedex-and-filters selection regardless of search. */
+  /** Narrows the display to species matching the search term without
+   * affecting the header's caught/total counts, which stay scoped to the
+   * full pokedex-and-filters selection regardless of search. */
   private applySearchFilter(): void {
     const term = this.searchTerm.trim().toLowerCase();
 
-    if (!term) {
-      this.visibleGenerations = this.generationToPokemonMap;
-      return;
-    }
+    this.visibleGenerations = term
+      ? this.generationToPokemonMap
+          .map((generation) => ({
+            ...generation,
+            speciesList: generation.speciesList.filter((group) =>
+              group.speciesName.toLowerCase().includes(term)
+            ),
+          }))
+          .filter((generation) => generation.speciesList.length > 0)
+      : this.generationToPokemonMap;
 
-    this.visibleGenerations = this.generationToPokemonMap
-      .map((generation) => ({
-        ...generation,
-        speciesList: generation.speciesList.filter((group) =>
-          group.speciesName.toLowerCase().includes(term)
-        ),
-      }))
-      .filter((generation) => generation.speciesList.length > 0);
+    const flattened = flattenGenerations(this.visibleGenerations);
+    this.flatRows = flattened.rows;
+    this.generationHeaderIndexByRow = flattened.generationHeaderIndexByRow;
+    this.onScrolledIndexChange(0);
+    this.viewportRef?.scrollToIndex(0);
   }
 
   private updateHeaderText(): void {

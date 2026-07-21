@@ -22,15 +22,36 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
-  <ion-accordion-group [multiple]="true" (ionChange)="onAccordionChange($event.detail.value)">
-    @for (generation of visibleGenerations; track generation.generationName) {
-      <app-poke-group
-        [generation]="generation"
-        [expanded]="expandedGenerations.has(generation.generationName)"
-      ></app-poke-group>
+<ion-content [scrollY]="false">
+  <div class="gather-scroll-region">
+    @if (flatRows.length) {
+      <div class="sticky-header-bar">
+        <div class="generation-line">
+          {{ stickyGenerationName }} ({{ stickyGenerationCaught }}/{{ stickyGenerationTotal }})
+        </div>
+        @if (stickySpeciesName) {
+          <div class="species-line">{{ stickySpeciesName }} - #{{ stickySpeciesDexNr }}</div>
+        }
+      </div>
     }
-  </ion-accordion-group>
+
+    <cdk-virtual-scroll-viewport
+      [itemSize]="rowItemSizePx"
+      class="gather-viewport"
+      (scrolledIndexChange)="onScrolledIndexChange($event)"
+    >
+      <ng-container *cdkVirtualFor="let row of flatRows; trackBy: trackGatherRow">
+        @switch (row.kind) {
+          @case ('generation-header') {
+            <app-generation-header-row [generation]="row.generation"></app-generation-header-row>
+          }
+          @case ('entry') {
+            <app-gather-entry-row [row]="row"></app-gather-entry-row>
+          }
+        }
+      </ng-container>
+    </cdk-virtual-scroll-viewport>
+  </div>
 
   <ion-fab slot="fixed" horizontal="end" vertical="bottom">
     <ion-fab-button color="primary" size="small" (click)="focusSearch()">

@@ -1,11 +1,9 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Subject } from 'rxjs';
 import { CatalogEntry } from '@go-gather/shared';
-import { PokeGroupComponent } from './poke-group.component';
+import { GenerationHeaderRowComponent } from './generation-header-row.component';
 import { Generation } from '../../core/services/filter.service';
 import { UserDataService } from '../../core/services/user-data.service';
-import { GatherPokemonComponent } from '../gather-pokemon/gather-pokemon.component';
-import { GatherEntryComponent } from '../gather-entry/gather-entry.component';
 
 function makeEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
   return {
@@ -32,9 +30,9 @@ function makeEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
   };
 }
 
-describe('PokeGroupComponent', () => {
-  let fixture: ComponentFixture<PokeGroupComponent>;
-  let component: PokeGroupComponent;
+describe('GenerationHeaderRowComponent', () => {
+  let fixture: ComponentFixture<GenerationHeaderRowComponent>;
+  let component: GenerationHeaderRowComponent;
   let caughtIds: Set<string>;
   let progressChange$: Subject<void>;
 
@@ -53,18 +51,12 @@ describe('PokeGroupComponent', () => {
         },
       ],
     });
-    TestBed.overrideComponent(PokeGroupComponent, {
-      set: { template: '<div></div>', styleUrl: undefined },
-    });
-    TestBed.overrideComponent(GatherPokemonComponent, {
-      set: { template: '<div></div>', styleUrl: undefined },
-    });
-    TestBed.overrideComponent(GatherEntryComponent, {
+    TestBed.overrideComponent(GenerationHeaderRowComponent, {
       set: { template: '<div></div>', styleUrl: undefined },
     });
     await TestBed.compileComponents();
 
-    fixture = TestBed.createComponent(PokeGroupComponent);
+    fixture = TestBed.createComponent(GenerationHeaderRowComponent);
     component = fixture.componentInstance;
   });
 

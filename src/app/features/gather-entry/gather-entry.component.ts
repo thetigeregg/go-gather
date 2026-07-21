@@ -1,4 +1,10 @@
-import { Component, Input, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  Input,
+  inject,
+} from '@angular/core';
 import { IonIcon, IonItem, IonLabel, IonThumbnail } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { checkmarkCircle, sparkles } from 'ionicons/icons';
@@ -14,10 +20,12 @@ const SPRITE_PLACEHOLDER_URL = '/assets/sprite-placeholder.png';
   imports: [IonItem, IonThumbnail, IonLabel, IonIcon],
   templateUrl: './gather-entry.component.html',
   styleUrl: './gather-entry.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GatherEntryComponent {
   private readonly userDataService = inject(UserDataService);
   private readonly imageCacheService = inject(ImageCacheService);
+  private readonly changeDetectorRef = inject(ChangeDetectorRef);
 
   _entry!: CatalogEntry;
   caught = false;
@@ -60,6 +68,7 @@ export class GatherEntryComponent {
       .then((url) => {
         if (this._entry === entry) {
           this.spriteSrc = url;
+          this.changeDetectorRef.markForCheck();
         }
       })
       .catch(() => {

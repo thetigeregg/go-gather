@@ -1,23 +1,34 @@
-import { Component, Input, OnChanges, OnDestroy, OnInit, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  Input,
+  OnChanges,
+  OnDestroy,
+  OnInit,
+  inject,
+} from '@angular/core';
 import { Subscription } from 'rxjs';
-import { IonAccordion, IonItem, IonLabel } from '@ionic/angular/standalone';
+import { IonItem, IonLabel } from '@ionic/angular/standalone';
 import { Generation } from '../../core/services/filter.service';
 import { UserDataService } from '../../core/services/user-data.service';
-import { GatherPokemonComponent } from '../gather-pokemon/gather-pokemon.component';
+import { GATHER_ROW_ITEM_SIZE_PX } from '../../gather/gather-row-sizing';
 
 @Component({
-  selector: 'app-poke-group',
+  selector: 'app-generation-header-row',
   standalone: true,
-  imports: [IonAccordion, IonItem, IonLabel, GatherPokemonComponent],
-  templateUrl: './poke-group.component.html',
-  styleUrl: './poke-group.component.scss',
+  imports: [IonItem, IonLabel],
+  templateUrl: './generation-header-row.component.html',
+  styleUrl: './generation-header-row.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PokeGroupComponent implements OnInit, OnChanges, OnDestroy {
+export class GenerationHeaderRowComponent implements OnInit, OnChanges, OnDestroy {
   private readonly userDataService = inject(UserDataService);
+  private readonly changeDetectorRef = inject(ChangeDetectorRef);
 
   @Input() generation!: Generation;
-  @Input() expanded = false;
 
+  readonly rowHeightPx = GATHER_ROW_ITEM_SIZE_PX;
   countText = '';
 
   private progressChangeSubscription?: Subscription;
@@ -26,19 +37,20 @@ export class PokeGroupComponent implements OnInit, OnChanges, OnDestroy {
     this.progressChangeSubscription = this.userDataService
       .listenForProgressChanges()
       .subscribe(() => {
-        this.updateHeaderText();
+        this.updateCountText();
+        this.changeDetectorRef.markForCheck();
       });
   }
 
   ngOnChanges(): void {
-    this.updateHeaderText();
+    this.updateCountText();
   }
 
   ngOnDestroy(): void {
     this.progressChangeSubscription?.unsubscribe();
   }
 
-  private updateHeaderText(): void {
+  private updateCountText(): void {
     const entries = this.generation.speciesList.flatMap((group) => group.entries);
     const total = entries.length;
     const caught = entries.filter((entry) => this.userDataService.getItemState(entry.id)).length;
