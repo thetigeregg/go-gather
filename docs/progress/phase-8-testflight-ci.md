@@ -39,6 +39,11 @@ After all three fixes, a `workflow_dispatch` run passed end-to-end: `validate_as
 6. Confirmed `thetigeregg/go-gather-match-certs` exists and is private (`gh repo view --json isPrivate`).
 7. Confirmed the `production` GitHub Environment now exists on `thetigeregg/go-gather` (`gh api repos/thetigeregg/go-gather/environments/production`).
 
-## Remaining
+## Real-device install confirmed
 
-Manually confirm the uploaded TestFlight build installs and runs correctly on a real device via the TestFlight app — that's the last unchecked box in this phase and in the migration's overall "Done when" list.
+Confirmed working end-to-end: installed the TestFlight build, launched it against the NAS-hosted backend (Docker + Tailscale, see `docs/nas-deployment.md`) — app renders, catalog data loads, catch state persists, export/share and clipboard work. This closes the last open item in this phase and in the migration's "Done when" list.
+
+Getting to a clean confirmation surfaced two real, unrelated bugs, both fixed along the way:
+
+1. **`src/main.ts` blocked app bootstrap on the OTA check.** The `provideAppInitializer` wiring `LiveUpdateService` (added in Phase 9) `return`ed `checkAndStageUpdate(true)`'s promise instead of voiding it — Angular's bootstrap waits on every initializer's returned promise, and the native `LiveUpdate.getVersionCode()` call it depends on has no timeout of its own. On the very first TestFlight build to ever include the `LiveUpdate` plugin, this produced an indefinite white screen with no thrown error and nothing in the device logs. game-shelf's own `main.ts` explicitly `void`s this same call for exactly this reason — go-gather's port had deviated from that without a reason to. Fixed by voiding it, matching game-shelf.
+2. **`release-publish.yml`'s `validate_ios_signing_key` and `publish_server_image` jobs couldn't see `IOS_LIVE_UPDATE_PRIVATE_KEY`.** That secret is scoped to the `production` GitHub Environment (matching Phase 8's own match/ASC secrets), but neither job declared `environment: production` — so GitHub Actions correctly withheld the secret, and `validate_ios_signing_key` failed with "IOS_LIVE_UPDATE_PRIVATE_KEY is not set" on a real run. `ios-testflight.yml`'s `testflight` job already had this gate; `release-publish.yml`'s two jobs never got it. Fixed by adding `environment: production` to both (confirmed the `production` environment has no protection rules/required reviewers, so this adds no extra friction).

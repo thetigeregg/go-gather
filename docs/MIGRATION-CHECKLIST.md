@@ -118,5 +118,5 @@ Applies — a live backend is being kept (resolved, see Open Decisions gate abov
 - [x] Every item in [`current/FUNCTIONALITY.md`](../../go-gather-next/docs/current/FUNCTIONALITY.md) has a working equivalent, verified by manual walkthrough — see [progress notes](progress/phase-5-full-parity-verification.md)
 - [x] `StorageEngine` contract tests pass against both Dexie and SQLite engines — see [progress notes](progress/phase-6-sqlite-storage.md)
 - [ ] `search-engine/` has full unit test coverage
-- [ ] A TestFlight build has been successfully uploaded and installed on a real device — upload confirmed (see [progress notes](progress/phase-8-testflight-ci.md)); device install still needs manual confirmation via the TestFlight app
+- [x] A TestFlight build has been successfully uploaded and installed on a real device — confirmed working end-to-end against the NAS-hosted backend over Tailscale; see [progress notes](progress/phase-8-testflight-ci.md)
 - [ ] OTA live-update has been exercised at least once end-to-end — mechanism built and verified via local Docker build (real signed bundle + manifest produced, signature independently verified); real on-device check/stage/apply still pending, see [progress notes](progress/phase-9-ota-live-update.md)
