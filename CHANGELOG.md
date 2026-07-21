@@ -117,3 +117,8 @@
 ## v0.3.6 - 2026-07-21
 
 - 78abcbc test(settings): remove OTA live-update test marker
+
+## v0.4.0 - 2026-07-21
+
+- db986c0 feat(ios): give App DEV and App PROD distinct home-screen icons
+- c5fd093 fix: update migration checklist and confirm end-to-end OTA live-update functionality on real device
