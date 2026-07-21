@@ -94,3 +94,8 @@
 ## v0.3.1 - 2026-07-20
 
 - 45f234a chore(docker): bump node from 24.14.0-slim to 24.18.0-slim in /server
+
+## v0.3.2 - 2026-07-21
+
+- 77d2893 docs: refine NAS deployment instructions for clarity and consistency
+- 7013d22 docs: add README, NAS deployment guide, and docker-compose for go-gather
