@@ -192,18 +192,26 @@ describe('GatherPage', () => {
       expect(component.stickyGenerationName).toBe('Generation 1');
       expect(component.stickyGenerationCaught).toBe(0);
       expect(component.stickyGenerationTotal).toBe(1);
-      expect(component.stickySpeciesName).toBe('');
-      expect(component.stickySpeciesDexNr).toBeNull();
+      expect(component.showStickyBar).toBe(false);
     });
 
-    it('updates the sticky bar to the species at the scrolled-to card row', () => {
+    it('shows the sticky bar once scrolled to a species-card row', () => {
       fixture.detectChanges();
 
       component.onScrolledIndexChange(1);
 
       expect(component.stickyGenerationName).toBe('Generation 1');
-      expect(component.stickySpeciesName).toBe('Bulbasaur');
-      expect(component.stickySpeciesDexNr).toBe(1);
+      expect(component.showStickyBar).toBe(true);
+    });
+
+    it('hides the sticky bar again once scrolled back to a generation-header row', () => {
+      fixture.detectChanges();
+
+      component.onScrolledIndexChange(1);
+      expect(component.showStickyBar).toBe(true);
+
+      component.onScrolledIndexChange(0);
+      expect(component.showStickyBar).toBe(false);
     });
 
     it('resets the viewport scroll position whenever the rows are rebuilt', () => {

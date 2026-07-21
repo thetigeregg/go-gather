@@ -28,14 +28,11 @@
       <ion-title size="small">{{ headerText || 'GO Gather' }}</ion-title>
     </ion-toolbar>
 
-    @if (flatRows.length) {
+    @if (showStickyBar) {
       <div class="sticky-header-bar">
         <div class="generation-line">
           {{ stickyGenerationName }} ({{ stickyGenerationCaught }}/{{ stickyGenerationTotal }})
         </div>
-        @if (stickySpeciesName) {
-          <div class="species-line">{{ stickySpeciesName }} - #{{ stickySpeciesDexNr }}</div>
-        }
       </div>
     }
 

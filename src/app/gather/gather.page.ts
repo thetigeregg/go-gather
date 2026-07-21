@@ -79,8 +79,7 @@ export class GatherPage implements OnInit, AfterViewInit {
   stickyGenerationName = '';
   stickyGenerationCaught = 0;
   stickyGenerationTotal = 0;
-  stickySpeciesName = '';
-  stickySpeciesDexNr: number | null = null;
+  showStickyBar = false;
 
   constructor() {
     addIcons({ menu, filter, search });
@@ -160,8 +159,7 @@ export class GatherPage implements OnInit, AfterViewInit {
       this.stickyGenerationName = '';
       this.stickyGenerationCaught = 0;
       this.stickyGenerationTotal = 0;
-      this.stickySpeciesName = '';
-      this.stickySpeciesDexNr = null;
+      this.showStickyBar = false;
       return;
     }
 
@@ -177,14 +175,10 @@ export class GatherPage implements OnInit, AfterViewInit {
       ).length;
     }
 
-    const row = this.flatRows[clampedIndex];
-    if (row.kind === 'species-card') {
-      this.stickySpeciesName = row.speciesGroup.speciesName;
-      this.stickySpeciesDexNr = row.speciesGroup.dexNr;
-    } else {
-      this.stickySpeciesName = '';
-      this.stickySpeciesDexNr = null;
-    }
+    // The generation-header row itself is already visible at the top of the
+    // list once scrolled to it, so showing the sticky bar there too would
+    // just duplicate the same generation name/count redundantly.
+    this.showStickyBar = this.flatRows[clampedIndex].kind !== 'generation-header';
   }
 
   private setGenerations(generations: Generation[]): void {
