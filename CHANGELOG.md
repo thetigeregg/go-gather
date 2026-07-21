@@ -103,3 +103,7 @@
 ## v0.3.3 - 2026-07-21
 
 - 464337b fix: ensure LiveUpdateService does not block app bootstrap during OTA checks
+
+## v0.3.4 - 2026-07-21
+
+- 3864aec fix: add production environment to validate iOS signing key and publish server image jobs
