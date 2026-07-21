@@ -61,12 +61,15 @@ bootstrapApplication(AppComponent, {
         });
     }),
     // Independent of the storage-engine chain above (LiveUpdateService.isEnabled()
-    // short-circuits to a no-op on web/dev and never reads STORAGE_ENGINE), so this
-    // runs unconditionally and in parallel rather than being sequenced after it.
+    // short-circuits to a no-op on web/dev and never reads STORAGE_ENGINE). Voided,
+    // not returned/awaited: an OTA check must never be able to block app bootstrap
+    // (matching game-shelf's main.ts) — the native LiveUpdate bridge calls this
+    // triggers have no timeout of their own, so awaiting this here would hang the
+    // entire app on a white screen indefinitely if any of them ever stall.
     provideAppInitializer(() => {
       const liveUpdateService = inject(LiveUpdateService);
       liveUpdateService.initializeResumeChecks();
-      return liveUpdateService.checkAndStageUpdate(true);
+      void liveUpdateService.checkAndStageUpdate(true);
     }),
     {
       provide: STORAGE_ENGINE,
