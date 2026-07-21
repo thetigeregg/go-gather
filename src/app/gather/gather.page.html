@@ -5,7 +5,7 @@
         <ion-icon name="menu"></ion-icon>
       </ion-menu-button>
     </ion-buttons>
-    <ion-title>{{ headerText || 'GO Gather' }}</ion-title>
+    <ion-title>GO Gather</ion-title>
     <ion-buttons slot="end">
       <ion-menu-button menu="end">
         <ion-icon name="filter"></ion-icon>
@@ -24,6 +24,10 @@
 
 <ion-content [scrollY]="false">
   <div class="gather-scroll-region">
+    <ion-toolbar color="light" class="total-counter-toolbar">
+      <ion-title size="small">{{ headerText || 'GO Gather' }}</ion-title>
+    </ion-toolbar>
+
     @if (flatRows.length) {
       <div class="sticky-header-bar">
         <div class="generation-line">

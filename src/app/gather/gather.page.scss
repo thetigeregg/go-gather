@@ -20,6 +20,22 @@
   margin-bottom: 12px;
 }
 
+.total-counter-toolbar {
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--ion-color-light-shade, #d7d8da);
+  --min-height: 32px;
+  --padding-top: 0;
+  --padding-bottom: 0;
+
+  ion-title {
+    display: flex;
+    align-items: center;
+    height: 32px;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
 .sticky-header-bar {
   flex: 0 0 auto;
   padding: 8px 16px;
