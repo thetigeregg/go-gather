@@ -19,3 +19,7 @@ Status: complete. `npm run lint`, `npm run test` (12 files, 102 tests passing), 
 ## Scope confirmation
 
 Nothing in `core/services/` or any UI/component consumes this yet, matching the "zero-UI-dependency" framing — these five files aren't imported from `main.ts`'s reachable bundle graph, confirmed by the production build's bundle sizes being unchanged from Phase 2. Wiring this into actual services (`search-string.service.ts`, `filter.service.ts`, etc.) and the `PresetQueryEditorComponent` UI is Phase 5.
+
+## Coverage closure (migration checklist "Done when" item)
+
+Re-verified with a scoped run: `npx vitest run --coverage src/app/core/search-engine` → **100% statements (86/86), branches (56/56), functions (20/20), lines (85/85)**, 77/77 tests passing, zero uncovered lines across all 5 files. `search-query.model.ts` has no dedicated spec file but still reaches 100% because its `term`/`not`/`and`/`or` factory functions are exercised indirectly by the builder/serializer/compiler specs above. Cross-checked against the unported `go-gather-next` originals: the 5 files differ only cosmetically (Prettier arrow-paren formatting, the `eslint-disable` comment noted above) — no logic differences — so this is genuinely complete coverage of a verbatim port, not an artifact of untested branches hiding behind the port.
