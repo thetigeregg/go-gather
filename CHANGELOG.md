@@ -122,3 +122,12 @@
 
 - db986c0 feat(ios): give App DEV and App PROD distinct home-screen icons
 - c5fd093 fix: update migration checklist and confirm end-to-end OTA live-update functionality on real device
+
+## v0.5.0 - 2026-07-21
+
+- e7ee1f8 feat(gather): refactor generation header row styles and sizing constants
+- 078d2fa feat(gather): move total counter into content toolbar, dedupe sticky generation bar
+- f54a1fc feat(gather): add total counter toolbar with dynamic header text
+- a724e37 feat(gather): implement species cards with virtual scrolling and precomputed sizes
+- 73448c1 fix(package): update angular dependencies in update script to include @angular/cdk
+- d84ffcd perf(gather): replace accordion expand-gating with CDK virtual scroll
