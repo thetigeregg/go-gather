@@ -12,7 +12,8 @@
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
 		504EC30D1FED79650016851F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30B1FED79650016851F /* Main.storyboard */; };
-		504EC30F1FED79650016851F /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
+		504EC30F1FED79650016851F /* Assets.shared.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.shared.xcassets */; };
+		C9F2C1C49345E6CB47F3E9F2 /* Assets.dev.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E30787F0B3F4C5B96A006F42 /* Assets.dev.xcassets */; };
 		504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		C691A6CF5EDB86CBA3807EE2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = BCFFACA414D38DF39EC2CEDF /* PrivacyInfo.xcprivacy */; };
@@ -21,7 +22,8 @@
 		9195D8DB31A0D5823CFFF33F /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		1893A310EA05AE1C824DDAE9 /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
 		9447761710470296BCDA34DA /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30B1FED79650016851F /* Main.storyboard */; };
-		0783CED893CA8A93FEFD9C3E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.xcassets */; };
+		0783CED893CA8A93FEFD9C3E /* Assets.shared.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.shared.xcassets */; };
+		4C73888D797E13FC23EEED8B /* Assets.prod.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3C1B7CF7F457B24FB7E02BF4 /* Assets.prod.xcassets */; };
 		0EA4BDA4AA536AB3D11F81A8 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		7DB7E695962D132BB395B97A /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		C0BB2A7339F015A6906FD741 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = BCFFACA414D38DF39EC2CEDF /* PrivacyInfo.xcprivacy */; };
@@ -34,7 +36,9 @@
 		2CCE7D71BBA84306E917C1BA /* App PROD.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "App PROD.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		504EC30C1FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		504EC30E1FED79650016851F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		504EC30E1FED79650016851F /* Assets.shared.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.shared.xcassets; sourceTree = "<group>"; };
+		E30787F0B3F4C5B96A006F42 /* Assets.dev.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.dev.xcassets; sourceTree = "<group>"; };
+		3C1B7CF7F457B24FB7E02BF4 /* Assets.prod.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.prod.xcassets; sourceTree = "<group>"; };
 		504EC3111FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		4F9DFBE6CEA608366C9AED5D /* Info.shared.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.shared.plist; sourceTree = "<group>"; };
 		1708480EE08397FA03FD3534 /* Info.dev.overlay.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.dev.overlay.plist; sourceTree = "<group>"; };
@@ -90,7 +94,9 @@
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
-				504EC30E1FED79650016851F /* Assets.xcassets */,
+				504EC30E1FED79650016851F /* Assets.shared.xcassets */,
+				E30787F0B3F4C5B96A006F42 /* Assets.dev.xcassets */,
+				3C1B7CF7F457B24FB7E02BF4 /* Assets.prod.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
 				4F9DFBE6CEA608366C9AED5D /* Info.shared.plist */,
 				1708480EE08397FA03FD3534 /* Info.dev.overlay.plist */,
@@ -197,7 +203,8 @@
 			files = (
 				504EC3121FED79650016851F /* LaunchScreen.storyboard in Resources */,
 				50B271D11FEDC1A000F3C39B /* public in Resources */,
-				504EC30F1FED79650016851F /* Assets.xcassets in Resources */,
+				504EC30F1FED79650016851F /* Assets.shared.xcassets in Resources */,
+				C9F2C1C49345E6CB47F3E9F2 /* Assets.dev.xcassets in Resources */,
 				50379B232058CBB4000EE86E /* capacitor.config.json in Resources */,
 				504EC30D1FED79650016851F /* Main.storyboard in Resources */,
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
@@ -211,7 +218,8 @@
 			files = (
 				0EA4BDA4AA536AB3D11F81A8 /* LaunchScreen.storyboard in Resources */,
 				7DB7E695962D132BB395B97A /* public in Resources */,
-				0783CED893CA8A93FEFD9C3E /* Assets.xcassets in Resources */,
+				0783CED893CA8A93FEFD9C3E /* Assets.shared.xcassets in Resources */,
+				4C73888D797E13FC23EEED8B /* Assets.prod.xcassets in Resources */,
 				1893A310EA05AE1C824DDAE9 /* capacitor.config.json in Resources */,
 				9447761710470296BCDA34DA /* Main.storyboard in Resources */,
 				9195D8DB31A0D5823CFFF33F /* config.xml in Resources */,
