@@ -23,8 +23,8 @@ Source docs live in the sibling repo: [`pogo-cal/docs/README.md`](../../pogo-cal
 
 See [`MIGRATION-CHECKLIST.md` Phase 0](../../pogo-cal/docs/migration/MIGRATION-CHECKLIST.md#phase-0--domain-model--types) and [`DOMAIN-MODEL.md`](../../pogo-cal/docs/current/DOMAIN-MODEL.md). Do this before any UI work.
 
-- [ ] Port `PogoEvent`, the event-type registry, and `EventMetadata` verbatim into `@go-gather/shared` — preserve the loosely-typed `extraData` grab-bag and the unrecognized-event-type fallback
-- [ ] Port `SeasonData`/`Season` types (resolved in scope) — the "Daily Discovery" chip data
+- [x] Port `PogoEvent`, the event-type registry, and `EventMetadata` verbatim into `@go-gather/shared` — preserve the loosely-typed `extraData` grab-bag and the unrecognized-event-type fallback (`shared/src/calendar.ts`; `extraData`'s catch-all and `CommunityDayData`'s loose fields ported as `unknown` rather than `any` to satisfy this repo's stricter lint — same escape-hatch semantics)
+- [x] Port `SeasonData`/`Season` types (resolved in scope) — the "Daily Discovery" chip data (same file)
 
 ## Phase 1 — Event Data Service
 
