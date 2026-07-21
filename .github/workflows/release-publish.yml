@@ -163,6 +163,7 @@ jobs:
       - detect_ios_live_update
     if: needs.detect_ios_live_update.outputs.should_deploy == 'true'
     runs-on: ubuntu-latest
+    environment: production
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -219,6 +220,7 @@ jobs:
       (needs.validate_ios_signing_key.result == 'success' ||
        needs.validate_ios_signing_key.result == 'skipped')
     runs-on: ubuntu-latest
+    environment: production
     permissions:
       contents: read
       packages: write
