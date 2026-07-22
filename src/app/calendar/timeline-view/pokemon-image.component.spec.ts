@@ -153,6 +153,7 @@ describe('PokemonImageComponent', () => {
       component.showCP = false;
       component.pokemonData = makePokemonImage();
       fakeStatsService.searchCatchablePokemon.mockReturnValue(makePokemonData());
+      component.ngOnChanges();
       expect(component.formattedCP).toBe('');
     });
 
@@ -161,6 +162,7 @@ describe('PokemonImageComponent', () => {
       component.eventType = 'community-day';
       component.pokemonData = makePokemonImage();
       fakeStatsService.searchCatchablePokemon.mockReturnValue(makePokemonData());
+      component.ngOnChanges();
       expect(component.formattedCP).toBe('');
     });
 
@@ -169,11 +171,13 @@ describe('PokemonImageComponent', () => {
       component.isPlaceholder = true;
       component.pokemonData = makePokemonImage();
       fakeStatsService.searchCatchablePokemon.mockReturnValue(makePokemonData());
+      component.ngOnChanges();
       expect(component.formattedCP).toBe('');
     });
 
     it('is empty when there is no pokemonData', () => {
       component.showCP = true;
+      component.ngOnChanges();
       expect(component.formattedCP).toBe('');
     });
 
@@ -181,6 +185,7 @@ describe('PokemonImageComponent', () => {
       component.showCP = true;
       component.pokemonData = makePokemonImage();
       fakeStatsService.searchCatchablePokemon.mockReturnValue(null);
+      component.ngOnChanges();
       expect(component.formattedCP).toBe('');
     });
 
@@ -189,6 +194,7 @@ describe('PokemonImageComponent', () => {
       component.eventType = 'max-battles';
       component.pokemonData = makePokemonImage();
       fakeStatsService.searchCatchablePokemon.mockReturnValue(makePokemonData());
+      component.ngOnChanges();
       expect(component.formattedCP).toBe('1,602');
     });
 
@@ -197,6 +203,7 @@ describe('PokemonImageComponent', () => {
       component.eventType = 'raid-battles';
       component.pokemonData = makePokemonImage();
       fakeStatsService.searchCatchablePokemon.mockReturnValue(makePokemonData());
+      component.ngOnChanges();
       expect(component.formattedCP).toBe('1,602 / 2,003');
     });
 
@@ -206,6 +213,7 @@ describe('PokemonImageComponent', () => {
       component.eventType = 'community-day';
       component.pokemonData = makePokemonImage();
       fakeStatsService.searchCatchablePokemon.mockReturnValue(makePokemonData());
+      component.ngOnChanges();
       expect(component.formattedCP).toBe('1,602 / 2,003');
     });
 
@@ -215,7 +223,29 @@ describe('PokemonImageComponent', () => {
       component.eventType = 'raid-battles';
       component.pokemonData = makePokemonImage();
       fakeStatsService.searchCatchablePokemon.mockReturnValue(makePokemonData());
+      component.ngOnChanges();
       expect(component.formattedCP).toBe('');
+    });
+
+    it('recomputes once Pokemon stats finish loading after this component already settled', () => {
+      let loadCallback: (() => void) | undefined;
+      fakeStatsService.loadPokemonData.mockReturnValue({
+        subscribe: (cb: () => void) => {
+          loadCallback = cb;
+        },
+      });
+      component.showCP = true;
+      component.eventType = 'raid-battles';
+      component.pokemonData = makePokemonImage();
+      fakeStatsService.searchCatchablePokemon.mockReturnValue(null);
+
+      component.ngOnInit();
+      component.ngOnChanges();
+      expect(component.formattedCP).toBe('');
+
+      fakeStatsService.searchCatchablePokemon.mockReturnValue(makePokemonData());
+      loadCallback?.();
+      expect(component.formattedCP).toBe('1,602 / 2,003');
     });
   });
 });

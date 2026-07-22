@@ -9,6 +9,7 @@ import { calendarOutline, chevronBack, chevronForward } from 'ionicons/icons';
 import { EventMetadata, PogoEvent, Season } from '@go-gather/shared';
 import { CalendarEventsService } from '../../core/services/calendar-events.service';
 import { CalendarFilterService } from '../../core/services/calendar-filter.service';
+import { SyncService } from '../../core/services/sync.service';
 import { EventDetailComponent } from '../event-detail/event-detail.component';
 import { CalendarDayComponent } from './calendar-day.component';
 import { buildEventSlots, EventSlot } from './calendar-grid-slots.util';
@@ -32,6 +33,13 @@ const EARLIEST_MONTH = dayjs().year(2016).month(0);
  * event/season data on init rather than waiting on a shared page-level
  * loader (Phase 6 may hoist this up to share with timeline-view — noted as
  * a follow-up, not a blocker).
+ *
+ * Also re-loads when `SyncService` pulls fresh calendar-events/season data —
+ * without this, a view that mounts before the very first background sync
+ * has written anything to local storage (fresh install, cleared storage, or
+ * just unlucky timing) would show an empty grid forever, since the initial
+ * load only ever resolves once and never re-fires on its own once newer
+ * data lands moments later.
  */
 @Component({
   selector: 'app-calendar-view',
@@ -42,6 +50,7 @@ const EARLIEST_MONTH = dayjs().year(2016).month(0);
 export class CalendarViewComponent implements OnInit {
   private readonly calendarEventsService = inject(CalendarEventsService);
   private readonly calendarFilterService = inject(CalendarFilterService);
+  private readonly syncService = inject(SyncService);
 
   readonly dayHeaders = DAY_HEADERS;
   readonly firstDayIndex = FIRST_DAY_INDEX;
@@ -66,12 +75,14 @@ export class CalendarViewComponent implements OnInit {
 
   ngOnInit(): void {
     this.refresh();
+    this.loadAndRefresh();
 
-    forkJoin([
-      this.calendarEventsService.loadCalendarEvents(),
-      this.calendarEventsService.loadSeason(),
-    ]).subscribe(() => {
-      this.refresh();
+    this.syncService.listenForCalendarEventsSync().subscribe(() => {
+      this.loadAndRefresh();
+    });
+
+    this.syncService.listenForSeasonSync().subscribe(() => {
+      this.loadAndRefresh();
     });
 
     this.calendarFilterService.listenForFilterChanges().subscribe(() => {
@@ -156,6 +167,15 @@ export class CalendarViewComponent implements OnInit {
   closeDetail(): void {
     this.selectedEvent = null;
     this.selectedEventMetadata = null;
+  }
+
+  private loadAndRefresh(): void {
+    forkJoin([
+      this.calendarEventsService.loadCalendarEvents(),
+      this.calendarEventsService.loadSeason(),
+    ]).subscribe(() => {
+      this.refresh();
+    });
   }
 
   private refresh(): void {

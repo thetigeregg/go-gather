@@ -15,6 +15,7 @@ import { TimelineCategorySectionComponent } from './timeline-category-section.co
 import { TimelineCollapsedScheduleComponent } from './timeline-collapsed-schedule.component';
 import { TimelineEventComponent } from './timeline-event.component';
 import { TimelineRaidScheduleComponent } from './timeline-raid-schedule.component';
+import { SyncService } from '../../core/services/sync.service';
 
 function makeEvent(overrides: Partial<PogoEvent> = {}): PogoEvent {
   return {
@@ -37,12 +38,14 @@ describe('TimelineViewComponent', () => {
   let eventMetadata: Record<string, EventMetadata>;
   let filterState: CalendarFilterState;
   let filterChange$: Subject<void>;
+  let calendarEventsSync$: Subject<void>;
 
   beforeEach(async () => {
     events = [];
     eventMetadata = {};
     filterState = { disabledEventTypes: [], hiddenEventIds: [], filtersApplyToTimeline: false };
     filterChange$ = new Subject<void>();
+    calendarEventsSync$ = new Subject<void>();
 
     TestBed.configureTestingModule({
       providers: [
@@ -64,6 +67,12 @@ describe('TimelineViewComponent', () => {
             getFilterState: () => filterState,
             isEventVisible: () => true,
             listenForFilterChanges: () => filterChange$.asObservable(),
+          },
+        },
+        {
+          provide: SyncService,
+          useValue: {
+            listenForCalendarEventsSync: () => calendarEventsSync$.asObservable(),
           },
         },
       ],
@@ -115,6 +124,36 @@ describe('TimelineViewComponent', () => {
 
     expect(component.timelineData.hasAnyEvents).toBe(true);
     expect(component.eventMetadata).toBe(eventMetadata);
+  });
+
+  it('re-loads and rebuilds timelineData when SyncService pulls fresh calendar-events data', () => {
+    fixture.detectChanges();
+    expect(component.timelineData.hasAnyEvents).toBe(false);
+
+    // Data lands in local storage moments after the view's own initial
+    // (empty) load already resolved — this is the exact race that used to
+    // leave the timeline stuck showing "No upcoming events found" forever.
+    const start = dayjs();
+    const end = start.add(2, 'hour');
+    events = [makeEvent({ start: start.toISOString(), end: end.toISOString() })];
+    eventMetadata = {
+      'event-1': {
+        startDate: start,
+        endDate: end,
+        isMultiDayEvent: false,
+        isSingleDayEvent: true,
+        isPastEvent: false,
+        isFutureEvent: false,
+        typeInfo: { name: 'Test', priority: 50, category: 'events-and-misc' },
+        color: '#123456',
+        formattedStartTime: '10am',
+        displayName: 'Test Event',
+      },
+    };
+
+    calendarEventsSync$.next();
+
+    expect(component.timelineData.hasAnyEvents).toBe(true);
   });
 
   it('recomputes timelineData when the global filter state changes', () => {

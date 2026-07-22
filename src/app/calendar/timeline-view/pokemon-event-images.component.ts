@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, OnChanges } from '@angular/core';
 import { PogoEvent } from '@go-gather/shared';
 import {
   getEventPokemonImages,
@@ -28,6 +28,12 @@ const PLACEHOLDER_EVENT_TYPES: readonly string[] = [
  * gate (`useBreakpoints().smaller('md')`) is dropped too: go-gather is a
  * native single-layout mobile app with no responsive breakpoint switching,
  * so that condition is always true here.
+ *
+ * `pokemonImages` is memoized on ngOnChanges rather than recomputed on every
+ * template read — it's consulted from 6 different members below, and its
+ * regex-heavy event-type resolution showed up as a real main-thread cost on
+ * a raid-heavy Timeline (confirmed via a live trace alongside
+ * pokemon-image.component.ts's identical fix).
  */
 @Component({
   selector: 'app-pokemon-event-images',
@@ -35,7 +41,7 @@ const PLACEHOLDER_EVENT_TYPES: readonly string[] = [
   templateUrl: './pokemon-event-images.component.html',
   styleUrl: './pokemon-event-images.component.scss',
 })
-export class PokemonEventImagesComponent {
+export class PokemonEventImagesComponent implements OnChanges {
   @Input({ required: true }) event!: PogoEvent;
   @Input() height = 18;
   @Input() showPlaceholder = false;
@@ -45,8 +51,16 @@ export class PokemonEventImagesComponent {
   @Input() excludeTiers: string[] | undefined = undefined;
   @Input() wrap = false;
 
+  private cachedPokemonImages: PokemonImageData[] = [];
+
+  ngOnChanges(): void {
+    this.cachedPokemonImages = getEventPokemonImages(this.event, {
+      excludeTiers: this.excludeTiers,
+    });
+  }
+
   private get pokemonImages(): PokemonImageData[] {
-    return getEventPokemonImages(this.event, { excludeTiers: this.excludeTiers });
+    return this.cachedPokemonImages;
   }
 
   get displayedImages(): PokemonImageData[] {

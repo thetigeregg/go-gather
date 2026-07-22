@@ -5,6 +5,7 @@ import { EventMetadata, PogoEvent, Season } from '@go-gather/shared';
 import { CalendarViewComponent } from './calendar-view.component';
 import { CalendarEventsService } from '../../core/services/calendar-events.service';
 import { CalendarFilterService } from '../../core/services/calendar-filter.service';
+import { SyncService } from '../../core/services/sync.service';
 import { CalendarDayComponent } from './calendar-day.component';
 import { MultiDayEventBarComponent } from './multi-day-event-bar.component';
 import { SingleDayEventComponent } from './single-day-event.component';
@@ -47,12 +48,16 @@ describe('CalendarViewComponent', () => {
   let eventMetadata: Record<string, EventMetadata>;
   let season: Season | undefined;
   let filterChange$: Subject<void>;
+  let calendarEventsSync$: Subject<void>;
+  let seasonSync$: Subject<void>;
 
   beforeEach(async () => {
     events = [];
     eventMetadata = {};
     season = undefined;
     filterChange$ = new Subject<void>();
+    calendarEventsSync$ = new Subject<void>();
+    seasonSync$ = new Subject<void>();
 
     TestBed.configureTestingModule({
       providers: [
@@ -77,6 +82,13 @@ describe('CalendarViewComponent', () => {
           useValue: {
             isEventVisible: () => true,
             listenForFilterChanges: () => filterChange$.asObservable(),
+          },
+        },
+        {
+          provide: SyncService,
+          useValue: {
+            listenForCalendarEventsSync: () => calendarEventsSync$.asObservable(),
+            listenForSeasonSync: () => seasonSync$.asObservable(),
           },
         },
       ],
@@ -147,6 +159,50 @@ describe('CalendarViewComponent', () => {
     expect(component.eventSlots).toHaveLength(1);
     expect(component.events).toBe(events);
     expect(component.eventMetadata).toBe(eventMetadata);
+    expect(component.season).toBe(season);
+  });
+
+  it('re-loads and rebuilds event slots when SyncService pulls fresh calendar-events data', () => {
+    fixture.detectChanges();
+    expect(component.eventSlots).toHaveLength(0);
+
+    // Data lands in local storage moments after the view's own initial
+    // (empty) load already resolved — without a sync listener, this would
+    // never be picked up until a manual reload.
+    events = [
+      makeEvent({
+        eventID: 'multi-1',
+        start: '2026-07-08T00:00:00.000',
+        end: '2026-07-09T00:00:00.000',
+      }),
+    ];
+    eventMetadata = { 'multi-1': makeMetadata() };
+    component.month = 6;
+    component.year = 2026;
+
+    calendarEventsSync$.next();
+
+    expect(component.eventSlots).toHaveLength(1);
+    expect(component.events).toBe(events);
+  });
+
+  it('re-loads and rebuilds when SyncService pulls fresh season data', () => {
+    fixture.detectChanges();
+    expect(component.season).toBeUndefined();
+
+    season = {
+      name: 'Forever Forward',
+      eventID: 'season-1',
+      link: 'https://leekduck.com/events/season-1/',
+      start: '2026-06-02T10:00:00.000',
+      end: '2026-09-08T10:00:00.000',
+      note: null,
+      dailyBonuses: [],
+      seasonBonuses: [],
+    };
+
+    seasonSync$.next();
+
     expect(component.season).toBe(season);
   });
 

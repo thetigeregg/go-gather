@@ -53,11 +53,13 @@ describe('PokemonEventImagesComponent', () => {
           },
         },
       });
+      component.ngOnChanges();
       expect(component.displayedImages).toHaveLength(3);
     });
 
     it('is empty for an event with no resolvable Pokemon', () => {
       component.event = makeEvent({ eventType: 'community-day' });
+      component.ngOnChanges();
       expect(component.displayedImages).toEqual([]);
     });
 
@@ -73,6 +75,7 @@ describe('PokemonEventImagesComponent', () => {
         },
       });
       component.excludeTiers = ['Tier 5'];
+      component.ngOnChanges();
       expect(component.displayedImages.map((i) => i.name)).toEqual(['Tier3Boss']);
     });
   });
@@ -97,24 +100,28 @@ describe('PokemonEventImagesComponent', () => {
     it('is false when showPlaceholder is off', () => {
       component.event = makeEvent({ eventType: 'raid-battles' });
       component.showPlaceholder = false;
+      component.ngOnChanges();
       expect(component.shouldShowPlaceholder).toBe(false);
     });
 
     it('is true for a placeholder-eligible event type with no resolved Pokemon', () => {
       component.event = makeEvent({ eventType: 'raid-battles' });
       component.showPlaceholder = true;
+      component.ngOnChanges();
       expect(component.shouldShowPlaceholder).toBe(true);
     });
 
     it('is false for a non-placeholder-eligible event type', () => {
       component.event = makeEvent({ eventType: 'wild-area' });
       component.showPlaceholder = true;
+      component.ngOnChanges();
       expect(component.shouldShowPlaceholder).toBe(false);
     });
 
     it('is false when Pokemon images were actually resolved', () => {
       component.event = makeEvent({ extraData: { raidbattles: { bosses: [makeBoss()] } } });
       component.showPlaceholder = true;
+      component.ngOnChanges();
       expect(component.shouldShowPlaceholder).toBe(false);
     });
   });
@@ -140,6 +147,7 @@ describe('PokemonEventImagesComponent', () => {
           },
         },
       });
+      component.ngOnChanges();
       expect(component.showOverflowBadge).toBe(true);
       expect(component.overflowBadgeCount).toBe(4);
     });
@@ -156,6 +164,7 @@ describe('PokemonEventImagesComponent', () => {
         },
       });
       component.excludeTiers = ['Tier 5'];
+      component.ngOnChanges();
       expect(component.showOverflowBadge).toBe(true);
       expect(component.overflowBadgeCount).toBe(2);
     });
@@ -165,6 +174,7 @@ describe('PokemonEventImagesComponent', () => {
         extraData: { raidbattles: { bosses: [makeBoss(), makeBoss({ name: 'B' })] } },
       });
       component.showOverflowCounter = false;
+      component.ngOnChanges();
       expect(component.showOverflowBadge).toBe(false);
     });
 
@@ -173,6 +183,7 @@ describe('PokemonEventImagesComponent', () => {
         extraData: { raidbattles: { bosses: [makeBoss(), makeBoss({ name: 'B' })] } },
       });
       component.showOverflowCounter = true;
+      component.ngOnChanges();
       expect(component.showOverflowBadge).toBe(true);
       expect(component.overflowBadgeCount).toBe(2);
     });
@@ -180,12 +191,14 @@ describe('PokemonEventImagesComponent', () => {
     it('does not show the overflow badge when showOverflowCounter is on but fewer than 2 images resolved', () => {
       component.event = makeEvent({ extraData: { raidbattles: { bosses: [makeBoss()] } } });
       component.showOverflowCounter = true;
+      component.ngOnChanges();
       expect(component.showOverflowBadge).toBe(false);
     });
 
     it('does not treat an event with an explicitly empty raidbattles.bosses list as overflowing', () => {
       component.event = makeEvent({ extraData: { raidbattles: { bosses: [] } } });
       component.excludeTiers = ['Tier 5'];
+      component.ngOnChanges();
       expect(component.showOverflowBadge).toBe(false);
       expect(component.overflowBadgeCount).toBe(0);
     });
@@ -194,17 +207,20 @@ describe('PokemonEventImagesComponent', () => {
   describe('showContainer', () => {
     it('is true when there are displayed images', () => {
       component.event = makeEvent({ extraData: { raidbattles: { bosses: [makeBoss()] } } });
+      component.ngOnChanges();
       expect(component.showContainer).toBe(true);
     });
 
     it('is true when the placeholder should show', () => {
       component.event = makeEvent({ eventType: 'raid-battles' });
       component.showPlaceholder = true;
+      component.ngOnChanges();
       expect(component.showContainer).toBe(true);
     });
 
     it('is false when there is nothing to render', () => {
       component.event = makeEvent({ eventType: 'community-day' });
+      component.ngOnChanges();
       expect(component.showContainer).toBe(false);
     });
   });

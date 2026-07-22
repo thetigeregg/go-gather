@@ -4,6 +4,7 @@ import { IonAccordionGroup } from '@ionic/angular/standalone';
 import { EventMetadata } from '@go-gather/shared';
 import { CalendarEventsService } from '../../core/services/calendar-events.service';
 import { CalendarFilterService } from '../../core/services/calendar-filter.service';
+import { SyncService } from '../../core/services/sync.service';
 import { buildTimelineData, TIMELINE_CATEGORIES, TimelineData } from './timeline-categories.util';
 import { TimelineCategorySectionComponent } from './timeline-category-section.component';
 
@@ -29,6 +30,13 @@ function emptyTimelineData(): TimelineData {
  * "Now" is a plain snapshot recomputed on refresh() (init, data load, filter
  * change) rather than a live-ticking clock — see the plan's simplification
  * note; an event won't visibly hop categories while the page sits open.
+ *
+ * Also re-loads when `SyncService` pulls fresh calendar-events data — without
+ * this, a view that mounts before the very first background sync has
+ * written anything to local storage (fresh install, cleared storage, or
+ * just unlucky timing) would show "No upcoming events found" forever, since
+ * the initial `loadCalendarEvents()` call only ever resolves once and never
+ * re-fires on its own once newer data lands moments later.
  */
 @Component({
   selector: 'app-timeline-view',
@@ -39,6 +47,7 @@ function emptyTimelineData(): TimelineData {
 export class TimelineViewComponent implements OnInit {
   private readonly calendarEventsService = inject(CalendarEventsService);
   private readonly calendarFilterService = inject(CalendarFilterService);
+  private readonly syncService = inject(SyncService);
 
   readonly categories = TIMELINE_CATEGORIES;
   readonly defaultExpandedCategories = TIMELINE_CATEGORIES.map((category) => category.key);
@@ -49,9 +58,10 @@ export class TimelineViewComponent implements OnInit {
 
   ngOnInit(): void {
     this.refresh();
+    this.loadAndRefresh();
 
-    this.calendarEventsService.loadCalendarEvents().subscribe(() => {
-      this.refresh();
+    this.syncService.listenForCalendarEventsSync().subscribe(() => {
+      this.loadAndRefresh();
     });
 
     this.calendarFilterService.listenForFilterChanges().subscribe(() => {
@@ -75,6 +85,12 @@ export class TimelineViewComponent implements OnInit {
         }
       }, SCROLL_INTO_VIEW_DELAY_MS);
     }
+  }
+
+  private loadAndRefresh(): void {
+    this.calendarEventsService.loadCalendarEvents().subscribe(() => {
+      this.refresh();
+    });
   }
 
   private refresh(): void {

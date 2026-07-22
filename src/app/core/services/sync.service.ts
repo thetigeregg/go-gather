@@ -146,9 +146,15 @@ export class SyncService implements SyncOutboxWriter {
     try {
       await this.pushOutbox();
       await this.pullChanges();
-      await this.pullCatalog();
-      await this.pullCalendarEvents();
-      await this.pullSeason();
+      // Catalog, calendar-events, and season are three unrelated domains —
+      // each writes to its own store + its own syncMeta version key, so
+      // there's no correctness reason to serialize them. Chaining them with
+      // `await` one after another (as this used to) meant a slow catalog
+      // pull directly delayed calendar-events/season from even starting,
+      // which in turn delayed CalendarViewComponent/TimelineViewComponent's
+      // own sync-triggered refresh (see listenForCalendarEventsSync()/
+      // listenForSeasonSync() below) for no real reason.
+      await Promise.all([this.pullCatalog(), this.pullCalendarEvents(), this.pullSeason()]);
     } catch {
       // Best-effort: failures are retried on the next interval/online/write
       // trigger. No connectivity-status tracking yet (Phase 5+ concern).

@@ -68,20 +68,36 @@ export class PokemonImageComponent implements OnInit, OnChanges {
   private errorLevel = 0;
   private lastImageSourcesKey = '';
 
+  // Memoized on ngOnChanges/stats-load rather than recomputed on every
+  // template read — with dozens of sprites visible at once on a raid-heavy
+  // Timeline, re-running getPokemonSpriteUrl/searchCatchablePokemon's
+  // linear scans on every change-detection pass was a real, measurable
+  // main-thread cost (confirmed via a live trace: the tab went unresponsive
+  // for several seconds right as Pokemon stats data arrived).
+  private cachedImageSources: string[] = [];
+  private cachedCpData: CPResult | null = null;
+
   constructor() {
     addIcons({ 'help-circle-outline': helpCircleOutline, 'help-outline': helpOutline });
   }
 
   ngOnInit(): void {
-    this.pokemonStatsService.loadPokemonData().subscribe();
+    this.pokemonStatsService.loadPokemonData().subscribe(() => {
+      // Stats may finish loading after this component's own inputs have
+      // already settled (ngOnChanges already ran) — recompute once more so
+      // the CP badge appears once the data actually arrives.
+      this.cachedCpData = this.computeCpData();
+    });
   }
 
   ngOnChanges(): void {
-    const key = this.imageSources.join('|');
+    this.cachedImageSources = this.computeImageSources();
+    const key = this.cachedImageSources.join('|');
     if (key !== this.lastImageSourcesKey) {
       this.lastImageSourcesKey = key;
       this.errorLevel = 0;
     }
+    this.cachedCpData = this.computeCpData();
   }
 
   get resolvedEffect(): SpriteEffect | undefined {
@@ -92,7 +108,7 @@ export class PokemonImageComponent implements OnInit, OnChanges {
     return this.pokemonData?.shieldCount;
   }
 
-  private get imageSources(): string[] {
+  private computeImageSources(): string[] {
     const sources: string[] = [];
     const primary = this.pokemonData?.imageUrl;
     const altFolder = primary ? getSprite256FallbackUrl(primary) : null;
@@ -116,11 +132,11 @@ export class PokemonImageComponent implements OnInit, OnChanges {
   }
 
   get currentImageSrc(): string | null {
-    return this.imageSources[this.errorLevel] ?? null;
+    return this.cachedImageSources[this.errorLevel] ?? null;
   }
 
   get hasError(): boolean {
-    return this.errorLevel >= this.imageSources.length;
+    return this.errorLevel >= this.cachedImageSources.length;
   }
 
   onImageError(): void {
@@ -142,7 +158,7 @@ export class PokemonImageComponent implements OnInit, OnChanges {
     return CP_SUPPORTED_EVENT_TYPES.includes(this.eventType);
   }
 
-  private get cpData(): CPResult | null {
+  private computeCpData(): CPResult | null {
     if (!this.showCP || !this.shouldShowCP || this.isPlaceholder || !this.pokemonData) {
       return null;
     }
@@ -156,8 +172,11 @@ export class PokemonImageComponent implements OnInit, OnChanges {
   }
 
   get formattedCP(): string {
-    const cpData = this.cpData;
-    if (!cpData) return '';
-    return formatCPDisplay(cpData.level20Max, cpData.level25Max, this.shouldShowWeatherBoost);
+    if (!this.cachedCpData) return '';
+    return formatCPDisplay(
+      this.cachedCpData.level20Max,
+      this.cachedCpData.level25Max,
+      this.shouldShowWeatherBoost
+    );
   }
 }
