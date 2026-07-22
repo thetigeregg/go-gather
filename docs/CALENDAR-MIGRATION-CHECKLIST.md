@@ -50,9 +50,11 @@ See [`MIGRATION-CHECKLIST.md` Phase 2](../../pogo-cal/docs/migration/MIGRATION-C
 
 See [`MIGRATION-CHECKLIST.md` Phase 3](../../pogo-cal/docs/migration/MIGRATION-CHECKLIST.md#phase-3--calendar-month-grid-view) and [`CALENDAR-AND-TIMELINE-VIEWS.md`](../../pogo-cal/docs/current/CALENDAR-AND-TIMELINE-VIEWS.md).
 
-- [ ] Port the grid-construction util, then the grid skeleton, then the multi-day slot-packing algorithm (preserve its exact sort/conflict rules), then single-day event rendering (skip the "group similar events" `_isGrouped` branch — resolved deferred)
-- [ ] Build the Season "Daily Discovery" chip overlay on calendar days (resolved in scope)
-- [ ] Wire the filter service's visibility check unconditionally on this view
+- [x] Port the grid-construction util, then the grid skeleton, then the multi-day slot-packing algorithm (preserve its exact sort/conflict rules), then single-day event rendering (skip the "group similar events" `_isGrouped` branch — resolved deferred)
+- [x] Build the Season "Daily Discovery" chip overlay on calendar days (resolved in scope)
+- [x] Wire the filter service's visibility check unconditionally on this view — `calendar-day.component.ts` injects `CalendarFilterService` directly (rather than taking it as an input), subscribing to `listenForFilterChanges()` and calling `markForCheck()`, mirroring `generation-header-row.component.ts`'s existing OnPush+subscribe pattern so a live filter-menu toggle is reflected immediately
+
+Built as a self-contained `calendar-view.component.*` (month/year state, prev/next/today nav, own `ngOnInit` data load) with no `calendar.page.ts` wrapper yet — see [progress notes](progress/phase-3-calendar-month-grid-view.md) for the full file list and design notes (slot-packing two-stage major-event exclusion, OnPush reactivity design, etc).
 
 ## Phase 4 — Timeline View
 

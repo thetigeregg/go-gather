@@ -1,0 +1,45 @@
+<div class="calendar-day" [class.other-month]="!isCurrentMonth" [class.today]="isToday">
+  <div class="day-number-row">
+    <div class="day-number">{{ date }}</div>
+  </div>
+
+  @if (seasonChip; as chip) {
+    <div class="season-chip" [attr.data-event-id]="chip.sourceEventID">
+      {{ chip.label }}
+      @if (chip.extraCount > 0) {
+        <span class="season-chip-extra">+{{ chip.extraCount }}</span>
+      }
+    </div>
+  }
+
+  @if (multiDayEvents.length > 0) {
+    <div class="multi-day-events" [style.height.px]="multiDayEventsHeight">
+      @for (event of multiDayEvents; track event.eventID) {
+        <div
+          class="multi-day-event-slot"
+          [style.top.px]="getEventSlotTop(event)"
+          [style.height.px]="barHeight"
+        >
+          <app-multi-day-event-bar
+            [event]="event"
+            [color]="getMetadataFor(event).color"
+            [barClass]="getMultiDayEventBarClass(event)"
+            [position]="getEventPosition(event)"
+            (eventClick)="onEventClick($event)"
+          />
+        </div>
+      }
+    </div>
+  }
+
+  <div class="single-day-events">
+    @for (event of singleDayEvents; track event.eventID) {
+      <app-single-day-event
+        [event]="event"
+        [metadata]="getMetadataFor(event)"
+        [isToday]="isToday"
+        (eventClick)="onEventClick($event)"
+      />
+    }
+  </div>
+</div>

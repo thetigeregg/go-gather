@@ -1,0 +1,93 @@
+:host {
+  display: block;
+}
+
+.calendar-day {
+  min-height: 70px;
+  background: var(--ion-item-background, var(--ion-background-color));
+  min-width: 0;
+  overflow: visible;
+  position: relative;
+  border-radius: 7px;
+  box-shadow: 0 0 0 1px var(--ion-background-color) inset;
+
+  &.other-month {
+    background-color: var(--ion-color-step-50, rgba(0, 0, 0, 0.03));
+    color: var(--ion-color-medium);
+  }
+
+  &.today {
+    background-color: var(--ion-color-primary-tint, rgba(56, 128, 255, 0.12));
+  }
+
+  &.today .day-number {
+    background-color: var(--ion-color-primary);
+    color: var(--ion-color-primary-contrast);
+    font-weight: 600;
+  }
+}
+
+.day-number-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 2px 2px;
+}
+
+.day-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.season-chip {
+  margin: 0 2px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-weight: 500;
+  background: var(--ion-color-tertiary, #7044ff);
+  color: var(--ion-color-tertiary-contrast, #fff);
+  width: fit-content;
+  max-width: calc(100% - 4px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.season-chip-extra {
+  opacity: 0.85;
+}
+
+.multi-day-events {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.multi-day-event-slot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+}
+
+.single-day-events {
+  z-index: 2;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 5px;
+  gap: 5px;
+  margin: 4px 2px 2px 2px;
+}

@@ -1,0 +1,12 @@
+<div
+  class="multi-day-event-bar"
+  [class]="barClass"
+  [attr.data-event-type]="event.eventType"
+  [attr.data-event-id]="event.eventID"
+  [style.left]="position.left"
+  [style.width]="position.width"
+  [style.background-color]="color"
+  (click)="onClick()"
+>
+  <span class="event-name">{{ displayName }}</span>
+</div>

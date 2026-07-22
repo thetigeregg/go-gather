@@ -1,0 +1,82 @@
+:host {
+  display: block;
+}
+
+.single-day-event {
+  position: relative;
+  min-height: 40px;
+  display: flex;
+  flex-direction: column;
+  padding: 2px 2px 2px 4px;
+  border-radius: 3px;
+  cursor: pointer;
+  overflow: hidden;
+
+  &:hover {
+    background-color: var(--ion-color-step-50, rgba(0, 0, 0, 0.05));
+  }
+
+  &.event-past:not(:hover) {
+    opacity: 0.6;
+    filter: grayscale(50%);
+  }
+}
+
+.event-name {
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: var(--ion-text-color);
+  min-height: 15px;
+  line-height: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 1px;
+}
+
+.event-time {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: 3px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--ion-color-medium);
+  line-height: 0.8rem;
+  margin-top: 1px;
+}
+
+.event-dot {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.event-ended-label {
+  margin-left: 3px;
+  font-size: 0.65rem;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--ion-color-danger);
+}
+
+.single-day-event.major-daily-display-event {
+  min-height: 82px;
+  border-radius: 5px;
+  border: 2px solid
+    color-mix(in srgb, var(--ion-background-color) 22%, var(--major-event-color) 78%);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--ion-background-color) 70%, var(--major-event-color) 20%),
+    color-mix(in srgb, var(--ion-background-color) 66%, var(--major-event-color) 28%)
+  );
+
+  .event-name {
+    white-space: normal;
+    line-height: 0.875rem;
+    text-overflow: unset;
+    font-weight: 600;
+  }
+}

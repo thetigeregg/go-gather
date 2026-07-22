@@ -1,0 +1,41 @@
+:host {
+  display: block;
+}
+
+.calendar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0 4px;
+  margin-bottom: 4px;
+}
+
+.month-label {
+  font-size: 1.1rem;
+  font-weight: 500;
+}
+
+.nav-buttons {
+  display: flex;
+  align-items: center;
+}
+
+.calendar-day-headers,
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+}
+
+.calendar-day-header {
+  padding: 0.25rem;
+  text-align: center;
+  font-weight: 500;
+  font-size: 0.875rem;
+  color: var(--ion-color-medium);
+}
+
+.calendar-days {
+  gap: 2px;
+}

@@ -1,0 +1,58 @@
+<div class="calendar-view">
+  <div class="calendar-nav">
+    <span class="month-label">{{ monthLabel }}</span>
+    <div class="nav-buttons">
+      @if (!isCurrentMonth) {
+        <ion-button
+          fill="clear"
+          size="small"
+          (click)="goToCurrentMonth()"
+          aria-label="Go to current month"
+        >
+          <ion-icon slot="icon-only" name="calendar-outline"></ion-icon>
+        </ion-button>
+      }
+      <ion-button
+        fill="clear"
+        size="small"
+        [disabled]="isPreviousDisabled"
+        (click)="goToPreviousMonth()"
+        aria-label="Previous month"
+      >
+        <ion-icon slot="icon-only" name="chevron-back"></ion-icon>
+      </ion-button>
+      <ion-button
+        fill="clear"
+        size="small"
+        [disabled]="isNextDisabled"
+        (click)="goToNextMonth()"
+        aria-label="Next month"
+      >
+        <ion-icon slot="icon-only" name="chevron-forward"></ion-icon>
+      </ion-button>
+    </div>
+  </div>
+
+  <div class="calendar-day-headers">
+    @for (day of dayHeaders; track day) {
+      <div class="calendar-day-header">{{ day }}</div>
+    }
+  </div>
+
+  <div class="calendar-days">
+    @for (day of calendarDays; track day.year + '-' + day.month + '-' + day.date) {
+      <app-calendar-day
+        [date]="day.date"
+        [isCurrentMonth]="day.isCurrentMonth"
+        [isToday]="day.isToday"
+        [dayInstance]="day.dayInstance"
+        [events]="events"
+        [eventMetadata]="eventMetadata"
+        [eventSlots]="eventSlots"
+        [season]="season"
+        [today]="today"
+        [firstDayIndex]="firstDayIndex"
+      />
+    }
+  </div>
+</div>

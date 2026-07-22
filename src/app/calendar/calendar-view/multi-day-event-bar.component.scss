@@ -1,0 +1,46 @@
+:host {
+  display: block;
+  position: absolute;
+  top: 0;
+  height: 100%;
+  pointer-events: auto;
+}
+
+.multi-day-event-bar {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+  overflow: hidden;
+  cursor: pointer;
+  color: #fff;
+  font-size: 11px;
+  box-sizing: border-box;
+
+  &.start-cap {
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+  }
+
+  &.end-cap {
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
+  }
+
+  &.single-day-span {
+    border-radius: 6px;
+  }
+
+  &.week-continue,
+  &.middle-continue {
+    border-radius: 0;
+  }
+}
+
+.event-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

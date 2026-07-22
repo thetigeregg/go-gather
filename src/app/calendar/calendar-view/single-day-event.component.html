@@ -1,0 +1,20 @@
+<div
+  class="single-day-event"
+  [class.event-past]="metadata.isPastEvent"
+  [class.major-daily-display-event]="isMajorDaily"
+  [class.major-daily-global]="isMajorDaily && majorVariant === 'global'"
+  [class.major-daily-location]="isMajorDaily && majorVariant === 'location-specific'"
+  [style.--major-event-color]="metadata.color"
+  [attr.data-event-type]="event.eventType"
+  [attr.data-event-id]="sourceEventID"
+  (click)="onClick()"
+>
+  <div class="event-name">{{ displayName }}</div>
+  <div class="event-time">
+    <div class="event-dot" [style.background-color]="metadata.color"></div>
+    {{ metadata.formattedStartTime }}
+    @if (showEndedLabel) {
+      <span class="event-ended-label">Ended</span>
+    }
+  </div>
+</div>
