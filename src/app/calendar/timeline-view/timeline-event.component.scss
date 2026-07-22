@@ -81,6 +81,13 @@
   color: var(--ion-color-medium);
 }
 
+// ion-badge's shadow styles switch from --color to --ion-color-contrast once
+// a named `color` is applied (via its internal .ion-color/.ion-color-success
+// classes) — overriding --color alone has no effect once that happens.
+ion-badge[color='success'] {
+  --ion-color-contrast: #fff !important;
+}
+
 .event-extras {
   margin: 6px 0 0 16px;
   font-size: 0.8rem;
