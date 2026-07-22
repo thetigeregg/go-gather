@@ -11,6 +11,10 @@ export const routes: Routes = [
         loadComponent: () => import('../gather/gather.page').then((m) => m.GatherPage),
       },
       {
+        path: 'calendar',
+        loadComponent: () => import('../calendar/calendar.page').then((m) => m.CalendarPage),
+      },
+      {
         path: '',
         redirectTo: '/tabs/gather',
         pathMatch: 'full',

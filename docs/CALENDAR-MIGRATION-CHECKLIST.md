@@ -78,10 +78,12 @@ Built as `calendar/event-detail/event-detail.component.*`, owned/opened by `cale
 
 See [`MIGRATION-CHECKLIST.md` Phase 6](../../pogo-cal/docs/migration/MIGRATION-CHECKLIST.md#phase-6--calendar-tab--view-toggle) and [`VIEW-TOGGLE-AND-LAYOUT.md`](../../pogo-cal/docs/migration/VIEW-TOGGLE-AND-LAYOUT.md).
 
-- [ ] Register the `calendar` tab in `tabs.routes.ts`/`tabs.page.html`, following the exact `gather` tab pattern
-- [ ] Build the Calendar page: header (menu button / title / filter button), `IonSelect` Calendar/Timeline toggle, conditionally rendering the selected view below it
-- [ ] Persist the selected view via `PreferenceStorageService` (resolved)
-- [ ] Skip URL/query-param deep-linking — resolved deferred past the initial port
+- [x] Register the `calendar` tab in `tabs.routes.ts`/`tabs.page.html`, following the exact `gather` tab pattern
+- [x] Build the Calendar page: header (menu button / title / filter button), `IonSelect` Calendar/Timeline toggle, conditionally rendering the selected view below it
+- [x] Persist the selected view via `PreferenceStorageService` (resolved)
+- [x] Skip URL/query-param deep-linking — resolved deferred past the initial port
+
+The Calendar tab is now real and reachable — see [progress notes](progress/phase-6-calendar-tab-and-view-toggle.md) for the full implementation notes, including the deliberate decision to keep `calendar-view.component`/`timeline-view.component` self-sufficient rather than hoisting data loading to the page.
 
 ## Phase 7 — Full Parity Verification
 

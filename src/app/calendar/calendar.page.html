@@ -1,0 +1,36 @@
+<ion-header>
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-menu-button menu="start">
+        <ion-icon name="menu"></ion-icon>
+      </ion-menu-button>
+    </ion-buttons>
+    <ion-title>Calendar</ion-title>
+    <ion-buttons slot="end">
+      <ion-menu-button menu="calendar-filter">
+        <ion-icon name="filter"></ion-icon>
+      </ion-menu-button>
+    </ion-buttons>
+  </ion-toolbar>
+  <ion-toolbar color="primary">
+    <ion-item lines="none" color="primary">
+      <ion-select
+        label="View"
+        interface="popover"
+        [value]="selectedView"
+        (ionChange)="onViewChange($event.detail.value)"
+      >
+        <ion-select-option value="calendar">Calendar</ion-select-option>
+        <ion-select-option value="timeline">Timeline</ion-select-option>
+      </ion-select>
+    </ion-item>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  @if (selectedView === 'calendar') {
+    <app-calendar-view />
+  } @else {
+    <app-timeline-view />
+  }
+</ion-content>
