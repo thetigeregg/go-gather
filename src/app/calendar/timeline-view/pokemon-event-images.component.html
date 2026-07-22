@@ -1,0 +1,32 @@
+@if (showContainer) {
+  <div
+    class="pokemon-images"
+    [class.wrap-multiple]="displayedImages.length >= 3"
+    [class.force-wrap]="wrap"
+    [class.overflow-badge-right]="overflowBadgeAlign === 'right'"
+  >
+    @for (image of displayedImages; track trackByImage($index, image)) {
+      <app-pokemon-image
+        [pokemonData]="image"
+        [height]="height"
+        [showCP]="showCP"
+        [eventType]="event.eventType"
+        [isRaidHourSubEvent]="isRaidHourSubEvent"
+        [isSpotlightSubEvent]="isSpotlightSubEvent"
+      ></app-pokemon-image>
+    }
+
+    @if (showOverflowBadge) {
+      <span class="overflow-counter-badge">{{ overflowBadgeCount }}</span>
+    }
+
+    @if (shouldShowPlaceholder) {
+      <app-pokemon-image
+        [height]="height"
+        [eventType]="event.eventType"
+        [effect]="placeholderEffect"
+        [isPlaceholder]="true"
+      ></app-pokemon-image>
+    }
+  </div>
+}

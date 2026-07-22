@@ -1,0 +1,103 @@
+.raid-boss-tiers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  width: 100%;
+}
+
+::ng-deep .tier-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding-left: 0.5rem;
+}
+
+::ng-deep .tier-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--ion-text-color, #000) 70%, transparent);
+}
+
+.schedule-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.1rem 0.2rem;
+}
+
+.schedule-section + .schedule-section {
+  padding-top: 0.35rem;
+  margin-top: 0.05rem;
+}
+
+.schedule-day-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.4rem;
+  border-radius: 7px;
+  border: 1px solid var(--ion-color-step-150, rgba(0, 0, 0, 0.1));
+  background-color: color-mix(
+    in srgb,
+    var(--ion-background-color, #fff) 75%,
+    var(--event-color, transparent) 5%
+  );
+}
+
+.schedule-day-header {
+  font-size: 0.925rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: 0.05em;
+  opacity: 0.82;
+  padding: 0.15rem 0.1rem;
+}
+
+.schedule-section-header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding-top: 0.2rem;
+}
+
+.schedule-label {
+  display: block;
+  align-items: center;
+  width: 100%;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  padding: 0.12rem 0 0.34rem 0;
+  margin-bottom: 0.05rem;
+  color: color-mix(in srgb, var(--ion-text-color, #000) 82%, transparent);
+  border-bottom: 1px solid var(--ion-color-step-250, rgba(0, 0, 0, 0.2));
+}
+
+.schedule-section-header:not(.is-all-day) .schedule-label {
+  color: #3f86cc;
+  border-bottom-color: rgba(63, 134, 204, 0.46);
+}
+
+.schedule-section-header.is-all-day .schedule-label {
+  color: #198754;
+  border-bottom-color: rgba(25, 135, 84, 0.4);
+}
+
+.schedule-time {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.66rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  line-height: 1;
+  border-radius: 999px;
+  padding: 0.2rem 0.4rem;
+  opacity: 0.7;
+  background: var(--ion-color-step-100, rgba(0, 0, 0, 0.05));
+  margin-bottom: 0.24rem;
+}

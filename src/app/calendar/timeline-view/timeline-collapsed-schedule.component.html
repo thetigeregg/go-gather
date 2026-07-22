@@ -1,0 +1,18 @@
+<div class="collapsed-schedule-days">
+  @for (dayGroup of dayGroups; track dayGroup.id) {
+    <div class="collapsed-day-group">
+      <div class="collapsed-day-name">{{ dayGroup.date }}</div>
+      <div class="tier-images">
+        @for (boss of dayGroup.images; track boss.name) {
+          <app-pokemon-image
+            [pokemonData]="boss"
+            [height]="imageHeight"
+            [showCP]="false"
+            [eventType]="eventType"
+            [effect]="effect"
+          ></app-pokemon-image>
+        }
+      </div>
+    </div>
+  }
+</div>

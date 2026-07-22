@@ -14,6 +14,18 @@
   <div class="event-header">
     <div class="event-dot" [style.background-color]="metadata.color"></div>
     <div class="event-name">{{ displayName }}</div>
+    @if (metadata.spotlightBonus) {
+      <div class="spotlight-bonus-icons">
+        @if (metadata.spotlightBonus.category === 'evolve') {
+          <ion-icon name="arrow-up-circle-outline" class="evolve-icon"></ion-icon>
+        } @else if (metadata.spotlightBonus.category === 'transfer') {
+          <ion-icon name="swap-horizontal-outline" class="transfer-icon"></ion-icon>
+        }
+        @if (metadata.spotlightBonusIconUrl) {
+          <img [src]="metadata.spotlightBonusIconUrl" alt="" class="bonus-type-icon" />
+        }
+      </div>
+    }
     <ion-icon [name]="isActive ? 'chevron-up' : 'chevron-down'" class="expand-icon"></ion-icon>
   </div>
 
@@ -49,7 +61,35 @@
     }
   </div>
 
+  @if (showPokemonRow) {
+    <div class="pokemon-row">
+      @if (showInlinePokemonImages) {
+        <app-pokemon-event-images
+          [event]="event"
+          [height]="40"
+          [showPlaceholder]="true"
+          [showCP]="isActive"
+          overflowBadgeAlign="right"
+          [excludeTiers]="inlineImagesExcludeTiers"
+        ></app-pokemon-event-images>
+      } @else if (showCollapsedScheduleDays) {
+        <app-timeline-collapsed-schedule
+          [dayGroups]="collapsedScheduleDayGroups"
+          [eventType]="event.eventType"
+          [effect]="spriteEffect"
+        ></app-timeline-collapsed-schedule>
+      }
+    </div>
+  }
+
   @if (isActive) {
+    <app-timeline-raid-schedule
+      [daySections]="timelineScheduleDaySectionsWithTierGroups"
+      [defaultTierGroups]="defaultTierGroupsWithImages"
+      [eventType]="event.eventType"
+      [effect]="spriteEffect"
+    ></app-timeline-raid-schedule>
+
     @if (extras; as eventExtras) {
       <div class="event-extras">
         @if (eventExtras.spotlightBonus) {

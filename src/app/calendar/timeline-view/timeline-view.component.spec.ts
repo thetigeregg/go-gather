@@ -8,8 +8,13 @@ import {
   CalendarFilterService,
   CalendarFilterState,
 } from '../../core/services/calendar-filter.service';
+import { PokemonEventImagesComponent } from './pokemon-event-images.component';
+import { PokemonImageComponent } from './pokemon-image.component';
+import { RaidTierGroupImagesComponent } from './raid-tier-group-images.component';
 import { TimelineCategorySectionComponent } from './timeline-category-section.component';
+import { TimelineCollapsedScheduleComponent } from './timeline-collapsed-schedule.component';
 import { TimelineEventComponent } from './timeline-event.component';
+import { TimelineRaidScheduleComponent } from './timeline-raid-schedule.component';
 
 function makeEvent(overrides: Partial<PogoEvent> = {}): PogoEvent {
   return {
@@ -67,6 +72,11 @@ describe('TimelineViewComponent', () => {
       TimelineViewComponent,
       TimelineCategorySectionComponent,
       TimelineEventComponent,
+      PokemonEventImagesComponent,
+      TimelineCollapsedScheduleComponent,
+      TimelineRaidScheduleComponent,
+      RaidTierGroupImagesComponent,
+      PokemonImageComponent,
     ]) {
       TestBed.overrideComponent(cmp, { set: { template: '<div></div>', styleUrl: undefined } });
     }

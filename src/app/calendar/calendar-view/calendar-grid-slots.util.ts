@@ -2,7 +2,10 @@ import { Dayjs } from 'dayjs';
 import { EventMetadata, PogoEvent } from '@go-gather/shared';
 import { getEventTypeInfo } from '../../core/services/calendar-event-type-info.util';
 import { CalendarDayCell } from './calendar-grid.util';
-import { getRaidSubType, getRaidSubTypePriority } from './calendar-event-subtype.util';
+import {
+  getRaidSubType,
+  getRaidSubTypePriority,
+} from '../../core/services/calendar-event-subtype.util';
 
 /**
  * Ported from pogo-cal's src/composables/useCalendarGridSlots.ts (multi-day

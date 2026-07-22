@@ -1,0 +1,36 @@
+@if (daySections?.length) {
+  <div class="raid-boss-tiers">
+    @for (daySection of daySections; track daySection.id) {
+      <div class="schedule-day-section">
+        <div class="schedule-day-header">{{ daySection.date }}</div>
+
+        @for (section of daySection.sections; track section.id) {
+          <div class="schedule-section">
+            <div class="schedule-section-header" [class.is-all-day]="section.isAllDay">
+              <span class="schedule-label">{{ section.labelText }}</span>
+              @if (section.time) {
+                <span class="schedule-time">{{ section.time }}</span>
+              }
+            </div>
+
+            <app-raid-tier-group-images
+              [groups]="section.tierGroups"
+              [height]="imageHeight"
+              [eventType]="eventType"
+              [effect]="effect"
+            ></app-raid-tier-group-images>
+          </div>
+        }
+      </div>
+    }
+  </div>
+} @else if (defaultTierGroups) {
+  <div class="raid-boss-tiers">
+    <app-raid-tier-group-images
+      [groups]="defaultTierGroups"
+      [height]="imageHeight"
+      [eventType]="eventType"
+      [effect]="effect"
+    ></app-raid-tier-group-images>
+  </div>
+}

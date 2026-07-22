@@ -73,4 +73,51 @@ describe('buildEventMetadata', () => {
     expect(metadata.typeInfo.name).toBe('Some New Event Type');
     expect(metadata.color).toBe('#666666');
   });
+
+  it('leaves spotlightBonus null and raidBossTierGroups undefined for an event without that data', () => {
+    const now = dayjs('2026-01-01T00:00:00.000');
+    const metadata = buildEventMetadata(makeEvent(), now);
+
+    expect(metadata.spotlightBonus).toBeNull();
+    expect(metadata.spotlightBonusIconUrl).toBeNull();
+    expect(metadata.raidBossTierGroups).toBeUndefined();
+  });
+
+  it('populates spotlightBonus and its icon URL for a Spotlight Hour event', () => {
+    const now = dayjs('2026-01-01T00:00:00.000');
+    const metadata = buildEventMetadata(
+      makeEvent({
+        eventType: 'pokemon-spotlight-hour',
+        extraData: { spotlight: { name: 'Eevee', canBeShiny: true, bonus: 'Catch Candy' } },
+      }),
+      now
+    );
+
+    expect(metadata.spotlightBonus).toEqual({ category: 'catch', bonusType: 'candy' });
+    expect(metadata.spotlightBonusIconUrl).toBe('/assets/pokemon-icons/candy.png');
+  });
+
+  it('populates raidBossTierGroups for an event with raidbattles boss data', () => {
+    const now = dayjs('2026-01-01T00:00:00.000');
+    const metadata = buildEventMetadata(
+      makeEvent({
+        eventType: 'raid-battles',
+        extraData: {
+          raidbattles: {
+            bosses: [
+              { name: 'Machamp', image: 'machamp.png', canBeShiny: false, raidType: 'Tier 3' },
+            ],
+          },
+        },
+      }),
+      now
+    );
+
+    expect(metadata.raidBossTierGroups).toEqual([
+      {
+        label: 'Tier 3',
+        bosses: [{ name: 'Machamp', image: 'machamp.png', canBeShiny: false, raidType: 'Tier 3' }],
+      },
+    ]);
+  });
 });

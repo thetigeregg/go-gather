@@ -40,6 +40,33 @@
   color: var(--ion-color-medium);
 }
 
+.spotlight-bonus-icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.evolve-icon {
+  color: #aa403a;
+}
+
+.transfer-icon {
+  color: var(--ion-color-medium);
+}
+
+.bonus-type-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
+.pokemon-row {
+  margin-top: 4px;
+  margin-left: 16px;
+}
+
 .event-time-display {
   margin-top: 4px;
   margin-left: 16px;

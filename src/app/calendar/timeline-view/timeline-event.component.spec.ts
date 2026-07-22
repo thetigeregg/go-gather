@@ -1,7 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import dayjs from 'dayjs';
 import { EventMetadata, EventTypeInfoWithoutColor, PogoEvent } from '@go-gather/shared';
+import { PokemonEventImagesComponent } from './pokemon-event-images.component';
+import { PokemonImageComponent } from './pokemon-image.component';
+import { RaidTierGroupImagesComponent } from './raid-tier-group-images.component';
+import { TimelineCollapsedScheduleComponent } from './timeline-collapsed-schedule.component';
 import { TimelineEventComponent } from './timeline-event.component';
+import { TimelineRaidScheduleComponent } from './timeline-raid-schedule.component';
 
 function makeEvent(overrides: Partial<PogoEvent> = {}): PogoEvent {
   return {
@@ -45,6 +50,21 @@ describe('TimelineEventComponent', () => {
   beforeEach(async () => {
     TestBed.configureTestingModule({});
     TestBed.overrideComponent(TimelineEventComponent, {
+      set: { template: '<div></div>', styleUrl: undefined },
+    });
+    TestBed.overrideComponent(PokemonEventImagesComponent, {
+      set: { template: '<div></div>', styleUrl: undefined },
+    });
+    TestBed.overrideComponent(TimelineCollapsedScheduleComponent, {
+      set: { template: '<div></div>', styleUrl: undefined },
+    });
+    TestBed.overrideComponent(TimelineRaidScheduleComponent, {
+      set: { template: '<div></div>', styleUrl: undefined },
+    });
+    TestBed.overrideComponent(RaidTierGroupImagesComponent, {
+      set: { template: '<div></div>', styleUrl: undefined },
+    });
+    TestBed.overrideComponent(PokemonImageComponent, {
       set: { template: '<div></div>', styleUrl: undefined },
     });
     await TestBed.compileComponents();
@@ -102,5 +122,238 @@ describe('TimelineEventComponent', () => {
     component.onClick();
 
     expect(emitSpy).toHaveBeenCalledWith('event-1');
+  });
+
+  describe('pokemon sprite/schedule chain', () => {
+    it('pokemonCount reflects the resolved Pokemon images for the event', () => {
+      component.event = makeEvent({
+        eventType: 'raid-battles',
+        extraData: {
+          raidbattles: { bosses: [{ name: 'Machamp', image: 'machamp.png', canBeShiny: false }] },
+        },
+      });
+      expect(component.pokemonCount).toBe(1);
+    });
+
+    it('pokemonCount is 0 for an event with no resolvable Pokemon', () => {
+      expect(component.pokemonCount).toBe(0);
+    });
+
+    it('collapsedScheduleDayGroups is undefined while active', () => {
+      component.isActive = true;
+      component.event = makeEvent({
+        extraData: {
+          raidSchedule: [
+            {
+              date: 'July 8',
+              bosses: [{ name: 'Machamp', image: 'x.png', canBeShiny: false }],
+              raidHours: [],
+            },
+          ],
+        },
+      });
+      expect(component.collapsedScheduleDayGroups).toBeUndefined();
+    });
+
+    it('collapsedScheduleDayGroups builds from the raid schedule while inactive', () => {
+      component.isActive = false;
+      component.event = makeEvent({
+        extraData: {
+          raidSchedule: [
+            {
+              date: 'July 8',
+              bosses: [{ name: 'Machamp', image: 'x.png', canBeShiny: false }],
+              raidHours: [],
+            },
+          ],
+        },
+      });
+      expect(component.collapsedScheduleDayGroups).toHaveLength(1);
+    });
+
+    it('hasPokemon is true when pokemonCount is positive', () => {
+      component.event = makeEvent({
+        eventType: 'raid-battles',
+        extraData: {
+          raidbattles: { bosses: [{ name: 'Machamp', image: 'machamp.png', canBeShiny: false }] },
+        },
+      });
+      expect(component.hasPokemon).toBe(true);
+    });
+
+    it('hasPokemon is true when there are collapsed schedule day groups, even with pokemonCount 0', () => {
+      component.isActive = false;
+      component.event = makeEvent({
+        eventType: 'raid-weekend',
+        extraData: {
+          raidSchedule: [
+            {
+              date: 'July 8',
+              bosses: [{ name: 'Machamp', image: 'x.png', canBeShiny: false }],
+              raidHours: [],
+            },
+          ],
+        },
+      });
+      expect(component.hasPokemon).toBe(true);
+    });
+
+    it('hasPokemon is false for an event with neither', () => {
+      expect(component.hasPokemon).toBe(false);
+    });
+
+    it('spriteEffect reflects the event-level sprite effect', () => {
+      component.event = makeEvent({ eventType: 'max-mondays' });
+      expect(component.spriteEffect).toBe('dynamax');
+    });
+
+    it('defaultTierGroupsWithImages builds from metadata.raidBossTierGroups', () => {
+      component.metadata = makeMetadata({
+        raidBossTierGroups: [
+          { label: 'Tier 3', bosses: [{ name: 'Machamp', image: 'x.png', canBeShiny: false }] },
+        ],
+      });
+      expect(component.defaultTierGroupsWithImages).toEqual([
+        {
+          label: 'Tier 3',
+          showLabel: true,
+          images: [
+            {
+              name: 'Machamp',
+              imageUrl: 'x.png',
+              fallbackImageUrl: 'x.png',
+              shieldCount: undefined,
+            },
+          ],
+        },
+      ]);
+    });
+
+    it('defaultTierGroupsWithImages is null when metadata has no raidBossTierGroups', () => {
+      expect(component.defaultTierGroupsWithImages).toBeNull();
+    });
+
+    it('timelineScheduleDaySectionsWithTierGroups builds from the event raid schedule', () => {
+      component.event = makeEvent({
+        extraData: {
+          raidSchedule: [
+            {
+              date: 'July 8',
+              bosses: [{ name: 'Machamp', image: 'x.png', canBeShiny: false }],
+              raidHours: [],
+            },
+          ],
+        },
+      });
+      expect(component.timelineScheduleDaySectionsWithTierGroups).toHaveLength(1);
+    });
+
+    it('hasExpandedRaidSections is true when there are day sections', () => {
+      component.event = makeEvent({
+        extraData: {
+          raidSchedule: [
+            {
+              date: 'July 8',
+              bosses: [{ name: 'Machamp', image: 'x.png', canBeShiny: false }],
+              raidHours: [],
+            },
+          ],
+        },
+      });
+      expect(component.hasExpandedRaidSections).toBe(true);
+    });
+
+    it('hasExpandedRaidSections is true when there are default tier groups, with no day sections', () => {
+      component.metadata = makeMetadata({
+        raidBossTierGroups: [
+          { label: 'Tier 3', bosses: [{ name: 'Machamp', image: 'x.png', canBeShiny: false }] },
+        ],
+      });
+      expect(component.hasExpandedRaidSections).toBe(true);
+    });
+
+    it('hasExpandedRaidSections is false for neither', () => {
+      expect(component.hasExpandedRaidSections).toBe(false);
+    });
+
+    it('showCollapsedScheduleDays is true only while inactive with collapsed day groups', () => {
+      component.isActive = false;
+      component.event = makeEvent({
+        extraData: {
+          raidSchedule: [
+            {
+              date: 'July 8',
+              bosses: [{ name: 'Machamp', image: 'x.png', canBeShiny: false }],
+              raidHours: [],
+            },
+          ],
+        },
+      });
+      expect(component.showCollapsedScheduleDays).toBe(true);
+
+      component.isActive = true;
+      expect(component.showCollapsedScheduleDays).toBe(false);
+    });
+
+    it('showInlinePokemonImages is the negation of hasExpandedRaidSections while active', () => {
+      component.isActive = true;
+      component.event = makeEvent({
+        extraData: {
+          raidSchedule: [
+            {
+              date: 'July 8',
+              bosses: [{ name: 'Machamp', image: 'x.png', canBeShiny: false }],
+              raidHours: [],
+            },
+          ],
+        },
+      });
+      expect(component.showInlinePokemonImages).toBe(false);
+    });
+
+    it('showInlinePokemonImages is true while active with no expanded raid sections', () => {
+      component.isActive = true;
+      expect(component.showInlinePokemonImages).toBe(true);
+    });
+
+    it('showInlinePokemonImages is the negation of having collapsed schedule days while inactive', () => {
+      component.isActive = false;
+      component.event = makeEvent({
+        extraData: {
+          raidSchedule: [
+            {
+              date: 'July 8',
+              bosses: [{ name: 'Machamp', image: 'x.png', canBeShiny: false }],
+              raidHours: [],
+            },
+          ],
+        },
+      });
+      expect(component.showInlinePokemonImages).toBe(false);
+    });
+
+    it('showPokemonRow requires hasPokemon plus one of the two display modes', () => {
+      component.event = makeEvent({
+        eventType: 'raid-battles',
+        extraData: {
+          raidbattles: { bosses: [{ name: 'Machamp', image: 'machamp.png', canBeShiny: false }] },
+        },
+      });
+      expect(component.showPokemonRow).toBe(true);
+    });
+
+    it('showPokemonRow is false when there is no Pokemon to show', () => {
+      expect(component.showPokemonRow).toBe(false);
+    });
+
+    it('inlineImagesExcludeTiers is empty while active', () => {
+      component.isActive = true;
+      expect(component.inlineImagesExcludeTiers).toEqual([]);
+    });
+
+    it('inlineImagesExcludeTiers hides Tier 1 and Tier 3 while inactive', () => {
+      component.isActive = false;
+      expect(component.inlineImagesExcludeTiers).toEqual(['Tier 1', 'Tier 3']);
+    });
   });
 });

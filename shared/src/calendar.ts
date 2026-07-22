@@ -202,8 +202,7 @@ export interface EventMetadata {
   spotlightBonus?: SpotlightBonusInfo | null;
   spotlightBonusIconUrl?: string | null;
 
-  // Raid boss groupings by tier (for events with raidbattles data). Unused
-  // until raid-boss art rendering is built (currently deferred/text-only).
+  // Raid boss groupings by tier (for events with raidbattles data).
   raidBossTierGroups?: RaidBossTierGroup[];
 
   // Grouping metadata (for when grouping is enabled)

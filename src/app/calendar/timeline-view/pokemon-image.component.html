@@ -1,0 +1,66 @@
+<div class="pokemon-item">
+  <div
+    class="pokemon-container"
+    [class.has-dynamax-overlay]="resolvedEffect === 'dynamax'"
+    [class.has-shadow-effect]="resolvedEffect === 'shadow'"
+    [class.has-gigantamax-effect]="resolvedEffect === 'gigantamax'"
+    [class.placeholder-container]="isPlaceholder || !currentImageSrc"
+  >
+    @if (resolvedEffect === 'dynamax') {
+      <div class="dynamax-overlay">
+        <img
+          src="/assets/pokemon-icons/dynamax-clouds.png"
+          alt="Dynamax effect"
+          class="dynamax-clouds"
+        />
+      </div>
+    }
+    @if (resolvedEffect === 'shadow') {
+      <div class="shadow-overlay">
+        <img src="/assets/pokemon-icons/shadow-aura.png" alt="Shadow effect" class="shadow-aura" />
+      </div>
+    }
+
+    @if (shieldCount) {
+      <div class="shield-badge-anchor">
+        <div class="shield-badge">
+          <img
+            src="/assets/pokemon-icons/super-mega-shield.png"
+            alt="Super Mega Raid shield"
+            class="shield-icon"
+          />
+          <span class="shield-count">{{ shieldCount }}</span>
+        </div>
+      </div>
+    }
+
+    @if (isPlaceholder) {
+      <ion-icon
+        name="help-circle-outline"
+        class="placeholder-icon"
+        [style.font-size.px]="height"
+      ></ion-icon>
+    } @else {
+      @if (currentImageSrc && !hasError) {
+        <img
+          [src]="currentImageSrc"
+          [alt]="pokemonData?.name"
+          class="pokemon-icon"
+          [style.height.px]="height"
+          [style.width.px]="height"
+          (error)="onImageError()"
+        />
+      } @else {
+        <ion-icon
+          name="help-outline"
+          class="placeholder-icon"
+          [style.font-size.px]="height"
+        ></ion-icon>
+      }
+    }
+  </div>
+
+  @if (showCP && !isPlaceholder && pokemonData && formattedCP) {
+    <div class="pokemon-cp-badge">{{ formattedCP }}</div>
+  }
+</div>

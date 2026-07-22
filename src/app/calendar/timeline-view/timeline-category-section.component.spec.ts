@@ -1,7 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import dayjs from 'dayjs';
+import { PokemonEventImagesComponent } from './pokemon-event-images.component';
+import { PokemonImageComponent } from './pokemon-image.component';
+import { RaidTierGroupImagesComponent } from './raid-tier-group-images.component';
 import { TimelineCategorySectionComponent } from './timeline-category-section.component';
+import { TimelineCollapsedScheduleComponent } from './timeline-collapsed-schedule.component';
 import { TimelineEventComponent } from './timeline-event.component';
+import { TimelineRaidScheduleComponent } from './timeline-raid-schedule.component';
 
 describe('TimelineCategorySectionComponent', () => {
   let fixture: ComponentFixture<TimelineCategorySectionComponent>;
@@ -13,6 +18,21 @@ describe('TimelineCategorySectionComponent', () => {
       set: { template: '<div></div>', styleUrl: undefined },
     });
     TestBed.overrideComponent(TimelineEventComponent, {
+      set: { template: '<div></div>', styleUrl: undefined },
+    });
+    TestBed.overrideComponent(PokemonEventImagesComponent, {
+      set: { template: '<div></div>', styleUrl: undefined },
+    });
+    TestBed.overrideComponent(TimelineCollapsedScheduleComponent, {
+      set: { template: '<div></div>', styleUrl: undefined },
+    });
+    TestBed.overrideComponent(TimelineRaidScheduleComponent, {
+      set: { template: '<div></div>', styleUrl: undefined },
+    });
+    TestBed.overrideComponent(RaidTierGroupImagesComponent, {
+      set: { template: '<div></div>', styleUrl: undefined },
+    });
+    TestBed.overrideComponent(PokemonImageComponent, {
       set: { template: '<div></div>', styleUrl: undefined },
     });
     await TestBed.compileComponents();

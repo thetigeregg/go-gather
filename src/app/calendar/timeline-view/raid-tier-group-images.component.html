@@ -1,0 +1,18 @@
+@for (group of groups; track group.label) {
+  <div class="tier-group">
+    @if (group.showLabel) {
+      <div class="tier-label">{{ group.label }}</div>
+    }
+    <div class="tier-images">
+      @for (boss of group.images; track boss.name) {
+        <app-pokemon-image
+          [pokemonData]="boss"
+          [height]="height"
+          [showCP]="true"
+          [eventType]="eventType"
+          [effect]="effect"
+        ></app-pokemon-image>
+      }
+    </div>
+  </div>
+}
