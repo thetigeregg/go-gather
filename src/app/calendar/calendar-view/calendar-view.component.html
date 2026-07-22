@@ -52,7 +52,26 @@
         [season]="season"
         [today]="today"
         [firstDayIndex]="firstDayIndex"
+        (eventClick)="onEventClick($event)"
       />
     }
   </div>
+
+  <ion-modal
+    [isOpen]="selectedEvent !== null"
+    [initialBreakpoint]="0.6"
+    [breakpoints]="[0, 0.6, 1]"
+    (didDismiss)="closeDetail()"
+  >
+    <ng-template>
+      @if (selectedEvent && selectedEventMetadata) {
+        <app-event-detail
+          [event]="selectedEvent"
+          [metadata]="selectedEventMetadata"
+          [now]="today"
+          (closed)="closeDetail()"
+        />
+      }
+    </ng-template>
+  </ion-modal>
 </div>

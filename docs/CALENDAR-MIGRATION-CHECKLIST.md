@@ -70,7 +70,9 @@ Built as a self-contained `timeline-view.component.*` (own `ngOnInit` data load,
 
 See [`MIGRATION-CHECKLIST.md` Phase 5](../../pogo-cal/docs/migration/MIGRATION-CHECKLIST.md#phase-5--event-detail) and [`VIEW-TOGGLE-AND-LAYOUT.md`](../../pogo-cal/docs/migration/VIEW-TOGGLE-AND-LAYOUT.md).
 
-- [ ] Build one event-detail presentation — a sheet-style `ion-modal`, no desktop-popover branch, no `useDeviceDetection.ts` port (resolved); name/type/color/time range only — no `_isGrouped` handling and no boss/bonus art (both resolved deferred)
+- [x] Build one event-detail presentation — a sheet-style `ion-modal`, no desktop-popover branch, no `useDeviceDetection.ts` port (resolved); name/type/color/time range plus the text-only extras block (reused from Phase 4) — no `_isGrouped` handling, no boss/bonus art, and no action buttons (all resolved deferred/out of scope). Wired from the calendar grid (bars, single-day events, Season chip) only — not from Timeline cards, whose Phase 4 inline expand already covers the same content
+
+Built as `calendar/event-detail/event-detail.component.*`, owned/opened by `calendar-view.component.ts` (`selectedEvent`/`selectedEventMetadata` fields + a declarative `<ion-modal>`) — see [progress notes](progress/phase-5-event-detail.md) for the full design notes.
 
 ## Phase 6 — Calendar Tab & View Toggle
 

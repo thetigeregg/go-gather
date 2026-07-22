@@ -4,7 +4,11 @@
   </div>
 
   @if (seasonChip; as chip) {
-    <div class="season-chip" [attr.data-event-id]="chip.sourceEventID">
+    <div
+      class="season-chip"
+      [attr.data-event-id]="chip.sourceEventID"
+      (click)="onSeasonChipClick(chip.sourceEventID)"
+    >
       {{ chip.label }}
       @if (chip.extraCount > 0) {
         <span class="season-chip-extra">+{{ chip.extraCount }}</span>

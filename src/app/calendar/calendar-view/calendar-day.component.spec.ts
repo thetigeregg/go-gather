@@ -232,4 +232,23 @@ describe('CalendarDayComponent', () => {
 
     expect(emitSpy).toHaveBeenCalledWith(event);
   });
+
+  it('emits eventClick with the resolved event when the season chip is clicked and found in events', () => {
+    const seasonEvent = makeEvent({ eventID: 'season-1', eventType: 'season' });
+    component.events = [seasonEvent];
+    const emitSpy = vi.spyOn(component.eventClick, 'emit');
+
+    component.onSeasonChipClick('season-1');
+
+    expect(emitSpy).toHaveBeenCalledWith(seasonEvent);
+  });
+
+  it("does not emit eventClick when the season chip's sourceEventID is not found in events", () => {
+    component.events = [];
+    const emitSpy = vi.spyOn(component.eventClick, 'emit');
+
+    component.onSeasonChipClick('missing-event');
+
+    expect(emitSpy).not.toHaveBeenCalled();
+  });
 });

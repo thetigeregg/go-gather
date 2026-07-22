@@ -3,15 +3,17 @@ import dayjs, { Dayjs } from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import { forkJoin } from 'rxjs';
-import { IonButton, IonIcon } from '@ionic/angular/standalone';
+import { IonButton, IonIcon, IonModal } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { calendarOutline, chevronBack, chevronForward } from 'ionicons/icons';
 import { EventMetadata, PogoEvent, Season } from '@go-gather/shared';
 import { CalendarEventsService } from '../../core/services/calendar-events.service';
 import { CalendarFilterService } from '../../core/services/calendar-filter.service';
+import { EventDetailComponent } from '../event-detail/event-detail.component';
 import { CalendarDayComponent } from './calendar-day.component';
 import { buildEventSlots, EventSlot } from './calendar-grid-slots.util';
 import { buildCalendarDays, CalendarDayCell } from './calendar-grid.util';
+import { getSourceEventID } from './calendar-single-day-events.util';
 
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
@@ -33,7 +35,7 @@ const EARLIEST_MONTH = dayjs().year(2016).month(0);
  */
 @Component({
   selector: 'app-calendar-view',
-  imports: [IonButton, IonIcon, CalendarDayComponent],
+  imports: [IonButton, IonIcon, IonModal, CalendarDayComponent, EventDetailComponent],
   templateUrl: './calendar-view.component.html',
   styleUrl: './calendar-view.component.scss',
 })
@@ -50,6 +52,9 @@ export class CalendarViewComponent implements OnInit {
 
   calendarDays: CalendarDayCell[] = [];
   eventSlots: EventSlot[] = [];
+
+  selectedEvent: PogoEvent | null = null;
+  selectedEventMetadata: EventMetadata | null = null;
 
   constructor() {
     addIcons({
@@ -126,6 +131,31 @@ export class CalendarViewComponent implements OnInit {
     this.month = now.month();
     this.year = now.year();
     this.refresh();
+  }
+
+  /**
+   * Resolves via getSourceEventID() so a tap on a major-event daily
+   * projection (synthetic eventID) still finds its real metadata — the
+   * projection object already carries the source event's own display
+   * fields, so it's passed through to EventDetailComponent as-is. No-ops
+   * (modal stays closed) if metadata isn't found, mirroring source's own
+   * defensive v-if guard — covers the season-chip case, whose sourceEventID
+   * comes from a fully separate fetch with no structural guarantee a
+   * matching event exists in this feed.
+   */
+  onEventClick(event: PogoEvent): void {
+    const metadataByEventID: Partial<Record<string, EventMetadata>> = this.eventMetadata;
+    const metadata = metadataByEventID[getSourceEventID(event)];
+    if (!metadata) {
+      return;
+    }
+    this.selectedEvent = event;
+    this.selectedEventMetadata = metadata;
+  }
+
+  closeDetail(): void {
+    this.selectedEvent = null;
+    this.selectedEventMetadata = null;
   }
 
   private refresh(): void {

@@ -1,0 +1,110 @@
+:host {
+  display: block;
+}
+
+.detail-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 8px 12px 16px;
+  color: #fff;
+
+  ion-button {
+    --color: #fff;
+  }
+}
+
+.banner-text {
+  min-width: 0;
+}
+
+.event-name {
+  font-size: 1.05rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.event-type-label {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+.detail-body {
+  padding: 12px 16px;
+}
+
+.event-time-display {
+  margin-bottom: 8px;
+}
+
+.time-row {
+  font-size: 0.95rem;
+  color: var(--ion-text-color);
+
+  &.is-completed {
+    color: var(--ion-color-medium);
+  }
+}
+
+.time-dimmed {
+  opacity: 0.7;
+  color: var(--ion-color-medium);
+}
+
+.time-focused {
+  font-weight: 600;
+}
+
+.time-separator {
+  opacity: 0.7;
+  padding: 0 0.2rem;
+}
+
+.status-line {
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--ion-color-medium);
+
+  &.status-ended {
+    color: var(--ion-color-danger);
+  }
+
+  &.status-urgent {
+    color: var(--ion-color-warning);
+  }
+
+  &.status-upcoming {
+    color: var(--ion-color-success);
+  }
+}
+
+.event-extras {
+  margin-top: 8px;
+  font-size: 0.85rem;
+}
+
+.extra-block {
+  margin-bottom: 8px;
+}
+
+.bonus-time-range {
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.season-day-name {
+  font-weight: 600;
+}
+
+.season-group-title {
+  font-weight: 500;
+}
+
+.view-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: var(--ion-color-primary);
+}

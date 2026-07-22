@@ -8,6 +8,23 @@ import { CalendarFilterService } from '../../core/services/calendar-filter.servi
 import { CalendarDayComponent } from './calendar-day.component';
 import { MultiDayEventBarComponent } from './multi-day-event-bar.component';
 import { SingleDayEventComponent } from './single-day-event.component';
+import { EventDetailComponent } from '../event-detail/event-detail.component';
+
+function makeMetadata(overrides: Partial<EventMetadata> = {}): EventMetadata {
+  return {
+    startDate: dayjs('2026-07-08'),
+    endDate: dayjs('2026-07-09'),
+    isMultiDayEvent: true,
+    isSingleDayEvent: false,
+    isPastEvent: false,
+    isFutureEvent: false,
+    typeInfo: { name: 'Test', priority: 50, category: 'events-and-misc' },
+    color: '#123456',
+    formattedStartTime: '12am',
+    displayName: 'Test Event',
+    ...overrides,
+  };
+}
 
 function makeEvent(overrides: Partial<PogoEvent> = {}): PogoEvent {
   return {
@@ -69,6 +86,7 @@ describe('CalendarViewComponent', () => {
       CalendarDayComponent,
       MultiDayEventBarComponent,
       SingleDayEventComponent,
+      EventDetailComponent,
     ]) {
       TestBed.overrideComponent(cmp, { set: { template: '<div></div>', styleUrl: undefined } });
     }
@@ -193,6 +211,56 @@ describe('CalendarViewComponent', () => {
     component.goToNextMonth();
     expect(component.month).toBe(0);
     expect(component.year).toBe(2026);
+  });
+
+  it('opens the detail modal with the resolved event/metadata on eventClick', () => {
+    fixture.detectChanges();
+    const event = makeEvent();
+    eventMetadata = { 'event-1': makeMetadata() };
+
+    component.onEventClick(event);
+
+    expect(component.selectedEvent).toBe(event);
+    expect(component.selectedEventMetadata).toBe(eventMetadata['event-1']);
+  });
+
+  it("resolves a major-daily-projection event's metadata via its source eventID", () => {
+    fixture.detectChanges();
+    const metadata = makeMetadata();
+    eventMetadata = { 'go-fest': metadata };
+    const projection = makeEvent({
+      eventID: 'go-fest-daily-2026-07-08',
+      name: 'GO Fest',
+    }) as PogoEvent & { _isMajorDailyDisplay: true; _sourceEventID: string };
+    projection._isMajorDailyDisplay = true;
+    projection._sourceEventID = 'go-fest';
+
+    component.onEventClick(projection);
+
+    expect(component.selectedEvent).toBe(projection);
+    expect(component.selectedEventMetadata).toBe(metadata);
+  });
+
+  it('does not open the modal when no metadata is found for the clicked event', () => {
+    fixture.detectChanges();
+    eventMetadata = {};
+
+    component.onEventClick(makeEvent({ eventID: 'unknown-event' }));
+
+    expect(component.selectedEvent).toBeNull();
+    expect(component.selectedEventMetadata).toBeNull();
+  });
+
+  it('closeDetail clears the selected event and metadata', () => {
+    fixture.detectChanges();
+    eventMetadata = { 'event-1': makeMetadata() };
+    component.onEventClick(makeEvent());
+    expect(component.selectedEvent).not.toBeNull();
+
+    component.closeDetail();
+
+    expect(component.selectedEvent).toBeNull();
+    expect(component.selectedEventMetadata).toBeNull();
   });
 
   it('navigates back to the real current month/year', () => {

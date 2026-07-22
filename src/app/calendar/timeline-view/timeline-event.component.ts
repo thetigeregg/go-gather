@@ -10,13 +10,16 @@ import {
   MajorCalendarEventVariant,
 } from '../../core/services/calendar-event-major.util';
 import { formatEventName } from '../../core/services/calendar-event-name.util';
-import { getTimelineEventExtras, TimelineEventExtras } from './timeline-event-extras.util';
+import {
+  getTimelineEventExtras,
+  TimelineEventExtras,
+} from '../../core/services/timeline-event-extras.util';
 import {
   buildEventStatusInfo,
   buildTimeDisplayParts,
   EventStatusInfo,
   TimeDisplayParts,
-} from './timeline-event-time-display.util';
+} from '../../core/services/timeline-event-time-display.util';
 
 /**
  * Ported from pogo-cal's TimelineEvent.vue + TimelineEventHeader.vue, folded

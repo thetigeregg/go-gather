@@ -130,4 +130,17 @@ export class CalendarDayComponent implements OnChanges, OnInit, OnDestroy {
   onEventClick(event: PogoEvent): void {
     this.eventClick.emit(event);
   }
+
+  /**
+   * Season chip's sourceEventID comes from CalendarEventsService.season — a
+   * fully separate fetch from this calendar's own events feed, with no
+   * structural guarantee a matching event exists here. No-ops if not found,
+   * mirroring source's own defensive v-if="seasonChip.event" guard.
+   */
+  onSeasonChipClick(sourceEventID: string): void {
+    const event = this.events.find((e) => e.eventID === sourceEventID);
+    if (event) {
+      this.eventClick.emit(event);
+    }
+  }
 }
