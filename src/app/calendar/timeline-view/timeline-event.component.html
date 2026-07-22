@@ -8,6 +8,7 @@
   "
   [attr.data-event-type]="event.eventType"
   [attr.data-timeline-event-id]="event.eventID"
+  [style.--event-color]="metadata.color"
   (click)="onClick()"
 >
   <div class="event-header">

@@ -4,13 +4,9 @@
 
 .timeline-event {
   padding: 8px 10px;
-  background: var(--ion-item-background, var(--ion-background-color));
+  background: color-mix(in srgb, var(--ion-background-color, #fff) 90%, var(--event-color) 10%);
   border-bottom: 1px solid var(--ion-color-step-150, rgba(0, 0, 0, 0.1));
   cursor: pointer;
-
-  &:last-child {
-    border-bottom: none;
-  }
 
   &.major-timeline-event {
     border-left: 3px solid var(--ion-color-primary);
