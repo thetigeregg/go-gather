@@ -2,8 +2,21 @@
   display: block;
 }
 
+// ion-accordion zeroes out its header ion-item's border while
+// expanding/expanded (via --border-width on ::slotted(ion-item[slot="header"])
+// in its own shadow styles). --border-width isn't lines-aware (it drives all
+// sides, not just the bottom), so disable Ionic's own border variables
+// entirely and draw a real bottom-only border directly on the host element
+// instead — same style as timeline-event.component.scss's card border.
+ion-item[slot='header'] {
+  --border-width: 0 !important;
+  --inner-border-width: 0 !important;
+  border-bottom: 1px solid var(--ion-color-step-150, rgba(0, 0, 0, 0.1)) !important;
+}
+
 .category-badge {
-  background: var(--ion-color-step-150, rgba(0, 0, 0, 0.1));
+  background: #333333;
+  color: #fff;
   border-radius: 10px;
   padding: 1px 8px;
   font-size: 0.75rem;
