@@ -154,6 +154,47 @@ describe('GatherPage', () => {
     });
   });
 
+  describe('onSearchChange with a "+" prefix (family search)', () => {
+    beforeEach(() => {
+      fixture.detectChanges();
+
+      // Reassign directly rather than going through the FilterService mock,
+      // so this block's species list is independent from the header-count
+      // assertions elsewhere, which depend on the shared fixture staying at
+      // exactly one species/entry.
+      component.generationToPokemonMap = [
+        {
+          generationName: 'Generation 1',
+          speciesList: [
+            { dexNr: 1, speciesId: 'bulbasaur', speciesName: 'Bulbasaur', entries: [] },
+            { dexNr: 2, speciesId: 'ivysaur', speciesName: 'Ivysaur', entries: [] },
+            { dexNr: 4, speciesId: 'charmander', speciesName: 'Charmander', entries: [] },
+          ],
+        },
+      ];
+    });
+
+    it('matches every species in the same evolutionary line, not just the typed one', () => {
+      component.onSearchChange('+bulbasaur');
+
+      expect(component.visibleGenerations[0].speciesList.map((group) => group.speciesName)).toEqual(
+        ['Bulbasaur', 'Ivysaur']
+      );
+    });
+
+    it('does not fall back to a plain substring match on the family term', () => {
+      component.onSearchChange('+bulba');
+
+      expect(component.visibleGenerations).toEqual([]);
+    });
+
+    it('falls back to an exact match when the name is not a recognized species', () => {
+      component.onSearchChange('+not a real pokemon');
+
+      expect(component.visibleGenerations).toEqual([]);
+    });
+  });
+
   it('re-filters and recomputes the header when user settings change', () => {
     fixture.detectChanges();
 

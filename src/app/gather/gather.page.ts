@@ -30,6 +30,10 @@ import { GatherPokemonComponent } from '../features/gather-pokemon/gather-pokemo
 import { GatherRow, flattenGenerations, trackGatherRow } from './gather-row.model';
 import { PrecomputedSizeVirtualScrollStrategy } from './precomputed-size-virtual-scroll-strategy';
 import { POKEDEX_TYPE_LABELS } from '../features/side-menu/side-menu.component';
+import {
+  getFamilyMemberNames,
+  normalizePokemonName,
+} from '../core/services/pokemon-sprite-mapper.util';
 
 @Component({
   selector: 'app-gather',
@@ -188,16 +192,24 @@ export class GatherPage implements OnInit, AfterViewInit {
 
   /** Narrows the display to species matching the search term without
    * affecting the header's caught/total counts, which stay scoped to the
-   * full pokedex-and-filters selection regardless of search. */
+   * full pokedex-and-filters selection regardless of search. A leading `+`
+   * switches to an evolution-family match (e.g. "+pikachu" also surfaces
+   * Pichu/Raichu), mirroring the `+name` family operator Pokemon GO's own
+   * search bar supports (see search-query.serializer.ts). */
   private applySearchFilter(): void {
-    const term = this.searchTerm.trim().toLowerCase();
+    const rawTerm = this.searchTerm.trim();
+    const isFamilySearch = rawTerm.startsWith('+');
+    const term = (isFamilySearch ? rawTerm.slice(1) : rawTerm).trim().toLowerCase();
+    const familyMembers = isFamilySearch && term ? getFamilyMemberNames(term) : null;
 
     this.visibleGenerations = term
       ? this.generationToPokemonMap
           .map((generation) => ({
             ...generation,
             speciesList: generation.speciesList.filter((group) =>
-              group.speciesName.toLowerCase().includes(term)
+              familyMembers
+                ? familyMembers.has(normalizePokemonName(group.speciesName))
+                : group.speciesName.toLowerCase().includes(term)
             ),
           }))
           .filter((generation) => generation.speciesList.length > 0)

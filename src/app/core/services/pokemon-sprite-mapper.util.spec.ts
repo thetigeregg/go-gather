@@ -1,4 +1,5 @@
 import {
+  getFamilyMemberNames,
   getGigantamaxSpriteUrl,
   getPokemonId,
   getPokemonSpriteUrl,
@@ -41,6 +42,27 @@ describe('getPokemonId', () => {
 
   it('returns null for an unknown name', () => {
     expect(getPokemonId('Not A Real Pokemon')).toBeNull();
+  });
+});
+
+describe('getFamilyMemberNames', () => {
+  it('resolves a multi-stage family from any member', () => {
+    const expected = new Set(['pichu', 'pikachu', 'raichu']);
+    expect(getFamilyMemberNames('pikachu')).toEqual(expected);
+    expect(getFamilyMemberNames('Pichu')).toEqual(expected);
+    expect(getFamilyMemberNames('RAICHU')).toEqual(expected);
+  });
+
+  it('returns a single-member set for a single-stage species', () => {
+    expect(getFamilyMemberNames('Tauros')).toEqual(new Set(['tauros']));
+  });
+
+  it('matches case-insensitively and normalizes accents/gender symbols', () => {
+    expect(getFamilyMemberNames('nidoran♀')).toContain('nidoranf');
+  });
+
+  it('falls back to a single-member set of the normalized input for an unknown name', () => {
+    expect(getFamilyMemberNames('Not A Real Pokemon')).toEqual(new Set(['not a real pokemon']));
   });
 });
 

@@ -8,6 +8,7 @@
     "sync:calendar-events": "tsx src/sync-calendar-events.ts",
     "sync:season": "tsx src/sync-season.ts",
     "sync:pokemon-stats": "tsx src/sync-pokemon-stats.ts",
+    "generate:pokemon-family": "tsx src/generate-pokemon-family.ts",
     "start": "tsx src/index.ts",
     "dev": "tsx watch --exclude 'data/**' src/index.ts"
   },

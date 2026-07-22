@@ -1,4 +1,5 @@
 import { POKEMON_NAME_TO_ID } from './pokemon-name-to-id.constant';
+import { POKEMON_FAMILY_ID } from './pokemon-family.constant';
 import { PokemonFormData, POKEMON_FORM_MAP } from './pokemon-form-map.constant';
 import { VALID_STATIC_SPRITES } from './valid-static-sprites.constant';
 import { GIGANTAMAX_POKEMON_IDS } from './valid-gigantamax-sprites.constant';
@@ -45,6 +46,37 @@ function getNormalizedNameToIdIndex(): Map<string, number> {
 export function getPokemonId(name: string): number | null {
   const normalizedInput = normalizePokemonName(name);
   return getNormalizedNameToIdIndex().get(normalizedInput) ?? null;
+}
+
+// Same lazy-cached reverse-index pattern as getNormalizedNameToIdIndex()
+// above, built from POKEMON_FAMILY_ID instead of POKEMON_NAME_TO_ID.
+let normalizedFamilyIndex: Map<string, number> | null = null;
+
+function getNormalizedFamilyIndex(): Map<string, number> {
+  normalizedFamilyIndex ??= new Map(
+    Object.entries(POKEMON_FAMILY_ID).map(([name, id]) => [normalizePokemonName(name), id])
+  );
+  return normalizedFamilyIndex;
+}
+
+/** Every species sharing an evolutionary line with `name` (normalized), e.g.
+ * "pikachu" -> {pichu, pikachu, raichu}. Falls back to a single-member set
+ * containing just the normalized input when the name isn't recognized, so
+ * an unmatched search behaves like an exact match rather than matching
+ * everything or nothing. */
+export function getFamilyMemberNames(name: string): Set<string> {
+  const normalizedInput = normalizePokemonName(name);
+  const familyId = getNormalizedFamilyIndex().get(normalizedInput);
+
+  if (familyId === undefined) {
+    return new Set([normalizedInput]);
+  }
+
+  return new Set(
+    Object.entries(POKEMON_FAMILY_ID)
+      .filter(([, id]) => id === familyId)
+      .map(([speciesName]) => normalizePokemonName(speciesName))
+  );
 }
 
 export function isValidStaticSprite(spriteName: string): boolean {
