@@ -1,8 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { Dayjs } from 'dayjs';
-import { IonIcon } from '@ionic/angular/standalone';
-import { addIcons } from 'ionicons';
-import { chevronDown, chevronUp } from 'ionicons/icons';
+import { IonAccordion, IonItem, IonLabel } from '@ionic/angular/standalone';
 import { EventMetadata, PogoEvent } from '@go-gather/shared';
 import { TimelineCategoryKey, TimelineDateGroup } from './timeline-categories.util';
 import { TimelineEventComponent } from './timeline-event.component';
@@ -12,12 +10,15 @@ import { TimelineEventComponent } from './timeline-event.component';
  * flat event list; UPCOMING/FUTURE render date-grouped lists (dateGroups
  * input is undefined for the flat categories, matching
  * timeline-categories.util.ts's Partial<Record<...>> groupedByDate shape).
- * Collapse state is local-only, not persisted (see the plan's simplification
- * note) — default expanded.
+ * Expand/collapse is an `ion-accordion` (parent timeline-view.component.html
+ * hosts the `ion-accordion-group`), matching this repo's existing
+ * search-string.component.ts convention rather than a hand-rolled toggle.
+ * Expand state is local-only, not persisted (see the plan's simplification
+ * note) — default expanded, set via the group's `value`.
  */
 @Component({
   selector: 'app-timeline-category-section',
-  imports: [IonIcon, TimelineEventComponent],
+  imports: [IonAccordion, IonItem, IonLabel, TimelineEventComponent],
   templateUrl: './timeline-category-section.component.html',
   styleUrl: './timeline-category-section.component.scss',
 })
@@ -34,22 +35,12 @@ export class TimelineCategorySectionComponent {
 
   @Output() activate = new EventEmitter<string>();
 
-  isCollapsed = false;
-
-  constructor() {
-    addIcons({ 'chevron-down': chevronDown, 'chevron-up': chevronUp });
-  }
-
   get isFlatCategory(): boolean {
     return this.categoryKey === 'today' || this.categoryKey === 'ongoing';
   }
 
   get hiddenCountText(): string {
     return `${String(this.hiddenCount)} event${this.hiddenCount === 1 ? '' : 's'} hidden by filters`;
-  }
-
-  toggleCollapsed(): void {
-    this.isCollapsed = !this.isCollapsed;
   }
 
   onActivate(eventId: string): void {

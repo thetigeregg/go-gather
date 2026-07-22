@@ -2,19 +2,21 @@
   @if (!timelineData.hasAnyEvents) {
     <p class="no-events">No upcoming events found</p>
   } @else {
-    @for (category of categories; track category.key) {
-      <app-timeline-category-section
-        [categoryKey]="category.key"
-        [title]="category.title"
-        [events]="timelineData.categorizedEvents[category.key]"
-        [dateGroups]="timelineData.groupedByDate[category.key]"
-        [totalCount]="timelineData.totalEventsCounts[category.key]"
-        [hiddenCount]="timelineData.hiddenEventsCounts[category.key]"
-        [eventMetadata]="eventMetadata"
-        [activeEventId]="activeEventId"
-        [now]="now"
-        (activate)="setActiveEvent($event)"
-      />
-    }
+    <ion-accordion-group [multiple]="true" [value]="defaultExpandedCategories">
+      @for (category of categories; track category.key) {
+        <app-timeline-category-section
+          [categoryKey]="category.key"
+          [title]="category.title"
+          [events]="timelineData.categorizedEvents[category.key]"
+          [dateGroups]="timelineData.groupedByDate[category.key]"
+          [totalCount]="timelineData.totalEventsCounts[category.key]"
+          [hiddenCount]="timelineData.hiddenEventsCounts[category.key]"
+          [eventMetadata]="eventMetadata"
+          [activeEventId]="activeEventId"
+          [now]="now"
+          (activate)="setActiveEvent($event)"
+        />
+      }
+    </ion-accordion-group>
   }
 </div>

@@ -51,14 +51,6 @@ describe('TimelineCategorySectionComponent', () => {
     expect(component.hiddenCountText).toBe('3 events hidden by filters');
   });
 
-  it('toggles isCollapsed', () => {
-    expect(component.isCollapsed).toBe(false);
-    component.toggleCollapsed();
-    expect(component.isCollapsed).toBe(true);
-    component.toggleCollapsed();
-    expect(component.isCollapsed).toBe(false);
-  });
-
   it('emits activate with the eventId when a child event activates', () => {
     const emitSpy = vi.spyOn(component.activate, 'emit');
 

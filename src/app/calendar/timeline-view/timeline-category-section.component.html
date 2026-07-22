@@ -1,11 +1,10 @@
-<div class="category-section">
-  <div class="category-header" (click)="toggleCollapsed()">
-    <span class="category-title">{{ title }}</span>
-    <span class="category-badge">{{ totalCount }}</span>
-    <ion-icon [name]="isCollapsed ? 'chevron-down' : 'chevron-up'"></ion-icon>
-  </div>
+<ion-accordion [value]="categoryKey">
+  <ion-item slot="header" color="light">
+    <ion-label>{{ title }}</ion-label>
+    <span class="category-badge" slot="end">{{ totalCount }}</span>
+  </ion-item>
 
-  @if (!isCollapsed) {
+  <div class="accordion-content" slot="content">
     @if (isFlatCategory) {
       @if (categoryKey === 'today' && totalCount === 0) {
         <p class="empty-state">No single-day events scheduled today</p>
@@ -38,5 +37,5 @@
     @if (hiddenCount > 0) {
       <div class="hidden-indicator">{{ hiddenCountText }}</div>
     }
-  }
-</div>
+  </div>
+</ion-accordion>

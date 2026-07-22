@@ -84,7 +84,7 @@ export class TimelineEventComponent {
     return getMajorCalendarEventVariant(this.event);
   }
 
-  onHeaderClick(): void {
+  onClick(): void {
     this.activate.emit(this.event.eventID);
   }
 }

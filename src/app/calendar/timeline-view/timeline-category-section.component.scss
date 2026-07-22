@@ -3,25 +3,16 @@
   margin-bottom: 12px;
 }
 
-.category-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 4px;
-  cursor: pointer;
-}
-
-.category-title {
-  flex: 1;
-  font-weight: 600;
-  font-size: 0.95rem;
-}
-
 .category-badge {
   background: var(--ion-color-step-150, rgba(0, 0, 0, 0.1));
   border-radius: 10px;
   padding: 1px 8px;
   font-size: 0.75rem;
+  margin-inline-end: 8px;
+}
+
+.accordion-content {
+  padding: 4px 0;
 }
 
 .empty-state {

@@ -1,5 +1,6 @@
 import { Component, OnInit, inject } from '@angular/core';
 import dayjs, { Dayjs } from 'dayjs';
+import { IonAccordionGroup } from '@ionic/angular/standalone';
 import { EventMetadata } from '@go-gather/shared';
 import { CalendarEventsService } from '../../core/services/calendar-events.service';
 import { CalendarFilterService } from '../../core/services/calendar-filter.service';
@@ -31,7 +32,7 @@ function emptyTimelineData(): TimelineData {
  */
 @Component({
   selector: 'app-timeline-view',
-  imports: [TimelineCategorySectionComponent],
+  imports: [IonAccordionGroup, TimelineCategorySectionComponent],
   templateUrl: './timeline-view.component.html',
   styleUrl: './timeline-view.component.scss',
 })
@@ -40,6 +41,7 @@ export class TimelineViewComponent implements OnInit {
   private readonly calendarFilterService = inject(CalendarFilterService);
 
   readonly categories = TIMELINE_CATEGORIES;
+  readonly defaultExpandedCategories = TIMELINE_CATEGORIES.map((category) => category.key);
 
   now: Dayjs = dayjs();
   activeEventId: string | null = null;

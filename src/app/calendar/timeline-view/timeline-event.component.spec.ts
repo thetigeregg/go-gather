@@ -99,7 +99,7 @@ describe('TimelineEventComponent', () => {
   it('emits activate with the eventID on header click', () => {
     const emitSpy = vi.spyOn(component.activate, 'emit');
 
-    component.onHeaderClick();
+    component.onClick();
 
     expect(emitSpy).toHaveBeenCalledWith('event-1');
   });

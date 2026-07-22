@@ -8,8 +8,9 @@
   "
   [attr.data-event-type]="event.eventType"
   [attr.data-timeline-event-id]="event.eventID"
+  (click)="onClick()"
 >
-  <div class="event-header" (click)="onHeaderClick()">
+  <div class="event-header">
     <div class="event-dot" [style.background-color]="metadata.color"></div>
     <div class="event-name">{{ displayName }}</div>
     <ion-icon [name]="isActive ? 'chevron-up' : 'chevron-down'" class="expand-icon"></ion-icon>
@@ -118,7 +119,13 @@
       </div>
     }
 
-    <a class="view-link" [href]="event.link" target="_blank" rel="noopener noreferrer">
+    <a
+      class="view-link"
+      [href]="event.link"
+      target="_blank"
+      rel="noopener noreferrer"
+      (click)="$event.stopPropagation()"
+    >
       View on LeekDuck
     </a>
   }
