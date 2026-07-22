@@ -37,7 +37,8 @@
   gap: 0.4rem;
   padding: 0.4rem;
   border-radius: 7px;
-  border: 1px solid var(--ion-color-step-150, rgba(0, 0, 0, 0.1));
+  border: 1px solid
+    color-mix(in srgb, var(--ion-color-step-150, rgba(0, 0, 0, 0.1)) 60%, transparent);
   background-color: color-mix(
     in srgb,
     var(--ion-background-color, #fff) 75%,
@@ -51,7 +52,7 @@
   font-weight: 700;
   line-height: 1.5;
   letter-spacing: 0.05em;
-  opacity: 0.82;
+  color: color-mix(in srgb, var(--ion-text-color, #000) 82%, transparent);
   padding: 0.15rem 0.1rem;
 }
 
@@ -75,7 +76,7 @@
   padding: 0.12rem 0 0.34rem 0;
   margin-bottom: 0.05rem;
   color: color-mix(in srgb, var(--ion-text-color, #000) 82%, transparent);
-  border-bottom: 1px solid var(--ion-color-step-250, rgba(0, 0, 0, 0.2));
+  border-bottom: 1px solid color-mix(in srgb, var(--ion-text-color, #000) 22%, transparent);
 }
 
 .schedule-section-header:not(.is-all-day) .schedule-label {
@@ -84,8 +85,8 @@
 }
 
 .schedule-section-header.is-all-day .schedule-label {
-  color: #198754;
-  border-bottom-color: rgba(25, 135, 84, 0.4);
+  color: color-mix(in srgb, #0f5132 88%, var(--ion-text-color, #000));
+  border-bottom-color: color-mix(in srgb, #198754 40%, transparent);
 }
 
 .schedule-time {
@@ -97,7 +98,8 @@
   line-height: 1;
   border-radius: 999px;
   padding: 0.2rem 0.4rem;
-  opacity: 0.7;
-  background: var(--ion-color-step-100, rgba(0, 0, 0, 0.05));
+  color: color-mix(in srgb, var(--ion-text-color, #000) 56%, transparent);
+  background: color-mix(in srgb, var(--ion-text-color, #000) 4%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ion-text-color, #000) 12%, transparent);
   margin-bottom: 0.24rem;
 }
