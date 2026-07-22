@@ -26,16 +26,25 @@ export function normalizePokemonName(name: string): string {
     .trim();
 }
 
+// Built lazily, once, on first lookup — POKEMON_NAME_TO_ID is a static
+// ~1045-entry constant, so a per-call O(n) scan (each comparison itself
+// paying for a fresh normalizePokemonName() call) was a real, measurable
+// main-thread cost: events with dozens of raid bosses (e.g. a GO Fest day
+// with 50+ bosses) could burn several seconds re-scanning this table once
+// per boss per resolver stage. A one-time reverse index turns every
+// subsequent lookup into a single Map.get().
+let normalizedNameToIdIndex: Map<string, number> | null = null;
+
+function getNormalizedNameToIdIndex(): Map<string, number> {
+  normalizedNameToIdIndex ??= new Map(
+    Object.entries(POKEMON_NAME_TO_ID).map(([pokeName, id]) => [normalizePokemonName(pokeName), id])
+  );
+  return normalizedNameToIdIndex;
+}
+
 export function getPokemonId(name: string): number | null {
   const normalizedInput = normalizePokemonName(name);
-
-  for (const [pokeName, id] of Object.entries(POKEMON_NAME_TO_ID)) {
-    if (normalizePokemonName(pokeName) === normalizedInput) {
-      return id;
-    }
-  }
-
-  return null;
+  return getNormalizedNameToIdIndex().get(normalizedInput) ?? null;
 }
 
 export function isValidStaticSprite(spriteName: string): boolean {
