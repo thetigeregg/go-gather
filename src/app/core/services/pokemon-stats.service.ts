@@ -3,9 +3,14 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, map, of, shareReplay, tap } from 'rxjs';
 import { calculateRaidCP, cleanPokemonName, CPResult } from './pokemon-cp.util';
 import { normalizePokemonName } from './pokemon-sprite-mapper.util';
+import { environment } from '../../../environments/environment';
 
-const POKEMON_DATA_URL =
-  'https://raw.githubusercontent.com/mgrann03/pokemon-resources/refs/heads/main/pogo_pkm.min.json';
+const POKEMON_DATA_URL = `${environment.apiUrl}/api/pokemon-stats`;
+
+interface PokemonStatsResponse {
+  syncedAt: string | null;
+  entries: PokemonData[];
+}
 
 export interface PokemonStats {
   baseStamina: number;
@@ -38,11 +43,13 @@ const REGIONAL_DATA_FORMS: Partial<Record<string, string>> = {
 };
 
 /**
- * Ported from pogo-cal's src/stores/pokemonData.ts (a Pinia store) — this is
- * static reference data lazily fetched directly from the same public CDN the
- * sprite `<img>` URLs already point at, not go-gather's own `server/`, so it
- * mirrors the source's lazy-fetch-and-cache-in-memory approach rather than
- * being proxied/synced like the calendar-events feed.
+ * Ported from pogo-cal's src/stores/pokemonData.ts (a Pinia store). Unlike
+ * the initial port, this no longer fetches the public CDN directly — it's
+ * proxied through go-gather's own server (`GET /api/pokemon-stats`, synced
+ * by `server/src/sync-pokemon-stats.ts`), matching the calendar-events/
+ * season pattern. Still lazily fetched and cached in memory for the life of
+ * the app session (no `StorageEngine` persistence) — this is reference data
+ * used only for CP calculation, not a domain model displayed in lists/filters.
  */
 @Injectable({ providedIn: 'root' })
 export class PokemonStatsService {
@@ -57,9 +64,10 @@ export class PokemonStatsService {
       return of(this.pokemonData);
     }
 
-    this.load$ ??= this.http.get<PokemonData[]>(POKEMON_DATA_URL).pipe(
-      tap((data) => {
-        this.pokemonData = data;
+    this.load$ ??= this.http.get<PokemonStatsResponse>(POKEMON_DATA_URL).pipe(
+      map((response) => response.entries),
+      tap((entries) => {
+        this.pokemonData = entries;
         this.isLoaded = true;
       }),
       shareReplay(1)

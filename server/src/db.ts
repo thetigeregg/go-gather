@@ -110,6 +110,17 @@ export function initSchema(): void {
       id INTEGER PRIMARY KEY CHECK (id = 1),
       payload TEXT NOT NULL
     );
+
+    -- Pokemon base-stat reference data (CP calculation for Timeline raid
+    -- sprites), synced from a third-party static-data feed by
+    -- sync-pokemon-stats.ts. The whole dataset is stored as one JSON payload
+    -- row, same singleton pattern as pokemon_go_season — the client wants
+    -- the entire array at once for its own in-memory lookup, not per-row
+    -- server queries.
+    CREATE TABLE IF NOT EXISTS pokemon_stats (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      payload TEXT NOT NULL
+    );
   `);
 
   // `CREATE TABLE IF NOT EXISTS` above is a no-op against a pre-existing

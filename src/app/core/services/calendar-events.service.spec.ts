@@ -1,5 +1,6 @@
 import 'fake-indexeddb/auto';
 import { TestBed } from '@angular/core/testing';
+import { Subject } from 'rxjs';
 import { vi } from 'vitest';
 import type {
   PogoEvent,
@@ -11,6 +12,7 @@ import { AppDb } from '../data/app-db';
 import { DexieStorageEngine } from '../data/dexie-storage-engine';
 import { StorageEngineFactory } from '../data/storage-engine.factory';
 import { CalendarEventsService, getEventTypeInfo } from './calendar-events.service';
+import { SyncService } from './sync.service';
 
 vi.mock(
   '../data/storage-transaction-context',
@@ -49,11 +51,24 @@ describe('CalendarEventsService', () => {
   let db: AppDb;
   let engine: DexieStorageEngine;
   let service: CalendarEventsService;
+  let calendarEventsSync$: Subject<void>;
 
   beforeEach(async () => {
+    calendarEventsSync$ = new Subject<void>();
+
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      providers: [AppDb, DexieStorageEngine, StorageEngineFactory],
+      providers: [
+        AppDb,
+        DexieStorageEngine,
+        StorageEngineFactory,
+        {
+          provide: SyncService,
+          useValue: {
+            listenForCalendarEventsSync: () => calendarEventsSync$.asObservable(),
+          },
+        },
+      ],
     });
 
     db = TestBed.inject(AppDb);
@@ -83,6 +98,73 @@ describe('CalendarEventsService', () => {
 
     expect(result).toHaveLength(2);
     expect(service.events).toHaveLength(2);
+  });
+
+  it('does not re-read StorageEngine on a second call when nothing has synced in between', async () => {
+    await engine.putCalendarEvent(makeCalendarEvent());
+
+    await new Promise<readonly PogoEvent[]>((resolve) => {
+      service.loadCalendarEvents().subscribe(resolve);
+    });
+    expect(service.events).toHaveLength(1);
+
+    // Added directly to storage, bypassing a sync pull — the cached
+    // expansion should not pick this up until invalidated.
+    await engine.putCalendarEvent(
+      makeCalendarEvent({ eventID: 'raid-day-january-2026', name: 'Raid Day' })
+    );
+
+    await new Promise<readonly PogoEvent[]>((resolve) => {
+      service.loadCalendarEvents().subscribe(resolve);
+    });
+    expect(service.events).toHaveLength(1);
+  });
+
+  it('re-reads StorageEngine once SyncService signals a new calendar-events pull', async () => {
+    await engine.putCalendarEvent(makeCalendarEvent());
+
+    await new Promise<readonly PogoEvent[]>((resolve) => {
+      service.loadCalendarEvents().subscribe(resolve);
+    });
+    expect(service.events).toHaveLength(1);
+
+    await engine.putCalendarEvent(
+      makeCalendarEvent({ eventID: 'raid-day-january-2026', name: 'Raid Day' })
+    );
+    calendarEventsSync$.next();
+
+    await new Promise<readonly PogoEvent[]>((resolve) => {
+      service.loadCalendarEvents().subscribe(resolve);
+    });
+    expect(service.events).toHaveLength(2);
+  });
+
+  it('rebuilds isPastEvent/isFutureEvent fresh on every call, even without a new sync', async () => {
+    // Only fake `Date` (not timers/tasks) — fake-indexeddb's internals rely
+    // on real setTimeout/microtask scheduling to resolve, so faking those
+    // too would deadlock every `await engine.*` call below.
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-01-11T13:00:00.000Z'));
+
+    try {
+      await engine.putCalendarEvent(makeCalendarEvent());
+
+      await new Promise<readonly PogoEvent[]>((resolve) => {
+        service.loadCalendarEvents().subscribe(resolve);
+      });
+      expect(service.eventMetadata['community-day-january-2026'].isPastEvent).toBe(false);
+
+      // No sync signal fired — only the clock moved. The cached expansion
+      // should still be reused, but metadata must reflect the new "now".
+      vi.setSystemTime(new Date('2026-01-11T18:00:00.000Z'));
+
+      await new Promise<readonly PogoEvent[]>((resolve) => {
+        service.loadCalendarEvents().subscribe(resolve);
+      });
+      expect(service.eventMetadata['community-day-january-2026'].isPastEvent).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('computes EventMetadata for each loaded event, keyed by eventID', async () => {

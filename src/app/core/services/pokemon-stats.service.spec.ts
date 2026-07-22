@@ -3,8 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { PokemonData, PokemonStatsService } from './pokemon-stats.service';
 
-const POKEMON_DATA_URL =
-  'https://raw.githubusercontent.com/mgrann03/pokemon-resources/refs/heads/main/pogo_pkm.min.json';
+const POKEMON_DATA_URL = 'http://localhost:3000/api/pokemon-stats';
 
 function makePokemon(overrides: Partial<PokemonData> = {}): PokemonData {
   return {
@@ -15,6 +14,10 @@ function makePokemon(overrides: Partial<PokemonData> = {}): PokemonData {
     stats: { baseAttack: 300, baseDefense: 182, baseStamina: 214 },
     ...overrides,
   };
+}
+
+function makeResponse(entries: PokemonData[]) {
+  return { syncedAt: '2026-01-01T00:00:00.000Z', entries };
 }
 
 describe('PokemonStatsService', () => {
@@ -38,14 +41,14 @@ describe('PokemonStatsService', () => {
     expect(service.searchCatchablePokemon('Mewtwo')).toBeNull();
   });
 
-  it('loadPokemonData fetches from the public CDN URL and caches the result', async () => {
+  it('loadPokemonData fetches from the server-proxied endpoint and caches the result', async () => {
     const loadPromise = new Promise((resolve) => {
       service.loadPokemonData().subscribe(resolve);
     });
 
     const req = httpMock.expectOne(POKEMON_DATA_URL);
     expect(req.request.method).toBe('GET');
-    req.flush([makePokemon()]);
+    req.flush(makeResponse([makePokemon()]));
 
     await loadPromise;
 
@@ -56,7 +59,7 @@ describe('PokemonStatsService', () => {
     const firstLoad = new Promise((resolve) => {
       service.loadPokemonData().subscribe(resolve);
     });
-    httpMock.expectOne(POKEMON_DATA_URL).flush([makePokemon()]);
+    httpMock.expectOne(POKEMON_DATA_URL).flush(makeResponse([makePokemon()]));
     await firstLoad;
 
     await new Promise((resolve) => {
@@ -72,13 +75,15 @@ describe('PokemonStatsService', () => {
       });
       httpMock
         .expectOne(POKEMON_DATA_URL)
-        .flush([
-          makePokemon({ name: 'Mewtwo', form: 'Normal' }),
-          makePokemon({ name: 'Dialga', form: 'Origin', id: 483 }),
-          makePokemon({ name: 'Braviary', form: 'Hisuian', id: 628 }),
-          makePokemon({ name: 'Necrozma', form: 'Normal', id: 800 }),
-          makePokemon({ name: 'Necrozma', form: 'Dusk Mane', id: 800 }),
-        ]);
+        .flush(
+          makeResponse([
+            makePokemon({ name: 'Mewtwo', form: 'Normal' }),
+            makePokemon({ name: 'Dialga', form: 'Origin', id: 483 }),
+            makePokemon({ name: 'Braviary', form: 'Hisuian', id: 628 }),
+            makePokemon({ name: 'Necrozma', form: 'Normal', id: 800 }),
+            makePokemon({ name: 'Necrozma', form: 'Dusk Mane', id: 800 }),
+          ])
+        );
       await loadPromise;
     });
 
@@ -136,7 +141,7 @@ describe('PokemonStatsService', () => {
       const loadPromise = new Promise((resolve) => {
         service.loadPokemonData().subscribe(resolve);
       });
-      httpMock.expectOne(POKEMON_DATA_URL).flush([makePokemon()]);
+      httpMock.expectOne(POKEMON_DATA_URL).flush(makeResponse([makePokemon()]));
       await loadPromise;
 
       const cp = await new Promise((resolve) => {
@@ -149,7 +154,7 @@ describe('PokemonStatsService', () => {
       const loadPromise = new Promise((resolve) => {
         service.loadPokemonData().subscribe(resolve);
       });
-      httpMock.expectOne(POKEMON_DATA_URL).flush([makePokemon()]);
+      httpMock.expectOne(POKEMON_DATA_URL).flush(makeResponse([makePokemon()]));
       await loadPromise;
 
       const cp = await new Promise((resolve) => {
@@ -162,7 +167,7 @@ describe('PokemonStatsService', () => {
       const cpPromise = new Promise((resolve) => {
         service.getPokemonCP('Mewtwo').subscribe(resolve);
       });
-      httpMock.expectOne(POKEMON_DATA_URL).flush([makePokemon()]);
+      httpMock.expectOne(POKEMON_DATA_URL).flush(makeResponse([makePokemon()]));
 
       expect(await cpPromise).toEqual({ level20Max: 2387, level25Max: 2984 });
     });

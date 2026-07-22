@@ -253,6 +253,23 @@ export function buildApp() {
     };
   });
 
+  // Pokemon base-stat reference data (CP calculation for Timeline raid
+  // sprites) — see sync-pokemon-stats.ts. Same enveloping rationale as
+  // /api/calendar-season; the client used to fetch this file directly from
+  // GitHub, now it only ever talks to this server.
+  app.get('/api/pokemon-stats', () => {
+    const row = db.prepare('SELECT payload FROM pokemon_stats WHERE id = 1').get() as
+      { payload: string } | undefined;
+    const syncMetaRow = db
+      .prepare(`SELECT value FROM sync_meta WHERE key = 'pokemonStatsSyncedAt'`)
+      .get() as { value: string } | undefined;
+
+    return {
+      syncedAt: syncMetaRow?.value ?? null,
+      entries: row ? (JSON.parse(row.payload) as unknown[]) : [],
+    };
+  });
+
   // Reads sync-overrides.json fresh on every request (small file, matches
   // sync.ts's own "re-read fresh every time" behavior) rather than caching
   // — so editing the file and refreshing the app picks up a change
