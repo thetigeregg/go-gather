@@ -118,6 +118,11 @@ describe('CalendarViewComponent', () => {
     expect(component.calendarDays.some((d) => d.isToday)).toBe(true);
   });
 
+  it('starts the week on Monday', () => {
+    expect(component.firstDayIndex).toBe(1);
+    expect(component.dayHeaders).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
+  });
+
   it('rebuilds event slots once calendar event/season data finishes loading', () => {
     events = [
       makeEvent({

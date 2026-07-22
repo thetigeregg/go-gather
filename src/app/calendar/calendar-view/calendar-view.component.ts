@@ -19,9 +19,9 @@ import { getSourceEventID } from './calendar-single-day-events.util';
 dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
 
-/** "First day of week" display preference dropped for this port — Sunday only. */
-const FIRST_DAY_INDEX = 0;
-const DAY_HEADERS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+/** "First day of week" display preference dropped for this port — Monday only. */
+const FIRST_DAY_INDEX = 1;
+const DAY_HEADERS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const EARLIEST_MONTH = dayjs().year(2016).month(0);
 
 /**

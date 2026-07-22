@@ -25,7 +25,12 @@
 .calendar-day-headers,
 .calendar-days {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  // `minmax(0, 1fr)` (not plain `1fr`) — grid tracks otherwise default to an
+  // implicit `auto` minimum, so a single unwrapped/long event name inside one
+  // cell can force that whole column wider than 1/7 of the row, throwing off
+  // every other column's width (confirmed visually: a long single-day event
+  // name blew up its column while sibling columns shrank to near nothing).
+  grid-template-columns: repeat(7, minmax(0, 1fr));
 }
 
 .calendar-day-header {
