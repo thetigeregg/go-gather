@@ -263,13 +263,38 @@ describe('TimelineEventComponent', () => {
       expect(component.hasExpandedRaidSections).toBe(true);
     });
 
-    it('hasExpandedRaidSections is true when there are default tier groups, with no day sections', () => {
+    it('hasExpandedRaidSections is true when there are multiple default tier groups, with no day sections', () => {
       component.metadata = makeMetadata({
         raidBossTierGroups: [
           { label: 'Tier 3', bosses: [{ name: 'Machamp', image: 'x.png', canBeShiny: false }] },
+          { label: 'Tier 5', bosses: [{ name: 'Mewtwo', image: 'y.png', canBeShiny: false }] },
         ],
       });
       expect(component.hasExpandedRaidSections).toBe(true);
+    });
+
+    it('hasExpandedRaidSections is true when a single tier group holds multiple Pokemon', () => {
+      component.metadata = makeMetadata({
+        raidBossTierGroups: [
+          {
+            label: 'Tier 5',
+            bosses: [
+              { name: 'Mewtwo', image: 'x.png', canBeShiny: false },
+              { name: 'Rayquaza', image: 'y.png', canBeShiny: false },
+            ],
+          },
+        ],
+      });
+      expect(component.hasExpandedRaidSections).toBe(true);
+    });
+
+    it('hasExpandedRaidSections is false for a single tier group holding a single Pokemon (e.g. "X in 5-Star Raid Battles")', () => {
+      component.metadata = makeMetadata({
+        raidBossTierGroups: [
+          { label: 'Tier 5', bosses: [{ name: 'Mewtwo', image: 'x.png', canBeShiny: false }] },
+        ],
+      });
+      expect(component.hasExpandedRaidSections).toBe(false);
     });
 
     it('hasExpandedRaidSections is false for neither', () => {

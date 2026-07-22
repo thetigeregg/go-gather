@@ -164,11 +164,25 @@ export class TimelineEventComponent {
   }
 
   get hasExpandedRaidSections(): boolean {
-    return Boolean(
-      (this.timelineScheduleDaySectionsWithTierGroups &&
-        this.timelineScheduleDaySectionsWithTierGroups.length > 0) ||
-      this.defaultTierGroupsWithImages
-    );
+    if (
+      this.timelineScheduleDaySectionsWithTierGroups &&
+      this.timelineScheduleDaySectionsWithTierGroups.length > 0
+    ) {
+      return true;
+    }
+
+    const tierGroups = this.defaultTierGroupsWithImages;
+    if (!tierGroups || tierGroups.length === 0) {
+      return false;
+    }
+
+    // A single tier group holding a single Pokemon (e.g. "X in 5-Star Raid
+    // Battles") doesn't need the full tier-group schedule box — it reads the
+    // same as a Raid Hour's lone boss, so it falls through to the simple
+    // inline Pokemon row (showInlinePokemonImages) instead, sharing the same
+    // right-aligned row as the "View on LeekDuck" button.
+    const totalImages = tierGroups.reduce((sum, group) => sum + group.images.length, 0);
+    return tierGroups.length > 1 || totalImages > 1;
   }
 
   get showCollapsedScheduleDays(): boolean {

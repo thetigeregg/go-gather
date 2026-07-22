@@ -85,12 +85,14 @@
   </div>
 
   @if (isActive) {
-    <app-timeline-raid-schedule
-      [daySections]="timelineScheduleDaySectionsWithTierGroups"
-      [defaultTierGroups]="defaultTierGroupsWithImages"
-      [eventType]="event.eventType"
-      [effect]="spriteEffect"
-    ></app-timeline-raid-schedule>
+    @if (hasExpandedRaidSections) {
+      <app-timeline-raid-schedule
+        [daySections]="timelineScheduleDaySectionsWithTierGroups"
+        [defaultTierGroups]="defaultTierGroupsWithImages"
+        [eventType]="event.eventType"
+        [effect]="spriteEffect"
+      ></app-timeline-raid-schedule>
+    }
 
     @if (extras; as eventExtras) {
       <div class="event-extras">
