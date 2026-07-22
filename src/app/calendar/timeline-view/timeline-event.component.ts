@@ -1,14 +1,16 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { Dayjs } from 'dayjs';
-import { IonBadge, IonButton, IonIcon } from '@ionic/angular/standalone';
+import { IonBadge, IonButton, IonIcon, ToastController } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   arrowUpCircleOutline,
   chevronDown,
   chevronUp,
+  eyeOffOutline,
   swapHorizontalOutline,
 } from 'ionicons/icons';
 import { EventMetadata, PogoEvent } from '@go-gather/shared';
+import { CalendarFilterService } from '../../core/services/calendar-filter.service';
 import {
   getMajorCalendarEventVariant,
   isMajorCalendarEventType,
@@ -55,16 +57,21 @@ const STATUS_BADGE_COLORS: Record<EventStatusType, string> = {
 // Raid tiers hidden from the collapsed (non-active) inline Pokemon row — shown in full once expanded.
 const COLLAPSED_EXCLUDED_TIERS = ['Tier 1', 'Tier 3'];
 
+const HIDE_TOAST_DURATION_MS = 4000;
+
 /**
  * Ported from pogo-cal's TimelineEvent.vue + TimelineEventHeader.vue +
  * useTimelineEvent.ts, folded into one component — with add-to-calendar
- * (ICS, out of scope), edit-color (dropped display pref), and quick-hide
- * (deferred, see plan) all gone, there's no longer enough header-only content
- * to warrant a separate component. The text-only "event extras" bonuses
- * block is kept alongside the newly-added sprite/schedule rendering (see
- * OPEN-DECISIONS.md's raid-boss-art item, reversed for this view's static
- * sprites — Timeline Pokemon Sprites & Raid Schedule plan). Dumb/
- * presentational — `isActive` is owned by the parent
+ * (ICS, out of scope) and edit-color (dropped display pref) gone, there's
+ * no longer enough header-only content to warrant a separate component.
+ * Quick-hide *is* ported (`onHideClick()`) — source's choice modal ("hide
+ * this event" vs. "hide this event type") is simplified to just the
+ * per-instance half, since "hide this event type" already exists as its own
+ * feature (the filter menu's per-type toggles). The text-only "event
+ * extras" bonuses block is kept alongside the newly-added sprite/schedule
+ * rendering (see OPEN-DECISIONS.md's raid-boss-art item, reversed for this
+ * view's static sprites — Timeline Pokemon Sprites & Raid Schedule plan).
+ * Dumb/presentational — `isActive` is owned by the parent
  * (timeline-view.component.ts), matching source's useTimelineActiveEvent.ts
  * pattern; this component only emits `activate`.
  */
@@ -82,6 +89,9 @@ const COLLAPSED_EXCLUDED_TIERS = ['Tier 1', 'Tier 3'];
   styleUrl: './timeline-event.component.scss',
 })
 export class TimelineEventComponent {
+  private readonly calendarFilterService = inject(CalendarFilterService);
+  private readonly toastController = inject(ToastController);
+
   @Input({ required: true }) event!: PogoEvent;
   @Input({ required: true }) metadata!: EventMetadata;
   @Input({ required: true }) isActive = false;
@@ -95,6 +105,7 @@ export class TimelineEventComponent {
       'chevron-up': chevronUp,
       'arrow-up-circle-outline': arrowUpCircleOutline,
       'swap-horizontal-outline': swapHorizontalOutline,
+      'eye-off-outline': eyeOffOutline,
     });
   }
 
@@ -215,5 +226,25 @@ export class TimelineEventComponent {
 
   onClick(): void {
     this.activate.emit(this.event.eventID);
+  }
+
+  async onHideClick(): Promise<void> {
+    const eventID = this.event.eventID;
+    this.calendarFilterService.hideEventById(eventID);
+
+    const toast = await this.toastController.create({
+      message: `Hidden "${this.displayName}"`,
+      duration: HIDE_TOAST_DURATION_MS,
+      position: 'bottom',
+      buttons: [
+        {
+          text: 'Undo',
+          handler: () => {
+            this.calendarFilterService.showEventById(eventID);
+          },
+        },
+      ],
+    });
+    await toast.present();
   }
 }

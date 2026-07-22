@@ -4,9 +4,14 @@
       <div class="event-name">{{ displayName }}</div>
       <div class="event-type-label">{{ metadata.typeInfo.name }}</div>
     </div>
-    <ion-button fill="clear" size="small" (click)="onCloseClick()" aria-label="Close">
-      <ion-icon slot="icon-only" name="close"></ion-icon>
-    </ion-button>
+    <div class="banner-actions">
+      <ion-button fill="clear" size="small" (click)="onHideClick()" aria-label="Hide event">
+        <ion-icon slot="icon-only" name="eye-off-outline"></ion-icon>
+      </ion-button>
+      <ion-button fill="clear" size="small" (click)="onCloseClick()" aria-label="Close">
+        <ion-icon slot="icon-only" name="close"></ion-icon>
+      </ion-button>
+    </div>
   </div>
 
   <div class="detail-body">

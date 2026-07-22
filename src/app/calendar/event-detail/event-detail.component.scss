@@ -18,6 +18,12 @@
   min-width: 0;
 }
 
+.banner-actions {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 .event-name {
   font-size: 1.05rem;
   font-weight: 600;

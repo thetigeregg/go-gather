@@ -165,16 +165,28 @@
     }
 
     <div class="card-footer">
-      <ion-button
-        color="primary"
-        size="small"
-        [href]="event.link"
-        target="_blank"
-        rel="noopener noreferrer"
-        (click)="$event.stopPropagation()"
-      >
-        View on LeekDuck
-      </ion-button>
+      <div class="footer-buttons">
+        <ion-button
+          color="primary"
+          size="small"
+          [href]="event.link"
+          target="_blank"
+          rel="noopener noreferrer"
+          (click)="$event.stopPropagation()"
+        >
+          View on LeekDuck
+        </ion-button>
+
+        <ion-button
+          fill="clear"
+          color="medium"
+          size="small"
+          (click)="$event.stopPropagation(); onHideClick()"
+        >
+          <ion-icon slot="start" name="eye-off-outline"></ion-icon>
+          Hide
+        </ion-button>
+      </div>
 
       @if (showPokemonRow) {
         <!-- showCollapsedScheduleDays is always false while active (see its

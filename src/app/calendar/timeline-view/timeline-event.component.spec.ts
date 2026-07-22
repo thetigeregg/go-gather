@@ -1,12 +1,38 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ToastController } from '@ionic/angular/standalone';
 import dayjs from 'dayjs';
 import { EventMetadata, EventTypeInfoWithoutColor, PogoEvent } from '@go-gather/shared';
+import { CalendarFilterService } from '../../core/services/calendar-filter.service';
 import { PokemonEventImagesComponent } from './pokemon-event-images.component';
 import { PokemonImageComponent } from './pokemon-image.component';
 import { RaidTierGroupImagesComponent } from './raid-tier-group-images.component';
 import { TimelineCollapsedScheduleComponent } from './timeline-collapsed-schedule.component';
 import { TimelineEventComponent } from './timeline-event.component';
 import { TimelineRaidScheduleComponent } from './timeline-raid-schedule.component';
+
+interface ToastButtonConfig {
+  text?: string;
+  handler?: () => unknown;
+}
+
+function makeFakeToastController() {
+  const present = vi.fn().mockResolvedValue(undefined);
+  let lastOptions: { message?: string; buttons?: ToastButtonConfig[] } | undefined;
+  return {
+    create: vi
+      .fn()
+      .mockImplementation((options: { message?: string; buttons?: ToastButtonConfig[] }) => {
+        lastOptions = options;
+        return Promise.resolve({ present });
+      }),
+    get present() {
+      return present;
+    },
+    get lastOptions() {
+      return lastOptions;
+    },
+  };
+}
 
 function makeEvent(overrides: Partial<PogoEvent> = {}): PogoEvent {
   return {
@@ -46,9 +72,25 @@ function makeMetadata(overrides: Partial<EventMetadata> = {}): EventMetadata {
 describe('TimelineEventComponent', () => {
   let fixture: ComponentFixture<TimelineEventComponent>;
   let component: TimelineEventComponent;
+  let fakeCalendarFilterService: {
+    hideEventById: ReturnType<typeof vi.fn>;
+    showEventById: ReturnType<typeof vi.fn>;
+  };
+  let fakeToastController: ReturnType<typeof makeFakeToastController>;
 
   beforeEach(async () => {
-    TestBed.configureTestingModule({});
+    fakeCalendarFilterService = {
+      hideEventById: vi.fn(),
+      showEventById: vi.fn(),
+    };
+    fakeToastController = makeFakeToastController();
+
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: CalendarFilterService, useValue: fakeCalendarFilterService },
+        { provide: ToastController, useValue: fakeToastController },
+      ],
+    });
     TestBed.overrideComponent(TimelineEventComponent, {
       set: { template: '<div></div>', styleUrl: undefined },
     });
@@ -122,6 +164,29 @@ describe('TimelineEventComponent', () => {
     component.onClick();
 
     expect(emitSpy).toHaveBeenCalledWith('event-1');
+  });
+
+  describe('onHideClick', () => {
+    it('hides the event by its own eventID and shows a toast', async () => {
+      await component.onHideClick();
+
+      expect(fakeCalendarFilterService.hideEventById).toHaveBeenCalledWith('event-1');
+      expect(fakeToastController.create).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Hidden "Test & Event"' })
+      );
+      expect(fakeToastController.present).toHaveBeenCalled();
+    });
+
+    it("wires the toast's Undo button to restore the same event ID", async () => {
+      await component.onHideClick();
+
+      const undoButton = fakeToastController.lastOptions?.buttons?.[0];
+      expect(undoButton?.text).toBe('Undo');
+
+      undoButton?.handler?.();
+
+      expect(fakeCalendarFilterService.showEventById).toHaveBeenCalledWith('event-1');
+    });
   });
 
   describe('pokemon sprite/schedule chain', () => {
