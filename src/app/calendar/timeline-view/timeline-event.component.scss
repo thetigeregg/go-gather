@@ -87,6 +87,14 @@
   &.full-width {
     flex-basis: 100%;
   }
+
+  // Outside .event-content (the expanded-card placement, at the very bottom
+  // of the card, after the view-link) this isn't a flex item of anything —
+  // it needs its own indent/spacing rather than inheriting .event-content's.
+  .view-link ~ & {
+    margin-top: 8px;
+    margin-left: 16px;
+  }
 }
 
 .time-row {

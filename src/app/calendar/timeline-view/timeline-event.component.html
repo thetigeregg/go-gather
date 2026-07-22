@@ -62,7 +62,7 @@
       }
     </div>
 
-    @if (showPokemonRow) {
+    @if (showPokemonRow && !isActive) {
       <div class="pokemon-row" [class.full-width]="useStackedContentLayout">
         @if (showInlinePokemonImages) {
           <app-pokemon-event-images
@@ -171,5 +171,20 @@
     >
       View on LeekDuck
     </a>
+
+    @if (showPokemonRow) {
+      <!-- showCollapsedScheduleDays is always false while active (see its
+           getter), so the inline-images branch is the only one reachable here. -->
+      <div class="pokemon-row full-width">
+        <app-pokemon-event-images
+          [event]="event"
+          [height]="40"
+          [showPlaceholder]="true"
+          [showCP]="isActive"
+          overflowBadgeAlign="right"
+          [excludeTiers]="inlineImagesExcludeTiers"
+        ></app-pokemon-event-images>
+      </div>
+    }
   }
 </div>
