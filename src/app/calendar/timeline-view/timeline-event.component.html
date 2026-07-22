@@ -40,11 +40,11 @@
     </div>
 
     @if (statusInfo; as status) {
-      <div class="status-line" [class]="'status-' + status.type">
+      <div class="status-line">
         @if (status.prefix) {
           <span class="status-prefix">{{ status.prefix }}</span>
         }
-        <span class="status-text">{{ status.text }}</span>
+        <ion-badge [color]="statusBadgeColor">{{ status.text }}</ion-badge>
       </div>
     }
   </div>

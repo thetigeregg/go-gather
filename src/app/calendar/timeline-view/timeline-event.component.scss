@@ -69,21 +69,16 @@
 }
 
 .status-line {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 0.75rem;
+  margin-top: 8px;
+}
+
+.status-prefix {
   font-style: italic;
   color: var(--ion-color-medium);
-
-  &.status-ended {
-    color: var(--ion-color-danger);
-  }
-
-  &.status-urgent {
-    color: var(--ion-color-warning);
-  }
-
-  &.status-upcoming {
-    color: var(--ion-color-success);
-  }
 }
 
 .event-extras {

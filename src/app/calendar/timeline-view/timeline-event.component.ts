@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { Dayjs } from 'dayjs';
-import { IonIcon } from '@ionic/angular/standalone';
+import { IonBadge, IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { chevronDown, chevronUp } from 'ionicons/icons';
 import { EventMetadata, PogoEvent } from '@go-gather/shared';
@@ -18,8 +18,16 @@ import {
   buildEventStatusInfo,
   buildTimeDisplayParts,
   EventStatusInfo,
+  EventStatusType,
   TimeDisplayParts,
 } from '../../core/services/timeline-event-time-display.util';
+
+const STATUS_BADGE_COLORS: Record<EventStatusType, string> = {
+  ended: 'danger',
+  upcoming: 'success',
+  normal: 'medium',
+  urgent: 'warning',
+};
 
 /**
  * Ported from pogo-cal's TimelineEvent.vue + TimelineEventHeader.vue, folded
@@ -34,7 +42,7 @@ import {
  */
 @Component({
   selector: 'app-timeline-event',
-  imports: [IonIcon],
+  imports: [IonBadge, IonIcon],
   templateUrl: './timeline-event.component.html',
   styleUrl: './timeline-event.component.scss',
 })
@@ -70,6 +78,10 @@ export class TimelineEventComponent {
       this.now,
       this.metadata.isSingleDayEvent
     );
+  }
+
+  get statusBadgeColor(): string {
+    return STATUS_BADGE_COLORS[this.statusInfo?.type ?? 'normal'];
   }
 
   get extras(): TimelineEventExtras | null {
