@@ -62,14 +62,31 @@
   object-fit: contain;
 }
 
-.pokemon-row {
+.event-content {
+  display: flex;
+  align-items: flex-start;
   margin-top: 4px;
   margin-left: 16px;
+
+  &.stacked {
+    flex-direction: column;
+    gap: 4px;
+  }
 }
 
 .event-time-display {
-  margin-top: 4px;
-  margin-left: 16px;
+  flex-shrink: 0;
+}
+
+.pokemon-row {
+  display: flex;
+  justify-content: flex-end;
+  flex: 1 1 50%;
+  min-width: 0;
+
+  &.full-width {
+    flex-basis: 100%;
+  }
 }
 
 .time-row {

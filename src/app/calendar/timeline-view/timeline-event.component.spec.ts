@@ -355,5 +355,54 @@ describe('TimelineEventComponent', () => {
       component.isActive = false;
       expect(component.inlineImagesExcludeTiers).toEqual(['Tier 1', 'Tier 3']);
     });
+
+    it('useStackedContentLayout is true while active', () => {
+      component.isActive = true;
+      expect(component.useStackedContentLayout).toBe(true);
+    });
+
+    it('useStackedContentLayout is true when pokemonCount exceeds 6, even while inactive', () => {
+      component.isActive = false;
+      component.event = makeEvent({
+        eventType: 'raid-battles',
+        extraData: {
+          raidbattles: {
+            bosses: Array.from({ length: 7 }, (_, i) => ({
+              name: `Boss${String(i)}`,
+              image: 'x.png',
+              canBeShiny: false,
+            })),
+          },
+        },
+      });
+      expect(component.useStackedContentLayout).toBe(true);
+    });
+
+    it('useStackedContentLayout is true when there are collapsed schedule day groups', () => {
+      component.isActive = false;
+      component.event = makeEvent({
+        extraData: {
+          raidSchedule: [
+            {
+              date: 'July 8',
+              bosses: [{ name: 'Machamp', image: 'x.png', canBeShiny: false }],
+              raidHours: [],
+            },
+          ],
+        },
+      });
+      expect(component.useStackedContentLayout).toBe(true);
+    });
+
+    it('useStackedContentLayout is false while inactive with few Pokemon and no schedule days', () => {
+      component.isActive = false;
+      component.event = makeEvent({
+        eventType: 'raid-battles',
+        extraData: {
+          raidbattles: { bosses: [{ name: 'Machamp', image: 'machamp.png', canBeShiny: false }] },
+        },
+      });
+      expect(component.useStackedContentLayout).toBe(false);
+    });
   });
 });

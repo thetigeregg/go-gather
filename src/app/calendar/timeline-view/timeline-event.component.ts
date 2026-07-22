@@ -186,6 +186,18 @@ export class TimelineEventComponent {
     return this.isActive ? [] : COLLAPSED_EXCLUDED_TIERS;
   }
 
+  /**
+   * Matches source's `.flex-column.gap-2` toggle on `.event-content`: stack the
+   * time display above the Pokemon row (full width, right-aligned) instead of
+   * sharing one row, once there's enough Pokemon content that they'd no longer
+   * fit beside the time text.
+   */
+  get useStackedContentLayout(): boolean {
+    return (
+      this.isActive || this.pokemonCount > 6 || Boolean(this.collapsedScheduleDayGroups?.length)
+    );
+  }
+
   onClick(): void {
     this.activate.emit(this.event.eventID);
   }

@@ -29,58 +29,60 @@
     <ion-icon [name]="isActive ? 'chevron-up' : 'chevron-down'" class="expand-icon"></ion-icon>
   </div>
 
-  <div class="event-time-display">
-    <div class="time-row" [class.is-completed]="timeDisplayParts.isCompleted">
-      @if (timeDisplayParts.prefix) {
-        <span [class.time-dimmed]="timeDisplayParts.startIsPast">
-          {{ timeDisplayParts.prefix }}
+  <div class="event-content" [class.stacked]="useStackedContentLayout">
+    <div class="event-time-display">
+      <div class="time-row" [class.is-completed]="timeDisplayParts.isCompleted">
+        @if (timeDisplayParts.prefix) {
+          <span [class.time-dimmed]="timeDisplayParts.startIsPast">
+            {{ timeDisplayParts.prefix }}
+          </span>
+        }
+        <span
+          [class.time-focused]="timeDisplayParts.focusStart"
+          [class.time-dimmed]="timeDisplayParts.startIsPast"
+        >
+          {{ timeDisplayParts.startTime }}
         </span>
+        <span class="time-separator">{{ timeDisplayParts.separator }}</span>
+        <span
+          [class.time-focused]="timeDisplayParts.focusEnd"
+          [class.time-dimmed]="timeDisplayParts.endIsPast"
+        >
+          {{ timeDisplayParts.endTime }}
+        </span>
+      </div>
+
+      @if (statusInfo; as status) {
+        <div class="status-line">
+          @if (status.prefix) {
+            <span class="status-prefix">{{ status.prefix }}</span>
+          }
+          <ion-badge [color]="statusBadgeColor">{{ status.text }}</ion-badge>
+        </div>
       }
-      <span
-        [class.time-focused]="timeDisplayParts.focusStart"
-        [class.time-dimmed]="timeDisplayParts.startIsPast"
-      >
-        {{ timeDisplayParts.startTime }}
-      </span>
-      <span class="time-separator">{{ timeDisplayParts.separator }}</span>
-      <span
-        [class.time-focused]="timeDisplayParts.focusEnd"
-        [class.time-dimmed]="timeDisplayParts.endIsPast"
-      >
-        {{ timeDisplayParts.endTime }}
-      </span>
     </div>
 
-    @if (statusInfo; as status) {
-      <div class="status-line">
-        @if (status.prefix) {
-          <span class="status-prefix">{{ status.prefix }}</span>
+    @if (showPokemonRow) {
+      <div class="pokemon-row" [class.full-width]="useStackedContentLayout">
+        @if (showInlinePokemonImages) {
+          <app-pokemon-event-images
+            [event]="event"
+            [height]="40"
+            [showPlaceholder]="true"
+            [showCP]="isActive"
+            overflowBadgeAlign="right"
+            [excludeTiers]="inlineImagesExcludeTiers"
+          ></app-pokemon-event-images>
+        } @else if (showCollapsedScheduleDays) {
+          <app-timeline-collapsed-schedule
+            [dayGroups]="collapsedScheduleDayGroups"
+            [eventType]="event.eventType"
+            [effect]="spriteEffect"
+          ></app-timeline-collapsed-schedule>
         }
-        <ion-badge [color]="statusBadgeColor">{{ status.text }}</ion-badge>
       </div>
     }
   </div>
-
-  @if (showPokemonRow) {
-    <div class="pokemon-row">
-      @if (showInlinePokemonImages) {
-        <app-pokemon-event-images
-          [event]="event"
-          [height]="40"
-          [showPlaceholder]="true"
-          [showCP]="isActive"
-          overflowBadgeAlign="right"
-          [excludeTiers]="inlineImagesExcludeTiers"
-        ></app-pokemon-event-images>
-      } @else if (showCollapsedScheduleDays) {
-        <app-timeline-collapsed-schedule
-          [dayGroups]="collapsedScheduleDayGroups"
-          [eventType]="event.eventType"
-          [effect]="spriteEffect"
-        ></app-timeline-collapsed-schedule>
-      }
-    </div>
-  }
 
   @if (isActive) {
     <app-timeline-raid-schedule
