@@ -162,29 +162,32 @@
       </div>
     }
 
-    <a
-      class="view-link"
-      [href]="event.link"
-      target="_blank"
-      rel="noopener noreferrer"
-      (click)="$event.stopPropagation()"
-    >
-      View on LeekDuck
-    </a>
+    <div class="card-footer">
+      <ion-button
+        color="primary"
+        size="small"
+        [href]="event.link"
+        target="_blank"
+        rel="noopener noreferrer"
+        (click)="$event.stopPropagation()"
+      >
+        View on LeekDuck
+      </ion-button>
 
-    @if (showPokemonRow) {
-      <!-- showCollapsedScheduleDays is always false while active (see its
-           getter), so the inline-images branch is the only one reachable here. -->
-      <div class="pokemon-row full-width">
-        <app-pokemon-event-images
-          [event]="event"
-          [height]="40"
-          [showPlaceholder]="true"
-          [showCP]="isActive"
-          overflowBadgeAlign="right"
-          [excludeTiers]="inlineImagesExcludeTiers"
-        ></app-pokemon-event-images>
-      </div>
-    }
+      @if (showPokemonRow) {
+        <!-- showCollapsedScheduleDays is always false while active (see its
+             getter), so the inline-images branch is the only one reachable here. -->
+        <div class="pokemon-row">
+          <app-pokemon-event-images
+            [event]="event"
+            [height]="40"
+            [showPlaceholder]="true"
+            [showCP]="isActive"
+            overflowBadgeAlign="right"
+            [excludeTiers]="inlineImagesExcludeTiers"
+          ></app-pokemon-event-images>
+        </div>
+      }
+    </div>
   }
 </div>

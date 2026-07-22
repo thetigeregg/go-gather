@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { Dayjs } from 'dayjs';
-import { IonBadge, IonIcon } from '@ionic/angular/standalone';
+import { IonBadge, IonButton, IonIcon } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   arrowUpCircleOutline,
@@ -72,6 +72,7 @@ const COLLAPSED_EXCLUDED_TIERS = ['Tier 1', 'Tier 3'];
   selector: 'app-timeline-event',
   imports: [
     IonBadge,
+    IonButton,
     IonIcon,
     PokemonEventImagesComponent,
     TimelineCollapsedScheduleComponent,

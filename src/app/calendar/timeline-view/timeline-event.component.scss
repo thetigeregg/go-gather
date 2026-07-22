@@ -88,12 +88,13 @@
     flex-basis: 100%;
   }
 
-  // Outside .event-content (the expanded-card placement, at the very bottom
-  // of the card, after the view-link) this isn't a flex item of anything —
-  // it needs its own indent/spacing rather than inheriting .event-content's.
-  .view-link ~ & {
-    margin-top: 8px;
-    margin-left: 16px;
+  // Inside .card-footer (the expanded-card placement, at the very bottom of
+  // the card, alongside the view-on-LeekDuck button): grow/shrink to share
+  // the row with the button when there's only one Pokemon to show, wrap onto
+  // its own row (still right-aligned, never left blank-padded) once there's
+  // more than that — see .card-footer below.
+  .card-footer & {
+    flex: 1 1 auto;
   }
 }
 
@@ -162,9 +163,17 @@ ion-badge[color='success'] {
   font-weight: 500;
 }
 
-.view-link {
-  display: inline-block;
+.card-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 8px;
   margin: 6px 0 0 16px;
-  font-size: 0.8rem;
-  color: var(--ion-color-primary);
+  padding-top: 6px;
+
+  ion-button {
+    flex: 0 0 auto;
+    margin: auto 0 0 0;
+  }
 }
