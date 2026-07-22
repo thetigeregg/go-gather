@@ -131,3 +131,31 @@
 - a724e37 feat(gather): implement species cards with virtual scrolling and precomputed sizes
 - 73448c1 fix(package): update angular dependencies in update script to include @angular/cdk
 - d84ffcd perf(gather): replace accordion expand-gating with CDK virtual scroll
+
+## v0.6.0 - 2026-07-22
+
+- e2a05a2 feat(calendar): update first day of week to Monday and adjust day headers accordingly
+- 2b01161 feat(pokemon-sprite): optimize getPokemonId function with a cached index for improved performance
+- f65174c feat(sync): implement SyncService to handle calendar events and season data synchronization
+- 79e5816 feat(pokemon-stats): implement syncing of Pokémon stats from external source and create API endpoint
+- e20f82a fix(tabs): update tab label from 'Calendar' to 'Events' for consistency
+- 88f86c1 feat(timeline): enhance hasExpandedRaidSections logic for improved raid schedule display
+- 006dc36 feat(timeline): replace view link with ion-button in card footer and adjust layout
+- e7eab5b feat(timeline): conditionally display Pokémon row based on activity state and adjust styling
+- 05261ac feat(timeline): implement stacked content layout for event display based on conditions
+- cd6b59e style(timeline): update border and color mixing for improved visual consistency
+- e3772ec feat(calendar): add Pokemon sprites and raid schedule to timeline
+- 23c64f2 style(timeline): add ion-badge contrast styles for success state
+- 0271fdc feat(timeline): enhance status display with badges and improved styling
+- 140bbdd style(timeline): adjust header border styles for ion-accordion and update category badge background
+- cef2a96 style(timeline): refine styles for timeline event and category sections
+- fdcb828 style(timeline): use ion-accordion, tighten spacing, full-card tap
+- 577f5ea feat(calendar): update migration checklist and add full parity verification documentation
+- 9c22170 feat(calendar): register calendar tab with view toggle
+- be9d6e3 feat(calendar): add event-detail modal, wire tap-to-open from grid
+- 5db7990 feat(calendar): build timeline view components
+- 7192f09 feat(calendar): build month-grid calendar view components
+- 932751b feat(calendar): implement CalendarFilterService and CalendarFilterMenu for managing event filters
+- 7790669 feat(calendar): implement CalendarEventsService for managing calendar events
+- 751f5d6 feat(calendar): port calendar domain model types from pogo-cal and update shared exports
+- f5b608a feat(calendar): add calendar migration checklist and domain models for event types
