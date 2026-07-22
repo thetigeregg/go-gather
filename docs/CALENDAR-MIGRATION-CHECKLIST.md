@@ -60,9 +60,11 @@ Built as a self-contained `calendar-view.component.*` (month/year state, prev/ne
 
 See [`MIGRATION-CHECKLIST.md` Phase 4](../../pogo-cal/docs/migration/MIGRATION-CHECKLIST.md#phase-4--timeline-view) and [`CALENDAR-AND-TIMELINE-VIEWS.md`](../../pogo-cal/docs/current/CALENDAR-AND-TIMELINE-VIEWS.md#timeline-view).
 
-- [ ] Port the 60-day-window categorization (Today/Ongoing/Upcoming/Future) and its distinct timing-then-priority sort — keep separate from the calendar view's priority-only sort
-- [ ] Wire the filter service's visibility check **conditionally**, gated on a "filters apply to timeline" toggle (default off) — preserve the "N hidden by filters" passive-indicator count
-- [ ] Skip raid/spotlight schedule tree-building — resolved deferred alongside text-only raid-boss art
+- [x] Port the 60-day-window categorization (Today/Ongoing/Upcoming/Future) and its distinct timing-then-priority sort — keep separate from the calendar view's priority-only sort
+- [x] Wire the filter service's visibility check **conditionally**, gated on a "filters apply to timeline" toggle (default off) — preserve the "N hidden by filters" passive-indicator count. The gate is ported verbatim, including a real source quirk: toggling filtering off also un-hides individually-hidden events on the timeline (confirmed as an intentional port decision, not an oversight)
+- [x] Skip raid/spotlight schedule tree-building — resolved deferred alongside text-only raid-boss art. A text-only "event extras" bonuses block (Community Day/raid-hour/spotlight/season bonus text, no icons) was ported for the expanded card, since that data isn't boss/sprite art
+
+Built as a self-contained `timeline-view.component.*` (own `ngOnInit` data load, no `loadSeason()` since the timeline never reads season data) with no `calendar.page.ts` wrapper yet, matching `calendar-view.component.*`'s precedent — see [progress notes](progress/phase-4-timeline-view.md) for the full file list and design notes.
 
 ## Phase 5 — Event Detail
 

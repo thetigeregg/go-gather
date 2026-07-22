@@ -2,7 +2,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import { EventMetadata, PogoEvent } from '@go-gather/shared';
-import { isMajorCalendarEventType } from './calendar-event-major.util';
+import { isMajorCalendarEventType } from '../../core/services/calendar-event-major.util';
 import { sortEventsByPriority } from './calendar-grid-slots.util';
 
 dayjs.extend(isSameOrAfter);

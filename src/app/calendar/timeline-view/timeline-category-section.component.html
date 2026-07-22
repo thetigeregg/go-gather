@@ -1,0 +1,42 @@
+<div class="category-section">
+  <div class="category-header" (click)="toggleCollapsed()">
+    <span class="category-title">{{ title }}</span>
+    <span class="category-badge">{{ totalCount }}</span>
+    <ion-icon [name]="isCollapsed ? 'chevron-down' : 'chevron-up'"></ion-icon>
+  </div>
+
+  @if (!isCollapsed) {
+    @if (isFlatCategory) {
+      @if (categoryKey === 'today' && totalCount === 0) {
+        <p class="empty-state">No single-day events scheduled today</p>
+      } @else {
+        @for (event of events; track event.eventID) {
+          <app-timeline-event
+            [event]="event"
+            [metadata]="eventMetadata[event.eventID]"
+            [isActive]="activeEventId === event.eventID"
+            [now]="now"
+            (activate)="onActivate($event)"
+          />
+        }
+      }
+    } @else {
+      @for (group of dateGroups; track group.dateKey) {
+        <div class="date-divider">{{ group.dayOfWeek }} {{ group.dateStr }}</div>
+        @for (event of group.events; track event.eventID) {
+          <app-timeline-event
+            [event]="event"
+            [metadata]="eventMetadata[event.eventID]"
+            [isActive]="activeEventId === event.eventID"
+            [now]="now"
+            (activate)="onActivate($event)"
+          />
+        }
+      }
+    }
+
+    @if (hiddenCount > 0) {
+      <div class="hidden-indicator">{{ hiddenCountText }}</div>
+    }
+  }
+</div>

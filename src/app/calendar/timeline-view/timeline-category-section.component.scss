@@ -1,0 +1,46 @@
+:host {
+  display: block;
+  margin-bottom: 12px;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  cursor: pointer;
+}
+
+.category-title {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.category-badge {
+  background: var(--ion-color-step-150, rgba(0, 0, 0, 0.1));
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 0.75rem;
+}
+
+.empty-state {
+  color: var(--ion-color-medium);
+  font-style: italic;
+  padding: 4px;
+  font-size: 0.85rem;
+}
+
+.date-divider {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ion-color-medium);
+  margin: 8px 0 4px 4px;
+}
+
+.hidden-indicator {
+  font-size: 0.75rem;
+  color: var(--ion-color-medium);
+  font-style: italic;
+  padding: 4px;
+}

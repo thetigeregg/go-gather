@@ -41,7 +41,9 @@ export interface SpotlightData {
 export interface CommunityDayData {
   spawns?: PokemonBoss[];
   featured?: PokemonBoss | PokemonBoss[];
-  bonuses?: unknown[];
+  // Confirmed via pogo-cal's CommunityDayBonuses.vue during the timeline
+  // port (Phase 4) — same shape as BonusItem, not left as unknown[].
+  bonuses?: BonusItem[];
   shinies?: PokemonBoss[];
   specialresearch?: unknown[];
   bonusDisclaimers?: string[];

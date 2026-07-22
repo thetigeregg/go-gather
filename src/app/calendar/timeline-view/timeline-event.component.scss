@@ -1,0 +1,117 @@
+:host {
+  display: block;
+}
+
+.timeline-event {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--ion-item-background, var(--ion-background-color));
+  margin-bottom: 4px;
+
+  &.major-timeline-event {
+    border-left: 3px solid var(--ion-color-primary);
+  }
+}
+
+.event-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.event-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.event-name {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.expand-icon {
+  flex-shrink: 0;
+  color: var(--ion-color-medium);
+}
+
+.event-time-display {
+  margin-top: 4px;
+  margin-left: 16px;
+}
+
+.time-row {
+  font-size: 0.85rem;
+  color: var(--ion-text-color);
+
+  &.is-completed {
+    color: var(--ion-color-medium);
+  }
+}
+
+.time-dimmed {
+  opacity: 0.7;
+  color: var(--ion-color-medium);
+}
+
+.time-focused {
+  font-weight: 600;
+}
+
+.time-separator {
+  opacity: 0.7;
+  padding: 0 0.2rem;
+}
+
+.status-line {
+  font-size: 0.75rem;
+  font-style: italic;
+  color: var(--ion-color-medium);
+
+  &.status-ended {
+    color: var(--ion-color-danger);
+  }
+
+  &.status-urgent {
+    color: var(--ion-color-warning);
+  }
+
+  &.status-upcoming {
+    color: var(--ion-color-success);
+  }
+}
+
+.event-extras {
+  margin: 6px 0 0 16px;
+  font-size: 0.8rem;
+}
+
+.extra-block {
+  margin-bottom: 6px;
+}
+
+.bonus-time-range {
+  font-weight: 500;
+  opacity: 0.8;
+}
+
+.season-day-name {
+  font-weight: 600;
+}
+
+.season-group-title {
+  font-weight: 500;
+}
+
+.view-link {
+  display: inline-block;
+  margin: 6px 0 0 16px;
+  font-size: 0.8rem;
+  color: var(--ion-color-primary);
+}

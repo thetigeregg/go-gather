@@ -4,7 +4,7 @@ import { formatEventName } from '../../core/services/calendar-event-name.util';
 import {
   getMajorCalendarEventVariant,
   MajorCalendarEventVariant,
-} from './calendar-event-major.util';
+} from '../../core/services/calendar-event-major.util';
 import { getSourceEventID, isDailyMajorDisplayEvent } from './calendar-single-day-events.util';
 
 /**

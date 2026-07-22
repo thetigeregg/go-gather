@@ -1,0 +1,125 @@
+<div
+  class="timeline-event"
+  [class.is-active]="isActive"
+  [class.major-timeline-event]="isMajorTimelineEvent"
+  [class.major-timeline-global]="isMajorTimelineEvent && majorTimelineVariant === 'global'"
+  [class.major-timeline-location]="
+    isMajorTimelineEvent && majorTimelineVariant === 'location-specific'
+  "
+  [attr.data-event-type]="event.eventType"
+  [attr.data-timeline-event-id]="event.eventID"
+>
+  <div class="event-header" (click)="onHeaderClick()">
+    <div class="event-dot" [style.background-color]="metadata.color"></div>
+    <div class="event-name">{{ displayName }}</div>
+    <ion-icon [name]="isActive ? 'chevron-up' : 'chevron-down'" class="expand-icon"></ion-icon>
+  </div>
+
+  <div class="event-time-display">
+    <div class="time-row" [class.is-completed]="timeDisplayParts.isCompleted">
+      @if (timeDisplayParts.prefix) {
+        <span [class.time-dimmed]="timeDisplayParts.startIsPast">
+          {{ timeDisplayParts.prefix }}
+        </span>
+      }
+      <span
+        [class.time-focused]="timeDisplayParts.focusStart"
+        [class.time-dimmed]="timeDisplayParts.startIsPast"
+      >
+        {{ timeDisplayParts.startTime }}
+      </span>
+      <span class="time-separator">{{ timeDisplayParts.separator }}</span>
+      <span
+        [class.time-focused]="timeDisplayParts.focusEnd"
+        [class.time-dimmed]="timeDisplayParts.endIsPast"
+      >
+        {{ timeDisplayParts.endTime }}
+      </span>
+    </div>
+
+    @if (statusInfo; as status) {
+      <div class="status-line" [class]="'status-' + status.type">
+        @if (status.prefix) {
+          <span class="status-prefix">{{ status.prefix }}</span>
+        }
+        <span class="status-text">{{ status.text }}</span>
+      </div>
+    }
+  </div>
+
+  @if (isActive) {
+    @if (extras; as eventExtras) {
+      <div class="event-extras">
+        @if (eventExtras.spotlightBonus) {
+          <div class="extra-block">
+            <strong>Bonus:</strong>
+            <span>{{ eventExtras.spotlightBonus }}</span>
+          </div>
+        }
+
+        @if (eventExtras.raidHourBonuses) {
+          <div class="extra-block">
+            <strong>Bonus:</strong>
+            @for (bonus of eventExtras.raidHourBonuses; track bonus) {
+              <div>{{ bonus }}</div>
+            }
+          </div>
+        }
+
+        @if (eventExtras.communityDayBonuses) {
+          <div class="extra-block">
+            <strong>Bonuses:</strong>
+            @for (bonus of eventExtras.communityDayBonuses; track bonus.text) {
+              <div>{{ bonus.text }}</div>
+            }
+          </div>
+        }
+
+        @if (eventExtras.eventBonusGroups) {
+          <div class="extra-block">
+            <strong>Bonuses:</strong>
+            @for (group of eventExtras.eventBonusGroups; track $index) {
+              @if (group.startTime && group.endTime) {
+                <div class="bonus-time-range">{{ group.startTime }} – {{ group.endTime }}</div>
+              }
+              @for (item of group.items; track item.text) {
+                <div>{{ item.text }}</div>
+              }
+            }
+          </div>
+        }
+
+        @if (eventExtras.seasonData; as season) {
+          <div class="extra-block">
+            @if (season.dailyBonuses.length) {
+              <strong>Daily Discoveries</strong>
+              @for (day of season.dailyBonuses; track day.dayOfWeek) {
+                <div class="season-day">
+                  <div class="season-day-name">{{ day.day }}</div>
+                  @for (group of day.bonuses; track $index) {
+                    @if (group.title) {
+                      <div class="season-group-title">{{ group.title }}</div>
+                    }
+                    @for (item of group.items; track item) {
+                      <div>{{ item }}</div>
+                    }
+                  }
+                </div>
+              }
+            }
+            @if (season.seasonBonuses.length) {
+              <strong>Season Bonuses</strong>
+              @for (bonus of season.seasonBonuses; track $index) {
+                <div>{{ bonus.text }}</div>
+              }
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <a class="view-link" [href]="event.link" target="_blank" rel="noopener noreferrer">
+      View on LeekDuck
+    </a>
+  }
+</div>
