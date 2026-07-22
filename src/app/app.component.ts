@@ -2,12 +2,19 @@ import { Component, OnInit, inject } from '@angular/core';
 import { AlertController, IonApp, IonRouterOutlet } from '@ionic/angular/standalone';
 import { SideMenuComponent } from './features/side-menu/side-menu.component';
 import { NavMenuComponent } from './features/nav-menu/nav-menu.component';
+import { CalendarFilterMenuComponent } from './features/calendar-filter-menu/calendar-filter-menu.component';
 import { LiveUpdateService } from './core/services/live-update.service';
 
 @Component({
   selector: 'app-root',
   templateUrl: 'app.component.html',
-  imports: [IonApp, IonRouterOutlet, SideMenuComponent, NavMenuComponent],
+  imports: [
+    IonApp,
+    IonRouterOutlet,
+    SideMenuComponent,
+    NavMenuComponent,
+    CalendarFilterMenuComponent,
+  ],
 })
 export class AppComponent implements OnInit {
   private readonly alertController = inject(AlertController);

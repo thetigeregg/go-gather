@@ -1,0 +1,26 @@
+# Phase 2 — Calendar Filter Service & Menu
+
+Built the Calendar tab's filter state and its `IonMenu` UI, per [`CALENDAR-MIGRATION-CHECKLIST.md` Phase 2](../CALENDAR-MIGRATION-CHECKLIST.md#phase-2--filter-service--menu) and [`pogo-cal`'s Phase 2](../../../pogo-cal/docs/migration/MIGRATION-CHECKLIST.md#phase-2--filter-service--menu).
+
+## What landed
+
+- **`CalendarFilterService`** (`src/app/core/services/calendar-filter.service.ts`) — event-type denylist (`disabledEventTypes`, default `['go-pass', 'season']`, ported verbatim from `pogo-cal`'s `eventFilter.ts`), per-event hide list (`hiddenEventIds`), and `filtersApplyToTimeline` (folded in from `pogo-cal`'s separate `calendarSettings` store — one boolean didn't warrant a second service). Mirrors `UserDataService`'s shape exactly: in-memory field + `Subject`, `loadFilterState()`/`getFilterState()`/`listenForFilterChanges()`. Persisted via `PreferenceStorageService` — this is that service's **first real consumer** in the repo (it previously had zero usages anywhere).
+- **`calendar-filter-menu` component** (`src/app/features/calendar-filter-menu/`) — `IonMenu` (`menuId="calendar-filter"`, `side="end"`), category-grouped event-type toggles (single-column list with an `ion-item-divider` per category, in `pogo-cal`'s own display order — Seasonal & Premium, Research, Community & Raids, Events & Misc — not alphabetical, and not `pogo-cal`'s 4-column grid, which doesn't fit a phone-width menu), All/None bulk actions + "N of M enabled" stat, "Apply filters to Timeline" toggle, and a hidden-events list with per-item restore (display names resolved via `CalendarEventsService.eventMetadata`, falling back to the raw `eventID` if that event hasn't loaded). Wiring mirrors `SideMenuComponent` exactly: reads/writes through the service, rebuilds a plain array on init and after every mutation, no subscription to the service's own change stream.
+- **Menu disambiguation**: added explicit `menuId`s to both `side="end"` menus — `gather-filter` on the existing `app-side-menu`, `calendar-filter` on the new one. `gather.page.html`'s filter button now targets `menu="gather-filter"`. Confirmed via live source (not assumed from prior planning) that neither menu had an explicit `menuId` before this phase — both resolved by bare `side="end"`, which would have been ambiguous once a second `side="end"` menu existed.
+- Mounted `<app-calendar-filter-menu>` in `app.component.html`/`.ts`, alongside the existing two menus (global, unconditional — matching the existing convention; no menu in this app is conditionally mounted per route/tab).
+- Wired `calendarFilterService.loadFilterState()` into `main.ts`'s boot `Promise.all`, alongside `userDataService.loadSettings()` etc. — even though it doesn't touch `STORAGE_ENGINE` (it's `PreferenceStorageService`-backed, not part of that dependency chain), the menu is mounted globally and should reflect real persisted state the instant it's opened rather than a default-state flash.
+
+## Scope calls made during this phase
+
+- **Hidden-events list**: `pogo-cal`'s Phase 2 checklist marked this "if in scope." Built it — it's core filter functionality (not a display preference), and the cost was small given `CalendarEventsService` (Phase 1) already provides the display-name lookup.
+- **Page-level filter button deferred to Phase 6**: the original checklist wording ("wire `calendar.page.html`'s filter button") assumed a page that doesn't exist yet — confirmed via live source that only the `gather` tab is registered in `tabs.routes.ts`. This phase builds and mounts the menu; Phase 6 (Calendar Tab & View Toggle) adds the actual button that opens it.
+
+## A real bug caught by the full test suite
+
+Adding a third globally-mounted menu broke `app.component.spec.ts` — Angular's `TestBed.compileComponents()` walks every component reachable through a standalone component's `imports` array (not just what actually renders) trying to resolve `templateUrl`/`styleUrl`, which fails in Vitest without `resolveComponentResources()`. The existing spec already had this exact workaround for `SideMenuComponent`/`NavMenuComponent` (`TestBed.overrideComponent(..., { set: { template: '<div></div>', styleUrl: undefined } })`) — `CalendarFilterMenuComponent` needed the same override added. Caught by `npm run test`, not by `build`/`lint` (which don't exercise `TestBed`), showing why the full suite matters even for a wiring-only change.
+
+## Verification
+
+- `npm run build`, `npm run lint` — both clean.
+- `npm run test -- --run` — 46 test files / 419 tests, all passing (23 net-new this phase, up from 396 at the end of Phase 1): `calendar-filter.service.spec.ts` (16 tests, 100% coverage — every mutator, the combined `isEventVisible()` check including the unrecognized-type-still-visible case, corrupt/missing/malformed-JSON hydration fallbacks, and the persistence-failure-still-applies-in-memory path), `calendar-filter-menu.component.spec.ts` (7 tests, 100% coverage on the component class, following `side-menu.component.spec.ts`'s template-override convention).
+- Can't visually open the new menu yet — no page has a button wired to it until Phase 6 — verified instead via unit tests and confirming the app boots/tests cleanly with a third globally-mounted menu (no runtime `menuId` collision).

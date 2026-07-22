@@ -1,0 +1,59 @@
+<ion-menu menuId="calendar-filter" contentId="main-content" side="end" type="overlay">
+  <ion-header>
+    <ion-toolbar>
+      <ion-title>Event Filters</ion-title>
+    </ion-toolbar>
+  </ion-header>
+
+  <ion-content>
+    <ion-list>
+      <ion-item lines="full">
+        <ion-toggle
+          [checked]="filtersApplyToTimeline"
+          (ionChange)="onFiltersApplyToTimelineChange($event.detail.checked)"
+        >
+          Apply filters to Timeline
+        </ion-toggle>
+      </ion-item>
+
+      <ion-item lines="none">
+        <ion-button size="small" fill="outline" (click)="enableAll()">All</ion-button>
+        <ion-button size="small" fill="outline" (click)="disableAll()">None</ion-button>
+        <ion-note slot="end">{{ enabledCount }} of {{ totalCount }} enabled</ion-note>
+      </ion-item>
+
+      @for (group of categoryGroups; track group.category) {
+        @if (group.options.length > 0) {
+          <ion-item-divider>{{ group.label }}</ion-item-divider>
+          @for (option of group.options; track option.eventType) {
+            <ion-item lines="full">
+              <ion-toggle [checked]="option.isOn" (ionChange)="onToggleEventType(option.eventType)">
+                {{ option.label }}
+              </ion-toggle>
+            </ion-item>
+          }
+        }
+      }
+
+      @if (hiddenEvents.length > 0) {
+        <ion-item-divider>Hidden Events</ion-item-divider>
+        @for (event of hiddenEvents; track event.eventId) {
+          <ion-item lines="full">
+            <ion-label>{{ event.displayName }}</ion-label>
+            <ion-button slot="end" fill="clear" (click)="restoreHiddenEvent(event.eventId)">
+              <ion-icon slot="icon-only" name="close"></ion-icon>
+            </ion-button>
+          </ion-item>
+        }
+      }
+    </ion-list>
+  </ion-content>
+
+  <ion-footer>
+    <ion-toolbar>
+      <ion-menu-toggle menu="calendar-filter">
+        <ion-button expand="block">Done</ion-button>
+      </ion-menu-toggle>
+    </ion-toolbar>
+  </ion-footer>
+</ion-menu>

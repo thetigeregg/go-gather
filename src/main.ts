@@ -15,6 +15,7 @@ import { AppComponent } from './app/app.component';
 import { STORAGE_ENGINE } from './app/core/data/storage-engine';
 import { StorageEngineFactory } from './app/core/data/storage-engine.factory';
 import { SYNC_OUTBOX_WRITER } from './app/core/data/sync-outbox-writer';
+import { CalendarFilterService } from './app/core/services/calendar-filter.service';
 import { LiveUpdateService } from './app/core/services/live-update.service';
 import { PokeDataService } from './app/core/services/poke-data.service';
 import { SearchConfigService } from './app/core/services/search-config.service';
@@ -39,11 +40,17 @@ bootstrapApplication(AppComponent, {
     // are never read at their optimistic constructor defaults — that gap let
     // /search-strings render the Costume Gender section incorrectly when
     // reached without first visiting /tabs/gather in the same session.
+    // CalendarFilterService doesn't actually touch STORAGE_ENGINE (it's
+    // PreferenceStorageService-backed) but is included here too since the
+    // calendar-filter-menu is mounted globally in app.component.html and
+    // should reflect real persisted state the instant it's opened, not a
+    // default flash.
     provideAppInitializer(() => {
       const storageEngineFactory = inject(StorageEngineFactory);
       const userDataService = inject(UserDataService);
       const pokeDataService = inject(PokeDataService);
       const searchConfigService = inject(SearchConfigService);
+      const calendarFilterService = inject(CalendarFilterService);
       const syncService = inject(SyncService);
 
       return storageEngineFactory
@@ -54,6 +61,7 @@ bootstrapApplication(AppComponent, {
             firstValueFrom(userDataService.loadProgress()),
             firstValueFrom(pokeDataService.loadCatalog()),
             firstValueFrom(searchConfigService.loadConfig()),
+            firstValueFrom(calendarFilterService.loadFilterState()),
           ])
         )
         .then(() => {

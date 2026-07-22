@@ -5,6 +5,7 @@ import { Subject } from 'rxjs';
 import { AppComponent } from './app.component';
 import { SideMenuComponent } from './features/side-menu/side-menu.component';
 import { NavMenuComponent } from './features/nav-menu/nav-menu.component';
+import { CalendarFilterMenuComponent } from './features/calendar-filter-menu/calendar-filter-menu.component';
 import { LiveUpdateService } from './core/services/live-update.service';
 import { UserDataService } from './core/services/user-data.service';
 import { DEFAULT_SETTINGS } from '@go-gather/shared';
@@ -36,6 +37,9 @@ describe('AppComponent', () => {
       set: { template: '<div></div>', styleUrl: undefined },
     });
     TestBed.overrideComponent(NavMenuComponent, {
+      set: { template: '<div></div>', styleUrl: undefined },
+    });
+    TestBed.overrideComponent(CalendarFilterMenuComponent, {
       set: { template: '<div></div>', styleUrl: undefined },
     });
     await TestBed.compileComponents();

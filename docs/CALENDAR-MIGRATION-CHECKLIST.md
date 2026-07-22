@@ -42,9 +42,9 @@ See [`MIGRATION-CHECKLIST.md` Phase 1](../../pogo-cal/docs/migration/MIGRATION-C
 
 See [`MIGRATION-CHECKLIST.md` Phase 2](../../pogo-cal/docs/migration/MIGRATION-CHECKLIST.md#phase-2--filter-service--menu) and [`FILTER-MENU-MIGRATION.md`](../../pogo-cal/docs/migration/FILTER-MENU-MIGRATION.md) (centerpiece doc for this repo's own `IonMenu`/side-menu conventions applied to Calendar).
 
-- [ ] Build `calendar-filter.service.ts` — denylist model, per-event hide, combined visibility check, matching this repo's existing `UserDataService`-style service + RxJS `Subject` pattern (no NgRx, no signals); persist via `PreferenceStorageService` (resolved)
-- [ ] Build the `calendar-filter-menu` `IonMenu` (`menuId="calendar-filter"`, mounted at app root alongside the existing `app-nav-menu`/`app-side-menu`), wired the same decoupled way Gather's `side-menu` is wired to `gather.page.ts` — menu writes through the service, page subscribes independently
-- [ ] Add `menuId="gather-filter"` to the existing `app-side-menu` and update `gather.page.html`'s filter button to `menu="gather-filter"` (resolved disambiguation — a small touch to existing Gather code, not just new Calendar code)
+- [x] Built `calendar-filter.service.ts` — denylist model, per-event hide, `filtersApplyToTimeline` (folded in rather than a second service), combined visibility check, matching this repo's existing `UserDataService`-style service + RxJS `Subject` pattern (no NgRx, no signals); persisted via `PreferenceStorageService` — its first real consumer in this repo. 100% test coverage
+- [x] Built the `calendar-filter-menu` `IonMenu` (`menuId="calendar-filter"`, mounted at app root alongside the existing `app-nav-menu`/`app-side-menu`), category-grouped event-type toggles + All/None + hidden-events list. 100% test coverage on the component class (`side-menu.component.spec.ts`'s template-override convention). Its own page-level filter button is deferred to Phase 6 (no `calendar.page.html` exists yet)
+- [x] Added `menuId="gather-filter"` to the existing `app-side-menu` and updated `gather.page.html`'s filter button to `menu="gather-filter"` (resolved disambiguation — confirmed via live source neither existing menu had a `menuId` before this phase) — see [progress notes](progress/phase-2-filter-service-and-menu.md)
 
 ## Phase 3 — Calendar (Month Grid) View
 
