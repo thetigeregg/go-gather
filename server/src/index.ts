@@ -5,6 +5,7 @@
    go-gather-next's own ESLint config doesn't enforce these strictTypeChecked rules. */
 import { buildApp } from './api.js';
 import { initSchema } from './db.js';
+import { startScheduledSync } from './scheduled-sync.js';
 
 const PORT = 3000;
 
@@ -22,11 +23,14 @@ app
     process.exitCode = 1;
   });
 
+const stopScheduledSync = startScheduledSync(app.log);
+
 // Without this, `tsx watch` has no graceful way to stop the server on
 // restart (e.g. after a source file change) and has to force-kill it after
 // a multi-second timeout on every reload.
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {
   process.on(signal, () => {
+    stopScheduledSync();
     app.close().finally(() => process.exit(0));
   });
 }

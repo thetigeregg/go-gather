@@ -7,8 +7,8 @@
    config doesn't enforce these strictTypeChecked rules. Only markCatalogSynced()
    and its one call site are new. */
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { db, initSchema } from './db.js';
 import {
   fetchPokeApiGigantamaxSprites,
@@ -718,7 +718,7 @@ function markCatalogSynced(): void {
   ).run({ value: new Date().toISOString() });
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   initSchema();
 
   console.log('Fetching pokedex.json from pokemon-go-api...');
@@ -741,7 +741,13 @@ async function main(): Promise<void> {
   console.log(`Synced ${entries.length} catalog entries from ${pokedex.length} species.`);
 }
 
-main().catch((err) => {
-  console.error('Sync failed:', err);
-  process.exitCode = 1;
-});
+// Guarded so this module can be imported (e.g. by scheduled-sync.ts) without
+// triggering a sync run as an import side effect — only runs when invoked
+// directly, e.g. `tsx src/sync.ts` / `npm run sync`.
+const entrypoint = process.argv[1];
+if (entrypoint && import.meta.url === pathToFileURL(resolve(entrypoint)).href) {
+  main().catch((err) => {
+    console.error('Sync failed:', err);
+    process.exitCode = 1;
+  });
+}

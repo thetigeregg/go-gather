@@ -15,10 +15,10 @@ import { db } from './db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// Duplicated from sync.ts rather than imported: sync.ts is a standalone
-// script whose main() runs immediately as a side effect of import (no
-// export guard), so importing anything from it here would trigger a full
-// sync pipeline run every time the API server starts.
+// Duplicated from sync.ts rather than imported: sync.ts's main() is now
+// import-safe (see scheduled-sync.ts), but importing just this path constant
+// would still pull in its whole module graph (pokeapi.ts, transform.ts) for
+// no benefit here.
 const SYNC_OVERRIDES_PATH = join(__dirname, 'sync-overrides.json');
 
 interface CatalogRow {

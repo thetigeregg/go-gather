@@ -1,3 +1,5 @@
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { db, initSchema } from './db.js';
 
 // See src/app/core/services/pokemon-stats.service.ts — this used to be
@@ -36,7 +38,7 @@ function markPokemonStatsSynced(): void {
   ).run({ value: new Date().toISOString() });
 }
 
-async function main(): Promise<void> {
+export async function main(): Promise<void> {
   initSchema();
 
   console.log('Fetching pogo_pkm.min.json from pokemon-resources...');
@@ -49,7 +51,13 @@ async function main(): Promise<void> {
   console.log(`Synced ${String(entries.length)} Pokemon stats entries.`);
 }
 
-main().catch((err: unknown) => {
-  console.error('Pokemon stats sync failed:', err);
-  process.exitCode = 1;
-});
+// Guarded so this module can be imported (e.g. by scheduled-sync.ts) without
+// triggering a sync run as an import side effect — only runs when invoked
+// directly, e.g. `tsx src/sync-pokemon-stats.ts` / `npm run sync:pokemon-stats`.
+const entrypoint = process.argv[1];
+if (entrypoint && import.meta.url === pathToFileURL(resolve(entrypoint)).href) {
+  main().catch((err: unknown) => {
+    console.error('Pokemon stats sync failed:', err);
+    process.exitCode = 1;
+  });
+}

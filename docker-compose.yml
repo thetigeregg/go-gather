@@ -9,6 +9,13 @@ services:
       - ${NAS_DATA_ROOT:-./nas-data}/server-data:/app/server/data
     environment:
       TZ: ${TZ:-Europe/Zurich}
+      # Data-feed sync intervals (hours) — the server syncs all four feeds
+      # once at startup, then re-runs each on its own interval. Uncomment to
+      # override the defaults.
+      # SYNC_CATALOG_INTERVAL_HOURS: ${SYNC_CATALOG_INTERVAL_HOURS:-24}
+      # SYNC_CALENDAR_EVENTS_INTERVAL_HOURS: ${SYNC_CALENDAR_EVENTS_INTERVAL_HOURS:-6}
+      # SYNC_SEASON_INTERVAL_HOURS: ${SYNC_SEASON_INTERVAL_HOURS:-6}
+      # SYNC_POKEMON_STATS_INTERVAL_HOURS: ${SYNC_POKEMON_STATS_INTERVAL_HOURS:-24}
     healthcheck:
       test:
         [

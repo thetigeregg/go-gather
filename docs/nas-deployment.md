@@ -35,20 +35,24 @@ Env vars (all optional, shown with their defaults):
 - `SERVER_PORT` (default `3000`) — host port the API is published on
 - `NAS_DATA_ROOT` (default `./nas-data`) — absolute host path recommended for real deployments, e.g. `/volume1/docker/go-gather`
 - `TZ` (default `Europe/Zurich`)
+- `SYNC_CATALOG_INTERVAL_HOURS` (default `24`), `SYNC_CALENDAR_EVENTS_INTERVAL_HOURS` (default `6`), `SYNC_SEASON_INTERVAL_HOURS` (default `6`), `SYNC_POKEMON_STATS_INTERVAL_HOURS` (default `24`) — see section 4
 
 ## 4. First-time data bootstrap
 
-The database and image cache start empty. Two ways to populate them:
+The database and image cache start empty. The server syncs all four data feeds (Pokémon catalog, calendar events, season, Pokémon stats) automatically once at startup and then again on its own recurring interval per feed (`scheduled-sync.ts`) — so a fresh container populates itself within moments of first starting, no manual step required.
 
-**Option A — copy existing data** (recommended, avoids re-hitting PokeAPI): copy your Mac's already-populated `server/data/` directory (contains the full catalog DB + ~3,600 cached sprites) into `${NAS_DATA_ROOT}/server-data` before first starting the container.
+**Option A — copy existing data** (recommended, avoids re-hitting PokeAPI for the catalog's sprite backfill): copy your Mac's already-populated `server/data/` directory (contains the full catalog DB + ~3,600 cached sprites) into `${NAS_DATA_ROOT}/server-data` before first starting the container.
 
-**Option B — sync fresh from PokeAPI**, once the container is running:
+**Option B — force an immediate sync** (e.g. right after a fresh deploy, without waiting for the next interval), once the container is running:
 
 ```bash
-docker compose exec server npm run sync
+docker compose exec server npm run sync                    # catalog
+docker compose exec server npm run sync:calendar-events
+docker compose exec server npm run sync:season
+docker compose exec server npm run sync:pokemon-stats
 ```
 
-This runs `server/`'s existing standalone catalog-sync script (`tsx src/sync.ts`) inside the container.
+These are the same standalone scripts `scheduled-sync.ts` calls in-process — running them manually just forces an immediate refresh instead of waiting for the next scheduled tick.
 
 ## 5. Publish over Tailscale
 
