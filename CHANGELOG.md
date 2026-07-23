@@ -199,3 +199,7 @@
 - ed06b3a fix(deps): add firebase package required by capacitor messaging
 - ae0fcfd build(server): bump better-sqlite3 to ^13.0.1
 - 8d66ccb chore(dependencies): update @ionic/angular, lint-staged, prettier, and firebase-admin versions
+
+## v0.9.2 - 2026-07-23
+
+- 5c07a85 fix(docker): remove unnecessary rebuild step for better-sqlite3 in Dockerfile
