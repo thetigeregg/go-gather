@@ -39,7 +39,10 @@ export function getTimelineEventExtras(event: PogoEvent): TimelineEventExtras | 
       ? extra.communityday.bonuses
       : null;
 
-  const seasonData = event.eventType === 'season' && extra.season ? extra.season : null;
+  const seasonData =
+    (event.eventType === 'season' || event.eventType === 'season-daily-bonus') && extra.season
+      ? extra.season
+      : null;
 
   // Gate on at least one group having items (matching hasEventExtras()
   // exactly), but pass through every group once gated — an individual

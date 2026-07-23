@@ -30,7 +30,7 @@ describe('CalendarFilterMenuComponent', () => {
 
   function makeFilterState(overrides: Partial<CalendarFilterState> = {}): CalendarFilterState {
     return {
-      disabledEventTypes: ['go-pass', 'season'],
+      disabledEventTypes: ['go-pass', 'season', 'season-daily-bonus'],
       hiddenEventIds: [],
       filtersApplyToTimeline: false,
       ...overrides,
@@ -128,13 +128,19 @@ describe('CalendarFilterMenuComponent', () => {
       .flatMap((g) => g.options)
       .find((o) => o.eventType === 'go-pass');
     expect(goPass?.isOn).toBe(false);
+
+    const dailyBonus = component.categoryGroups
+      .flatMap((g) => g.options)
+      .find((o) => o.eventType === 'season-daily-bonus');
+    expect(dailyBonus?.label).toBe('Daily Bonus');
+    expect(dailyBonus?.isOn).toBe(false);
   });
 
   it('computes enabledCount/totalCount from the full EVENT_TYPES registry', () => {
     fixture.detectChanges();
 
     expect(component.totalCount).toBe(Object.keys(EVENT_TYPES).length);
-    expect(component.enabledCount).toBe(Object.keys(EVENT_TYPES).length - 2);
+    expect(component.enabledCount).toBe(Object.keys(EVENT_TYPES).length - 3);
   });
 
   it('onToggleEventType delegates to the service and refreshes', () => {

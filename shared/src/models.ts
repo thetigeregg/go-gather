@@ -289,7 +289,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
     POKEDEX_TYPES.map((pokedexType) => [pokedexType, defaultExcludedSearchTermsFor(pokedexType)])
   ) as Record<PokedexType, ExcludedSearchTerm[]>,
   hiddenEventIds: [],
-  disabledEventTypes: ['go-pass', 'season'],
+  disabledEventTypes: ['go-pass', 'season', 'season-daily-bonus'],
   notificationsEnabled: false,
   notificationTimedEventOffsetMinutes: 15,
   notificationAllDayEventTime: '09:00',

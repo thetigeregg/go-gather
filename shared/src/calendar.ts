@@ -436,6 +436,12 @@ export const EVENT_TYPES: Record<string, EventTypeInfo> = {
     priority: 100,
     category: 'seasonal-and-premium',
   },
+  'season-daily-bonus': {
+    name: 'Daily Bonus',
+    color: '#5fb3ae', // lighter tint of Season's teal — related but distinguishable
+    priority: 96,
+    category: 'seasonal-and-premium',
+  },
   update: {
     name: 'Update',
     color: '#2679af', // blue

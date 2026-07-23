@@ -97,6 +97,16 @@ describe('getTimelineEventExtras', () => {
     expect(getTimelineEventExtras(event)?.seasonData).toBe(seasonData);
   });
 
+  it('extracts season data for season-daily-bonus pseudo-events', () => {
+    const seasonData = { note: null, dailyBonuses: [], seasonBonuses: [] };
+    const event = makeEvent({
+      eventType: 'season-daily-bonus',
+      extraData: { season: seasonData },
+    });
+
+    expect(getTimelineEventExtras(event)?.seasonData).toBe(seasonData);
+  });
+
   it('does not extract season data for a non-season event', () => {
     const seasonData = { note: null, dailyBonuses: [], seasonBonuses: [] };
     const event = makeEvent({ eventType: 'raid-day', extraData: { season: seasonData } });

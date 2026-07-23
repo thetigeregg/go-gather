@@ -52,7 +52,7 @@ export function generateSeasonDailyBonusEvents(events: readonly PogoEvent[]): Po
       pseudoEvents.push({
         eventID: `${parentEvent.eventID}-daily-bonus-${dateKey}`,
         name,
-        eventType: parentEvent.eventType,
+        eventType: 'season-daily-bonus',
         heading: parentEvent.heading,
         link: parentEvent.link,
         image: parentEvent.image,

@@ -59,7 +59,7 @@ describe('CalendarFilterService', () => {
 
   it('defaults to the ported denylist (go-pass, season disabled) with no hidden events', () => {
     const state = service.getFilterState();
-    expect(state.disabledEventTypes).toEqual(['go-pass', 'season']);
+    expect(state.disabledEventTypes).toEqual(['go-pass', 'season', 'season-daily-bonus']);
     expect(state.hiddenEventIds).toEqual([]);
     expect(state.filtersApplyToTimeline).toBe(false);
   });
@@ -111,7 +111,7 @@ describe('CalendarFilterService', () => {
     });
 
     expect(result).toEqual({
-      disabledEventTypes: ['go-pass', 'season'],
+      disabledEventTypes: ['go-pass', 'season', 'season-daily-bonus'],
       hiddenEventIds: [],
       filtersApplyToTimeline: false,
     });
@@ -135,7 +135,7 @@ describe('CalendarFilterService', () => {
     service.toggleEventType('community-day');
     expect(service.isEventTypeEnabled('community-day')).toBe(false);
     expect(updateSpy).toHaveBeenCalledWith({
-      disabledEventTypes: ['go-pass', 'season', 'community-day'],
+      disabledEventTypes: ['go-pass', 'season', 'season-daily-bonus', 'community-day'],
     });
 
     service.toggleEventType('community-day');

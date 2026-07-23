@@ -131,7 +131,7 @@ describe('generateSeasonDailyBonusEvents', () => {
     expect(result[0].extraData?.parentEventId).toBe('forever-forward');
   });
 
-  it('carries the parent event type, link, image, and heading', () => {
+  it('stamps a distinct eventType, and carries the parent link, image, and heading', () => {
     const result = generateSeasonDailyBonusEvents([
       makeSeasonEvent({
         start: '2026-07-03T10:00:00.000',
@@ -146,7 +146,7 @@ describe('generateSeasonDailyBonusEvents', () => {
       }),
     ]);
 
-    expect(result[0].eventType).toBe('season');
+    expect(result[0].eventType).toBe('season-daily-bonus');
     expect(result[0].heading).toBe('Season');
     expect(result[0].link).toBe('https://leekduck.com/events/forever-forward/');
     expect(result[0].image).toBe('https://example.com/season.png');
