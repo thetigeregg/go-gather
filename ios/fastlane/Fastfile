@@ -45,6 +45,12 @@ def sync_capacitor_prod_assets
   end
 end
 
+def bootstrap_firebase_plist
+  Dir.chdir(REPO_ROOT) do
+    sh('node', 'scripts/bootstrap-ios-firebase-plist.mjs', '--required')
+  end
+end
+
 def sync_appstore_signing(api_key:, readonly:)
   match(
     type: 'appstore',
@@ -132,6 +138,9 @@ platform :ios do
     UI.message('Building Capacitor web assets for ios-prod')
     sync_capacitor_prod_assets
 
+    UI.message('Bootstrapping Firebase plist')
+    bootstrap_firebase_plist
+
     prod_build_app
 
     upload_to_testflight(
@@ -155,6 +164,7 @@ platform :ios do
     sync_appstore_signing(api_key: api_key, readonly: Helper.ci?)
     apply_prod_manual_signing
     sync_capacitor_prod_assets
+    bootstrap_firebase_plist
 
     prod_build_app
   end

@@ -27,6 +27,8 @@
 		0EA4BDA4AA536AB3D11F81A8 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC3101FED79650016851F /* LaunchScreen.storyboard */; };
 		7DB7E695962D132BB395B97A /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		C0BB2A7339F015A6906FD741 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = BCFFACA414D38DF39EC2CEDF /* PrivacyInfo.xcprivacy */; };
+		6ABFA792038FFCDB205F7AC4 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 6836724CDD9A4C3826B1C93D /* GoogleService-Info.plist */; };
+		D74C4ABD0600AF56D01CE16E /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 6836724CDD9A4C3826B1C93D /* GoogleService-Info.plist */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -50,6 +52,7 @@
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		BCFFACA414D38DF39EC2CEDF /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		6836724CDD9A4C3826B1C93D /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Firebase/GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -110,6 +113,7 @@
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
 				BCFFACA414D38DF39EC2CEDF /* PrivacyInfo.xcprivacy */,
+				6836724CDD9A4C3826B1C93D /* GoogleService-Info.plist */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -213,6 +217,7 @@
 				504EC30D1FED79650016851F /* Main.storyboard in Resources */,
 				2FAD9763203C412B000D30F8 /* config.xml in Resources */,
 				C691A6CF5EDB86CBA3807EE2 /* PrivacyInfo.xcprivacy in Resources */,
+				6ABFA792038FFCDB205F7AC4 /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -228,6 +233,7 @@
 				9447761710470296BCDA34DA /* Main.storyboard in Resources */,
 				9195D8DB31A0D5823CFFF33F /* config.xml in Resources */,
 				C0BB2A7339F015A6906FD741 /* PrivacyInfo.xcprivacy in Resources */,
+				D74C4ABD0600AF56D01CE16E /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
