@@ -62,6 +62,11 @@ server/data/images/
 server/ota/*
 !server/ota/.gitkeep
 
+# Server-side user-data backups (backup.ts) — real catch-progress/settings
+# data, written on every startup and never meant to be committed
+server/backups/*
+!server/backups/.gitkeep
+
 # IDEs and editors
 .idea/
 .project
