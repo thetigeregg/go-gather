@@ -112,6 +112,7 @@ describe('CalendarFilterService', () => {
 
     expect(result).toEqual({
       disabledEventTypes: ['go-pass', 'season', 'season-daily-bonus'],
+      disabledSeasonDailyBonusDays: [],
       hiddenEventIds: [],
       filtersApplyToTimeline: false,
     });
@@ -162,6 +163,21 @@ describe('CalendarFilterService', () => {
     service.disableAllEventTypes();
     expect(service.getFilterState().disabledEventTypes.length).toBeGreaterThan(30);
     expect(service.isEventTypeEnabled('community-day')).toBe(false);
+  });
+
+  it('isDailyBonusDayEnabled/toggleDailyBonusDay flip membership in the per-day denylist and persist via UserDataService', () => {
+    const userDataService = TestBed.inject(UserDataService);
+    const updateSpy = vi.spyOn(userDataService, 'updateUserSettings');
+
+    expect(service.isDailyBonusDayEnabled(5)).toBe(true);
+
+    service.toggleDailyBonusDay(5);
+    expect(service.isDailyBonusDayEnabled(5)).toBe(false);
+    expect(updateSpy).toHaveBeenCalledWith({ disabledSeasonDailyBonusDays: [5] });
+
+    service.toggleDailyBonusDay(5);
+    expect(service.isDailyBonusDayEnabled(5)).toBe(true);
+    expect(updateSpy).toHaveBeenCalledTimes(2);
   });
 
   it('hideEventById/showEventById are idempotent and combine with the type denylist', () => {

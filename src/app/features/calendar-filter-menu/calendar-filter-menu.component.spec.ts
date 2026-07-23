@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { EVENT_TYPES, EventMetadata, PogoEvent } from '@go-gather/shared';
+import { EVENT_TYPES, EventMetadata, PogoEvent, Season } from '@go-gather/shared';
 import { CalendarFilterMenuComponent } from './calendar-filter-menu.component';
 import { CalendarEventsService } from '../../core/services/calendar-events.service';
 import {
@@ -27,10 +27,12 @@ describe('CalendarFilterMenuComponent', () => {
   let filterState: CalendarFilterState;
   let eventMetadata: Record<string, EventMetadata>;
   let events: PogoEvent[];
+  let season: Season | undefined;
 
   function makeFilterState(overrides: Partial<CalendarFilterState> = {}): CalendarFilterState {
     return {
       disabledEventTypes: ['go-pass', 'season', 'season-daily-bonus'],
+      disabledSeasonDailyBonusDays: [],
       hiddenEventIds: [],
       filtersApplyToTimeline: false,
       ...overrides,
@@ -38,6 +40,7 @@ describe('CalendarFilterMenuComponent', () => {
   }
 
   const toggleEventTypeCalls: string[] = [];
+  const toggleDailyBonusDayCalls: number[] = [];
   const setFiltersApplyToTimelineCalls: boolean[] = [];
   const showEventByIdCalls: string[] = [];
   let enableAllCalled = false;
@@ -47,7 +50,9 @@ describe('CalendarFilterMenuComponent', () => {
     filterState = makeFilterState();
     eventMetadata = {};
     events = [];
+    season = undefined;
     toggleEventTypeCalls.length = 0;
+    toggleDailyBonusDayCalls.length = 0;
     setFiltersApplyToTimelineCalls.length = 0;
     showEventByIdCalls.length = 0;
     enableAllCalled = false;
@@ -85,6 +90,13 @@ describe('CalendarFilterMenuComponent', () => {
                 hiddenEventIds: filterState.hiddenEventIds.filter((id) => id !== eventId),
               };
             },
+            toggleDailyBonusDay: (dayOfWeek: number) => {
+              toggleDailyBonusDayCalls.push(dayOfWeek);
+              const disabled = filterState.disabledSeasonDailyBonusDays.includes(dayOfWeek)
+                ? filterState.disabledSeasonDailyBonusDays.filter((d) => d !== dayOfWeek)
+                : [...filterState.disabledSeasonDailyBonusDays, dayOfWeek];
+              filterState = { ...filterState, disabledSeasonDailyBonusDays: disabled };
+            },
           },
         },
         {
@@ -95,6 +107,9 @@ describe('CalendarFilterMenuComponent', () => {
             },
             get events() {
               return events;
+            },
+            get season() {
+              return season;
             },
           },
         },
@@ -165,6 +180,80 @@ describe('CalendarFilterMenuComponent', () => {
     component.disableAll();
     expect(disableAllCalled).toBe(true);
     expect(component.enabledCount).toBe(0);
+  });
+
+  it('builds dailyBonusDayOptions from the current season, deduped and sorted by dayOfWeek', () => {
+    season = {
+      name: 'Forever Forward',
+      eventID: 'season-1',
+      link: 'https://leekduck.com/events/season-1/',
+      start: '2026-06-02T10:00:00.000',
+      end: '2026-09-08T10:00:00.000',
+      note: null,
+      seasonBonuses: [],
+      dailyBonuses: [
+        {
+          day: 'Sunday',
+          dayOfWeek: 0,
+          bonuses: [{ title: null, items: ['Some bonus.'] }],
+          footnote: null,
+        },
+        {
+          day: 'Friday',
+          dayOfWeek: 5,
+          bonuses: [{ title: 'Friendship Friday', items: ['Some bonus.'] }],
+          footnote: null,
+        },
+        // Duplicate dayOfWeek entry — dedupe should keep only the first.
+        {
+          day: 'Friday',
+          dayOfWeek: 5,
+          bonuses: [{ title: 'Duplicate Friday', items: [] }],
+          footnote: null,
+        },
+      ],
+    };
+    filterState = makeFilterState({ disabledSeasonDailyBonusDays: [5] });
+
+    fixture.detectChanges();
+
+    expect(component.dailyBonusDayOptions).toEqual([
+      { dayOfWeek: 0, label: 'Sunday Bonus', isOn: true },
+      { dayOfWeek: 5, label: 'Friendship Friday', isOn: false },
+    ]);
+  });
+
+  it('leaves dailyBonusDayOptions empty when no season is loaded', () => {
+    season = undefined;
+    fixture.detectChanges();
+
+    expect(component.dailyBonusDayOptions).toEqual([]);
+  });
+
+  it('toggleDailyBonusDay delegates to the service and refreshes', () => {
+    season = {
+      name: 'Forever Forward',
+      eventID: 'season-1',
+      link: 'https://leekduck.com/events/season-1/',
+      start: '2026-06-02T10:00:00.000',
+      end: '2026-09-08T10:00:00.000',
+      note: null,
+      seasonBonuses: [],
+      dailyBonuses: [
+        {
+          day: 'Friday',
+          dayOfWeek: 5,
+          bonuses: [{ title: 'Friendship Friday', items: ['Some bonus.'] }],
+          footnote: null,
+        },
+      ],
+    };
+    fixture.detectChanges();
+
+    component.toggleDailyBonusDay(5);
+
+    expect(toggleDailyBonusDayCalls).toEqual([5]);
+    expect(component.dailyBonusDayOptions[0].isOn).toBe(false);
   });
 
   it('onFiltersApplyToTimelineChange delegates to the service', () => {

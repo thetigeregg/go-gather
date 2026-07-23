@@ -106,7 +106,14 @@ export class TimelineViewComponent implements OnInit {
 
   private refresh(): void {
     this.now = dayjs();
-    this.seasonDailyBonusEvents = generateSeasonDailyBonusEvents(this.calendarEventsService.events);
+    this.seasonDailyBonusEvents = generateSeasonDailyBonusEvents(
+      this.calendarEventsService.events
+    ).filter((event) => {
+      const dayOfWeek = event.extraData?.season?.dailyBonuses[0]?.dayOfWeek;
+      return (
+        dayOfWeek === undefined || this.calendarFilterService.isDailyBonusDayEnabled(dayOfWeek)
+      );
+    });
     this.seasonDailyBonusEventMetadata = Object.fromEntries(
       this.seasonDailyBonusEvents.map((event) => [
         event.eventID,

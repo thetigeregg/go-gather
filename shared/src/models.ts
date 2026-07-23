@@ -255,6 +255,11 @@ export interface UserSettings {
   /** Event types excluded from the calendar/timeline view and from
    * notifications. */
   disabledEventTypes: string[];
+  /** Individual `season-daily-bonus` weekdays (0=Sunday..6=Saturday, matching
+   * `SeasonDailyBonus.dayOfWeek`) excluded from the timeline view and from
+   * notifications, independently of the master `season-daily-bonus` entry in
+   * `disabledEventTypes`. */
+  disabledSeasonDailyBonusDays: number[];
   /** Master on/off switch for calendar-event push notifications. */
   notificationsEnabled: boolean;
   /** Minutes before a timed event's actual start to fire its notification
@@ -290,6 +295,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   ) as Record<PokedexType, ExcludedSearchTerm[]>,
   hiddenEventIds: [],
   disabledEventTypes: ['go-pass', 'season', 'season-daily-bonus'],
+  disabledSeasonDailyBonusDays: [],
   notificationsEnabled: false,
   notificationTimedEventOffsetMinutes: 15,
   notificationAllDayEventTime: '09:00',

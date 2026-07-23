@@ -8,6 +8,7 @@ const PREFERENCE_KEY = 'calendarFilterState';
 
 export interface CalendarFilterState {
   disabledEventTypes: string[];
+  disabledSeasonDailyBonusDays: number[];
   hiddenEventIds: string[];
   filtersApplyToTimeline: boolean;
 }
@@ -87,6 +88,7 @@ export class CalendarFilterService {
     const settings = this.userDataService.getUserSettings();
     return {
       disabledEventTypes: settings.disabledEventTypes,
+      disabledSeasonDailyBonusDays: settings.disabledSeasonDailyBonusDays,
       hiddenEventIds: settings.hiddenEventIds,
       filtersApplyToTimeline: this.localState.filtersApplyToTimeline,
     };
@@ -141,6 +143,21 @@ export class CalendarFilterService {
 
   disableAllEventTypes(): void {
     this.updateDisabledEventTypes(Object.keys(EVENT_TYPES));
+  }
+
+  /** Per-weekday override nested under the master `season-daily-bonus`
+   * EVENT_TYPES toggle — see disabledSeasonDailyBonusDays' doc comment in
+   * UserSettings for why this is a separate, independently-toggleable list. */
+  isDailyBonusDayEnabled(dayOfWeek: number): boolean {
+    return !this.userDataService.getUserSettings().disabledSeasonDailyBonusDays.includes(dayOfWeek);
+  }
+
+  toggleDailyBonusDay(dayOfWeek: number): void {
+    const current = this.userDataService.getUserSettings().disabledSeasonDailyBonusDays;
+    const disabledSeasonDailyBonusDays = current.includes(dayOfWeek)
+      ? current.filter((day) => day !== dayOfWeek)
+      : [...current, dayOfWeek];
+    this.userDataService.updateUserSettings({ disabledSeasonDailyBonusDays });
   }
 
   hideEventById(eventId: string): void {

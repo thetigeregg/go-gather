@@ -64,6 +64,7 @@ export function initSchema(): void {
       excluded_search_terms_by_pokedex TEXT NOT NULL,
       hidden_event_ids TEXT NOT NULL DEFAULT '[]',
       disabled_event_types TEXT NOT NULL DEFAULT '["go-pass","season"]',
+      disabled_season_daily_bonus_days TEXT NOT NULL DEFAULT '[]',
       notifications_enabled INTEGER NOT NULL DEFAULT 0,
       notification_timed_event_offset_minutes INTEGER NOT NULL DEFAULT 15,
       notification_all_day_event_time TEXT NOT NULL DEFAULT '09:00'
@@ -197,6 +198,13 @@ export function initSchema(): void {
       value: JSON.stringify(DEFAULT_SETTINGS.disabledEventTypes),
     });
   }
+  // Same rationale as disabled_event_types — needs no backfill, since this
+  // per-weekday state never existed server-side before.
+  if (!settingsColumns.some((c) => c.name === 'disabled_season_daily_bonus_days')) {
+    db.exec(
+      `ALTER TABLE user_settings ADD COLUMN disabled_season_daily_bonus_days TEXT NOT NULL DEFAULT '[]'`
+    );
+  }
   if (!settingsColumns.some((c) => c.name === 'notifications_enabled')) {
     db.exec(
       `ALTER TABLE user_settings ADD COLUMN notifications_enabled INTEGER NOT NULL DEFAULT 0`
@@ -223,7 +231,8 @@ export function initSchema(): void {
       excluded_name_patterns, excluded_dex_numbers,
       excluded_shiny_dex_numbers, excluded_shiny_name_patterns,
       user_tags, preset_queries, excluded_search_terms_by_pokedex,
-      hidden_event_ids, disabled_event_types, notifications_enabled,
+      hidden_event_ids, disabled_event_types, disabled_season_daily_bonus_days,
+      notifications_enabled,
       notification_timed_event_offset_minutes, notification_all_day_event_time
     ) VALUES (
       1, @pokedexType, @shinyFilter, @regionFilter,
@@ -231,7 +240,8 @@ export function initSchema(): void {
       @excludedNamePatterns, @excludedDexNumbers,
       @excludedShinyDexNumbers, @excludedShinyNamePatterns,
       @userTags, @presetQueries, @excludedSearchTermsByPokedex,
-      @hiddenEventIds, @disabledEventTypes, @notificationsEnabled,
+      @hiddenEventIds, @disabledEventTypes, @disabledSeasonDailyBonusDays,
+      @notificationsEnabled,
       @notificationTimedEventOffsetMinutes, @notificationAllDayEventTime
     )`
   ).run({
@@ -251,6 +261,7 @@ export function initSchema(): void {
     excludedSearchTermsByPokedex: JSON.stringify(DEFAULT_SETTINGS.excludedSearchTermsByPokedex),
     hiddenEventIds: JSON.stringify(DEFAULT_SETTINGS.hiddenEventIds),
     disabledEventTypes: JSON.stringify(DEFAULT_SETTINGS.disabledEventTypes),
+    disabledSeasonDailyBonusDays: JSON.stringify(DEFAULT_SETTINGS.disabledSeasonDailyBonusDays),
     notificationsEnabled: DEFAULT_SETTINGS.notificationsEnabled ? 1 : 0,
     notificationTimedEventOffsetMinutes: DEFAULT_SETTINGS.notificationTimedEventOffsetMinutes,
     notificationAllDayEventTime: DEFAULT_SETTINGS.notificationAllDayEventTime,

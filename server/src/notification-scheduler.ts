@@ -1,6 +1,7 @@
 import dayjs, { Dayjs } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import type { Season } from '@go-gather/shared';
 import { db } from './db.js';
 import { sendFcmMulticast } from './fcm.js';
 import {
@@ -8,6 +9,7 @@ import {
   MAX_NOTIFICATION_BODY,
   MAX_NOTIFICATION_TITLE,
 } from './notification-copy-policy.js';
+import { generateSeasonDailyBonusCandidateEvents } from './season-daily-bonus-notifications.util.js';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -21,6 +23,10 @@ export interface CandidateEvent {
   name: string;
   heading: string;
   start: string;
+  /** Set only for synthetic `season-daily-bonus` candidates (see
+   * season-daily-bonus-notifications.util.ts) — 0=Sunday..6=Saturday,
+   * matching `SeasonDailyBonus.dayOfWeek`. */
+  dayOfWeek?: number;
 }
 
 export interface NotificationPreferences {
@@ -29,6 +35,7 @@ export interface NotificationPreferences {
   notificationAllDayEventTime: string;
   hiddenEventIds: string[];
   disabledEventTypes: string[];
+  disabledSeasonDailyBonusDays: number[];
 }
 
 export interface DueNotification {
@@ -66,6 +73,13 @@ export function computeDueNotifications(
       continue;
     }
     if (settings.disabledEventTypes.includes(event.eventType)) {
+      continue;
+    }
+    if (
+      event.eventType === 'season-daily-bonus' &&
+      event.dayOfWeek !== undefined &&
+      settings.disabledSeasonDailyBonusDays.includes(event.dayOfWeek)
+    ) {
       continue;
     }
 
@@ -125,6 +139,7 @@ interface SettingsRow {
   notification_all_day_event_time: string;
   hidden_event_ids: string;
   disabled_event_types: string;
+  disabled_season_daily_bonus_days: string;
 }
 
 interface EventRow {
@@ -138,7 +153,8 @@ function readSettings(): NotificationPreferences | null {
   const row = db
     .prepare(
       `SELECT notifications_enabled, notification_timed_event_offset_minutes,
-              notification_all_day_event_time, hidden_event_ids, disabled_event_types
+              notification_all_day_event_time, hidden_event_ids, disabled_event_types,
+              disabled_season_daily_bonus_days
        FROM user_settings WHERE id = 1`
     )
     .get() as SettingsRow | undefined;
@@ -153,6 +169,7 @@ function readSettings(): NotificationPreferences | null {
     notificationAllDayEventTime: row.notification_all_day_event_time,
     hiddenEventIds: JSON.parse(row.hidden_event_ids) as string[],
     disabledEventTypes: JSON.parse(row.disabled_event_types) as string[],
+    disabledSeasonDailyBonusDays: JSON.parse(row.disabled_season_daily_bonus_days) as number[],
   };
 }
 
@@ -185,6 +202,21 @@ function readCandidateEvents(): CandidateEvent[] {
   });
 }
 
+/** Second, parallel candidate source computed from the season feed rather
+ * than `pokemon_go_events` — see season-daily-bonus-notifications.util.ts
+ * for why daily bonuses are synthesized here instead of persisted as rows. */
+function readSeasonDailyBonusCandidateEvents(): CandidateEvent[] {
+  const row = db.prepare(`SELECT payload FROM pokemon_go_season WHERE id = 1`).get() as
+    { payload: string } | undefined;
+
+  if (!row) {
+    return [];
+  }
+
+  const season = JSON.parse(row.payload) as Season;
+  return generateSeasonDailyBonusCandidateEvents(season);
+}
+
 /**
  * Reserves and sends every currently-due notification. Reservation happens
  * BEFORE the send attempt so a scheduler restart/re-run never double-sends;
@@ -199,7 +231,7 @@ export async function checkAndSendDueNotifications(): Promise<void> {
   }
 
   const effectiveTimezone = readEffectiveTimezone();
-  const events = readCandidateEvents();
+  const events = [...readCandidateEvents(), ...readSeasonDailyBonusCandidateEvents()];
   const now = dayjs();
   const due = computeDueNotifications(events, settings, now, effectiveTimezone);
 

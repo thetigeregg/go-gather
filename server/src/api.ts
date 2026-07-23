@@ -131,6 +131,7 @@ function applySettingsUpsert(payload: UserSettings): void {
       excluded_search_terms_by_pokedex = @excludedSearchTermsByPokedex,
       hidden_event_ids = @hiddenEventIds,
       disabled_event_types = @disabledEventTypes,
+      disabled_season_daily_bonus_days = @disabledSeasonDailyBonusDays,
       notifications_enabled = @notificationsEnabled,
       notification_timed_event_offset_minutes = @notificationTimedEventOffsetMinutes,
       notification_all_day_event_time = @notificationAllDayEventTime
@@ -152,6 +153,7 @@ function applySettingsUpsert(payload: UserSettings): void {
     excludedSearchTermsByPokedex: JSON.stringify(payload.excludedSearchTermsByPokedex),
     hiddenEventIds: JSON.stringify(payload.hiddenEventIds),
     disabledEventTypes: JSON.stringify(payload.disabledEventTypes),
+    disabledSeasonDailyBonusDays: JSON.stringify(payload.disabledSeasonDailyBonusDays),
     notificationsEnabled: payload.notificationsEnabled ? 1 : 0,
     notificationTimedEventOffsetMinutes: payload.notificationTimedEventOffsetMinutes,
     notificationAllDayEventTime: payload.notificationAllDayEventTime,

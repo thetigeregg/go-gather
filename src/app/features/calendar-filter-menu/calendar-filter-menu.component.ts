@@ -55,6 +55,12 @@ interface HiddenEventOption {
   displayName: string;
 }
 
+interface DailyBonusDayOption {
+  dayOfWeek: number;
+  label: string;
+  isOn: boolean;
+}
+
 /**
  * Ported from pogo-cal's EventFilterOptions.vue (+ its HiddenEventsList.vue
  * and the "Apply filters to Timeline" switch from CalendarOptions.vue),
@@ -92,6 +98,7 @@ export class CalendarFilterMenuComponent implements OnInit {
 
   categoryGroups: EventTypeCategoryGroup[] = [];
   hiddenEvents: HiddenEventOption[] = [];
+  dailyBonusDayOptions: DailyBonusDayOption[] = [];
   filtersApplyToTimeline = false;
   enabledCount = 0;
   totalCount = 0;
@@ -120,6 +127,11 @@ export class CalendarFilterMenuComponent implements OnInit {
 
   onToggleEventType(eventType: string): void {
     this.calendarFilterService.toggleEventType(eventType);
+    this.refresh();
+  }
+
+  toggleDailyBonusDay(dayOfWeek: number): void {
+    this.calendarFilterService.toggleDailyBonusDay(dayOfWeek);
     this.refresh();
   }
 
@@ -170,6 +182,23 @@ export class CalendarFilterMenuComponent implements OnInit {
           eventMetadata[eventId]?.displayName ?? (rawName ? formatEventName(rawName) : eventId),
       };
     });
+
+    const dailyBonuses = this.calendarEventsService.season?.dailyBonuses ?? [];
+    const seenDaysOfWeek = new Set<number>();
+    this.dailyBonusDayOptions = dailyBonuses
+      .filter((dailyBonus) => {
+        if (seenDaysOfWeek.has(dailyBonus.dayOfWeek)) {
+          return false;
+        }
+        seenDaysOfWeek.add(dailyBonus.dayOfWeek);
+        return true;
+      })
+      .map((dailyBonus) => ({
+        dayOfWeek: dailyBonus.dayOfWeek,
+        label: dailyBonus.bonuses.find((group) => group.title)?.title ?? `${dailyBonus.day} Bonus`,
+        isOn: !state.disabledSeasonDailyBonusDays.includes(dailyBonus.dayOfWeek),
+      }))
+      .sort((a, b) => a.dayOfWeek - b.dayOfWeek);
 
     this.filtersApplyToTimeline = state.filtersApplyToTimeline;
     this.totalCount = entries.length;

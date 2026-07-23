@@ -19,6 +19,7 @@ function baseSettings(overrides: Partial<NotificationPreferences> = {}): Notific
     notificationAllDayEventTime: '09:00',
     hiddenEventIds: [],
     disabledEventTypes: [],
+    disabledSeasonDailyBonusDays: [],
     ...overrides,
   };
 }
@@ -110,6 +111,39 @@ describe('computeDueNotifications', () => {
       ZONE
     );
     expect(due).toEqual([]);
+  });
+
+  it('excludes a season-daily-bonus event whose dayOfWeek is in disabledSeasonDailyBonusDays', () => {
+    const now = dayjs.tz('2026-03-15T09:00:00', ZONE);
+    const fridayBonus = event({
+      eventType: 'season-daily-bonus',
+      dayOfWeek: 5,
+      start: '2026-03-13T00:00:00', // a Friday, local midnight
+    });
+    const due = computeDueNotifications(
+      [fridayBonus],
+      baseSettings({ disabledSeasonDailyBonusDays: [5] }),
+      now,
+      ZONE
+    );
+    expect(due).toEqual([]);
+  });
+
+  it('still fires a season-daily-bonus event whose dayOfWeek is NOT disabled, as an all-day category', () => {
+    const now = dayjs.tz('2026-03-13T09:00:00', ZONE);
+    const fridayBonus = event({
+      eventType: 'season-daily-bonus',
+      dayOfWeek: 5,
+      start: '2026-03-13T00:00:00', // a Friday, local midnight
+    });
+    const due = computeDueNotifications(
+      [fridayBonus],
+      baseSettings({ disabledSeasonDailyBonusDays: [0] }),
+      now,
+      ZONE
+    );
+    expect(due).toHaveLength(1);
+    expect(due[0].category).toBe('all-day');
   });
 
   it('excludes an event whose notifyAt is still in the future', () => {

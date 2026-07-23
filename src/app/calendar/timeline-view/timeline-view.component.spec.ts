@@ -43,7 +43,12 @@ describe('TimelineViewComponent', () => {
   beforeEach(async () => {
     events = [];
     eventMetadata = {};
-    filterState = { disabledEventTypes: [], hiddenEventIds: [], filtersApplyToTimeline: false };
+    filterState = {
+      disabledEventTypes: [],
+      disabledSeasonDailyBonusDays: [],
+      hiddenEventIds: [],
+      filtersApplyToTimeline: false,
+    };
     filterChange$ = new Subject<void>();
     calendarEventsSync$ = new Subject<void>();
 
@@ -66,6 +71,8 @@ describe('TimelineViewComponent', () => {
           useValue: {
             getFilterState: () => filterState,
             isEventVisible: () => true,
+            isDailyBonusDayEnabled: (dayOfWeek: number) =>
+              !filterState.disabledSeasonDailyBonusDays.includes(dayOfWeek),
             listenForFilterChanges: () => filterChange$.asObservable(),
           },
         },
@@ -185,6 +192,7 @@ describe('TimelineViewComponent', () => {
     };
     filterState = {
       disabledEventTypes: [],
+      disabledSeasonDailyBonusDays: [],
       hiddenEventIds: ['event-1'],
       filtersApplyToTimeline: true,
     };
@@ -254,6 +262,58 @@ describe('TimelineViewComponent', () => {
     );
     expect(visiblePseudoEvents.length).toBeGreaterThan(0);
     expect(visiblePseudoEvents[0].name).toBe('Friendship Friday');
+  });
+
+  it('excludes daily bonus pseudo-events for a day disabled via disabledSeasonDailyBonusDays', () => {
+    const today = dayjs();
+    events = [
+      makeEvent({
+        eventID: 'forever-forward',
+        name: 'Forever Forward',
+        eventType: 'season',
+        start: today.subtract(10, 'day').format('YYYY-MM-DDTHH:mm:ss.SSS'),
+        end: today.add(30, 'day').format('YYYY-MM-DDTHH:mm:ss.SSS'),
+        extraData: {
+          season: {
+            note: null,
+            dailyBonuses: [
+              {
+                day: 'Friday',
+                dayOfWeek: 5,
+                bonuses: [{ title: 'Friendship Friday', items: ['Some bonus.'] }],
+                footnote: null,
+              },
+            ],
+            seasonBonuses: [],
+          },
+        },
+      }),
+    ];
+    eventMetadata = {
+      'forever-forward': {
+        startDate: today.subtract(10, 'day'),
+        endDate: today.add(30, 'day'),
+        isMultiDayEvent: true,
+        isSingleDayEvent: false,
+        isPastEvent: false,
+        isFutureEvent: false,
+        typeInfo: { name: 'Season', priority: 50, category: 'seasonal-and-premium' },
+        color: '#123456',
+        formattedStartTime: '10am',
+        displayName: 'Forever Forward',
+      },
+    };
+    filterState = {
+      ...filterState,
+      disabledSeasonDailyBonusDays: [5],
+    };
+
+    fixture.detectChanges();
+
+    const pseudoEventIds = Object.keys(component.eventMetadata).filter((id) =>
+      id.startsWith('forever-forward-daily-bonus-')
+    );
+    expect(pseudoEventIds).toEqual([]);
   });
 
   it('expands a card on first activate, and scrolls it into view after a delay', () => {

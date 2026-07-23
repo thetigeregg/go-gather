@@ -37,6 +37,22 @@
                 {{ option.label }}
               </ion-toggle>
             </ion-item>
+            @if (
+              option.eventType === 'season-daily-bonus' &&
+              option.isOn &&
+              dailyBonusDayOptions.length > 0
+            ) {
+              @for (dayOption of dailyBonusDayOptions; track dayOption.dayOfWeek) {
+                <ion-item lines="full">
+                  <ion-toggle
+                    [checked]="dayOption.isOn"
+                    (ionChange)="toggleDailyBonusDay(dayOption.dayOfWeek)"
+                  >
+                    &nbsp;&nbsp;{{ dayOption.label }}
+                  </ion-toggle>
+                </ion-item>
+              }
+            }
           }
         }
       }
