@@ -1,4 +1,10 @@
-<ion-menu menuId="calendar-filter" contentId="main-content" side="end" type="overlay">
+<ion-menu
+  menuId="calendar-filter"
+  contentId="main-content"
+  side="end"
+  type="overlay"
+  (ionWillOpen)="onWillOpen()"
+>
   <ion-header>
     <ion-toolbar>
       <ion-title>Event Filters</ion-title>

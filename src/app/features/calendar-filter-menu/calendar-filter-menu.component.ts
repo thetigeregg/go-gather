@@ -21,6 +21,7 @@ import { close } from 'ionicons/icons';
 import { EVENT_TYPES, EventMetadata, EventTypeInfo } from '@go-gather/shared';
 import { CalendarEventsService } from '../../core/services/calendar-events.service';
 import { CalendarFilterService } from '../../core/services/calendar-filter.service';
+import { formatEventName } from '../../core/services/calendar-event-name.util';
 
 /** Display order matches pogo-cal's EventTypeFilterGrid.vue — not alphabetical. */
 const CATEGORY_ORDER: EventTypeInfo['category'][] = [
@@ -103,6 +104,15 @@ export class CalendarFilterMenuComponent implements OnInit {
     this.refresh();
   }
 
+  /** Mounted once for the app's lifetime (a persistent side menu, not
+   * recreated per open) — re-syncing here, not just in ngOnInit, keeps the
+   * hidden-events list (names, counts) current with calendar data that may
+   * have finished loading, or filter state that may have changed elsewhere,
+   * since this menu was first constructed. */
+  onWillOpen(): void {
+    this.refresh();
+  }
+
   onFiltersApplyToTimelineChange(value: boolean): void {
     this.calendarFilterService.setFiltersApplyToTimeline(value);
     this.refresh();
@@ -151,10 +161,15 @@ export class CalendarFilterMenuComponent implements OnInit {
     // ever has). Re-typed as partial so the ?? fallback is honestly typed.
     const eventMetadata: Partial<Record<string, EventMetadata>> =
       this.calendarEventsService.eventMetadata;
-    this.hiddenEvents = state.hiddenEventIds.map((eventId) => ({
-      eventId,
-      displayName: eventMetadata[eventId]?.displayName ?? eventId,
-    }));
+    const events = this.calendarEventsService.events;
+    this.hiddenEvents = state.hiddenEventIds.map((eventId) => {
+      const rawName = events.find((event) => event.eventID === eventId)?.name;
+      return {
+        eventId,
+        displayName:
+          eventMetadata[eventId]?.displayName ?? (rawName ? formatEventName(rawName) : eventId),
+      };
+    });
 
     this.filtersApplyToTimeline = state.filtersApplyToTimeline;
     this.totalCount = entries.length;
