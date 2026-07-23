@@ -123,7 +123,7 @@ describe('TimelineViewComponent', () => {
     fixture.detectChanges();
 
     expect(component.timelineData.hasAnyEvents).toBe(true);
-    expect(component.eventMetadata).toBe(eventMetadata);
+    expect(component.eventMetadata).toEqual(eventMetadata);
   });
 
   it('re-loads and rebuilds timelineData when SyncService pulls fresh calendar-events data', () => {
@@ -194,6 +194,66 @@ describe('TimelineViewComponent', () => {
     fixture.detectChanges();
 
     expect(isEventVisibleSpy).toHaveBeenCalledWith('raid-day', 'event-1');
+  });
+
+  it('projects a season event daily bonuses as their own timeline entries, with metadata', () => {
+    const today = dayjs();
+    events = [
+      makeEvent({
+        eventID: 'forever-forward',
+        name: 'Forever Forward',
+        eventType: 'season',
+        start: today.subtract(10, 'day').format('YYYY-MM-DDTHH:mm:ss.SSS'),
+        end: today.add(30, 'day').format('YYYY-MM-DDTHH:mm:ss.SSS'),
+        extraData: {
+          season: {
+            note: null,
+            dailyBonuses: [
+              {
+                day: 'Friday',
+                dayOfWeek: 5,
+                bonuses: [{ title: 'Friendship Friday', items: ['Some bonus.'] }],
+                footnote: null,
+              },
+            ],
+            seasonBonuses: [],
+          },
+        },
+      }),
+    ];
+    eventMetadata = {
+      'forever-forward': {
+        startDate: today.subtract(10, 'day'),
+        endDate: today.add(30, 'day'),
+        isMultiDayEvent: true,
+        isSingleDayEvent: false,
+        isPastEvent: false,
+        isFutureEvent: false,
+        typeInfo: { name: 'Season', priority: 50, category: 'seasonal-and-premium' },
+        color: '#123456',
+        formattedStartTime: '10am',
+        displayName: 'Forever Forward',
+      },
+    };
+
+    fixture.detectChanges();
+
+    // The season spans -10d to +30d and generates one pseudo-event per Friday
+    // in that whole range, but only those within the timeline's own visible
+    // [-1d, +60d] window should actually appear in categorizedEvents — a
+    // Friday further in the past than that still gets metadata (harmless),
+    // just no timeline row, matching how every other event is windowed.
+    const pseudoEventIds = Object.keys(component.eventMetadata).filter((id) =>
+      id.startsWith('forever-forward-daily-bonus-')
+    );
+    expect(pseudoEventIds.length).toBeGreaterThan(1);
+
+    const allTimelineEvents = Object.values(component.timelineData.categorizedEvents).flat();
+    const visiblePseudoEvents = allTimelineEvents.filter((event) =>
+      event.eventID.startsWith('forever-forward-daily-bonus-')
+    );
+    expect(visiblePseudoEvents.length).toBeGreaterThan(0);
+    expect(visiblePseudoEvents[0].name).toBe('Friendship Friday');
   });
 
   it('expands a card on first activate, and scrolls it into view after a delay', () => {

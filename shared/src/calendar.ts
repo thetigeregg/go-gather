@@ -166,6 +166,7 @@ export interface PogoEvent {
     raidHourBonuses?: string[];
     isRaidHourSubEvent?: boolean;
     isSpotlightSubEvent?: boolean;
+    isSeasonDailyBonusSubEvent?: boolean;
     parentEventId?: string;
     [key: string]: unknown;
   };
