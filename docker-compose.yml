@@ -8,7 +8,10 @@ services:
     volumes:
       - ${NAS_DATA_ROOT:-./nas-data}/server-data:/app/server/data
       - ${NAS_DATA_ROOT:-./nas-data}/server-backups:/app/server/backups
-      - ${SECRETS_HOST_DIR:-./nas-secrets}:/run/secrets:ro
+      - type: bind
+        source: ${SECRETS_HOST_DIR:-./nas-secrets}
+        target: /run/secrets
+        read_only: true
     environment:
       TZ: ${TZ:-Europe/Zurich}
       # Data-feed sync intervals (hours) — the server syncs all four feeds
