@@ -189,3 +189,7 @@
 ## v0.8.0 - 2026-07-23
 
 - 00cd043 feat(docker): update secrets volume configuration to use bind mount
+
+## v0.9.0 - 2026-07-23
+
+- 027f12e feat(firebase): update environment variable references for production Firebase plist
