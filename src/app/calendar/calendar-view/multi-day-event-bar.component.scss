@@ -17,6 +17,14 @@
   color: #fff;
   font-size: 11px;
   box-sizing: border-box;
+  border-radius: 0;
+
+  // Declared after the base reset so start-cap/end-cap still round their
+  // corners on a bar that's also week-continue/middle-continue — a bar can
+  // be both (e.g. an event that continues into a new week and ends mid-week).
+  &.single-day-span {
+    border-radius: 6px;
+  }
 
   &.start-cap {
     border-top-left-radius: 6px;
@@ -26,15 +34,6 @@
   &.end-cap {
     border-top-right-radius: 6px;
     border-bottom-right-radius: 6px;
-  }
-
-  &.single-day-span {
-    border-radius: 6px;
-  }
-
-  &.week-continue,
-  &.middle-continue {
-    border-radius: 0;
   }
 }
 
