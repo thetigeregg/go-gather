@@ -36,6 +36,8 @@ Env vars (all optional, shown with their defaults):
 - `TZ` (default `Europe/Zurich`)
 - `SYNC_CATALOG_INTERVAL_HOURS` (default `24`), `SYNC_CALENDAR_EVENTS_INTERVAL_HOURS` (default `6`), `SYNC_SEASON_INTERVAL_HOURS` (default `6`), `SYNC_POKEMON_STATS_INTERVAL_HOURS` (default `24`) — see section 4
 - `BACKUP_AFTER_N_MODIFICATIONS` (default `0`, disabled) — see "Automatic backups" below
+- `FIREBASE_SERVICE_ACCOUNT_JSON` (no default, required for calendar-event push notifications) — see "Push notifications" below
+- `NOTIFICATION_CHECK_INTERVAL_MINUTES` (default `2`) — how often the server checks for due calendar-event push notifications
 
 ## 4. First-time data bootstrap
 
@@ -59,6 +61,16 @@ These are the same standalone scripts `scheduled-sync.ts` calls in-process — r
 The server also writes its own user-data backup (`user_progress`/`user_settings` — catch status, excluded-pattern filters, tags, preset queries) to `${NAS_DATA_ROOT}/server-backups` on every startup, in the exact same JSON format and `go-gather-backup-<timestamp>.json` filename scheme as the app's own Settings → Export Data button (`server/src/backup.ts`). No retention/pruning is applied — files accumulate indefinitely, so periodically clean out old ones if disk space matters.
 
 Set `BACKUP_AFTER_N_MODIFICATIONS` to also trigger a backup after that many catch add/remove operations, independent of the startup backup — e.g. `BACKUP_AFTER_N_MODIFICATIONS=25` backs up again every 25 catches/uncatches. Left at the default `0`, only the startup backup runs.
+
+### Push notifications
+
+Calendar-event push notifications (FCM) require `FIREBASE_SERVICE_ACCOUNT_JSON` to be set — without it, `server/src/fcm.ts` logs a one-time `[fcm] not_configured` warning and skips sending (the rest of the server functions normally). To enable:
+
+1. In the Firebase Console, create/select a project, then **Project Settings → Service Accounts → Generate new private key** to download the service-account JSON.
+2. Set `FIREBASE_SERVICE_ACCOUNT_JSON` to that file's contents as a single-line JSON string (e.g. `FIREBASE_SERVICE_ACCOUNT_JSON=$(cat service-account.json | tr -d '\n')` in your shell before `docker compose up`, or paste it directly into whatever secret store Portainer/your NAS uses).
+3. The iOS app also needs a matching `GoogleService-Info.plist` bootstrapped client-side — see the README's iOS section.
+
+The server checks for due notifications every `NOTIFICATION_CHECK_INTERVAL_MINUTES` (default 2) via a separate in-process loop (`server/src/notification-scheduler-loop.ts`), independent of the four data-feed sync jobs above. Device registration happens from the app's Settings page — no server-side action is needed beyond setting the service-account JSON.
 
 ## 5. Publish over Tailscale
 

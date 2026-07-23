@@ -56,6 +56,8 @@ npm run sync:ios:prod
 
 See `.env.example` for the env vars these read (`IOS_LAN_HOST`, `IOS_BACKEND_ORIGIN_LOCAL`, `IOS_BACKEND_ORIGIN_PROD`).
 
+`npm run prebuild:ios*` also bootstraps `ios/App/App/Firebase/GoogleService-Info.plist` (needed for calendar-event push notifications) from `~/.config/go-gather/ios/GoogleService-Info.plist` — download it from the Firebase Console once and place it there (override the source path with `IOS_FIREBASE_PLIST_PATH`, see `.env.example`). Missing it only logs a warning; the rest of the build still succeeds, but push notifications won't work on that build. The server side needs `FIREBASE_SERVICE_ACCOUNT_JSON` set — see `docs/nas-deployment.md`'s "Push notifications" section.
+
 For the full history of how the native shell, signing, CI, and OTA live-update pipeline were built:
 
 - [`docs/progress/phase-6-ios-targets.md`](docs/progress/phase-6-ios-targets.md) — dual Xcode targets, signing scaffolding
@@ -90,7 +92,7 @@ npm run build
 
 - Secret scanning: `.gitleaks.toml` + `.github/workflows/secret-scan.yml`.
 - Coverage: `codecov.yml`, uploaded from `ci-pr.yml` using the `CODECOV_TOKEN` secret.
-- Local secrets stay out of git: `.env` (see `.env.example`), `src/environments/environment.ios.*.ts` (generated, gitignored), the OTA signing private key (`~/.config/go-gather/ios/live-update-private.pem`, never committed).
+- Local secrets stay out of git: `.env` (see `.env.example`), `src/environments/environment.ios.*.ts` (generated, gitignored), the OTA signing private key (`~/.config/go-gather/ios/live-update-private.pem`, never committed), `GoogleService-Info.plist` (`~/.config/go-gather/ios/GoogleService-Info.plist`, never committed), and the server's `FIREBASE_SERVICE_ACCOUNT_JSON` env var.
 
 ## Deployment
 
