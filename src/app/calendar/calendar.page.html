@@ -13,17 +13,14 @@
     </ion-buttons>
   </ion-toolbar>
   <ion-toolbar color="primary">
-    <ion-item lines="none" color="primary">
-      <ion-select
-        label="View"
-        interface="popover"
-        [value]="selectedView"
-        (ionChange)="onViewChange($event.detail.value)"
-      >
-        <ion-select-option value="calendar">Calendar</ion-select-option>
-        <ion-select-option value="timeline">Timeline</ion-select-option>
-      </ion-select>
-    </ion-item>
+    <ion-segment [value]="selectedView" (ionChange)="onViewChange($event.detail.value)">
+      <ion-segment-button value="calendar">
+        <ion-label>Calendar</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="timeline">
+        <ion-label>Timeline</ion-label>
+      </ion-segment-button>
+    </ion-segment>
   </ion-toolbar>
 </ion-header>
 

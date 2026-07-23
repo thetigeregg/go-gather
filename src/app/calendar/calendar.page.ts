@@ -4,10 +4,10 @@ import {
   IonContent,
   IonHeader,
   IonIcon,
-  IonItem,
+  IonLabel,
   IonMenuButton,
-  IonSelect,
-  IonSelectOption,
+  IonSegment,
+  IonSegmentButton,
   IonTitle,
   IonToolbar,
 } from '@ionic/angular/standalone';
@@ -21,14 +21,14 @@ const SELECTED_VIEW_KEY = 'calendarSelectedView';
 
 type CalendarSelectedView = 'calendar' | 'timeline';
 
-function isCalendarSelectedView(value: string | null): value is CalendarSelectedView {
+function isCalendarSelectedView(value: unknown): value is CalendarSelectedView {
   return value === 'calendar' || value === 'timeline';
 }
 
 /**
  * Ported from pogo-cal's pages/Calendar.vue, minus the responsive side-by-
  * side/stacked layout (both views always mounted there) — resolved: an
- * IonSelect toggle mounts exactly one view at a time instead (see
+ * IonSegment toggle mounts exactly one view at a time instead (see
  * VIEW-TOGGLE-AND-LAYOUT.md). calendar-view.component.ts/timeline-view.
  * component.ts each stay self-sufficient (own ngOnInit data load) rather
  * than being refactored to take events/eventMetadata as inputs from this
@@ -48,9 +48,9 @@ function isCalendarSelectedView(value: string | null): value is CalendarSelected
     IonButtons,
     IonMenuButton,
     IonIcon,
-    IonItem,
-    IonSelect,
-    IonSelectOption,
+    IonLabel,
+    IonSegment,
+    IonSegmentButton,
     CalendarViewComponent,
     TimelineViewComponent,
   ],
@@ -77,7 +77,7 @@ export class CalendarPage implements OnInit {
       });
   }
 
-  onViewChange(value: string): void {
+  onViewChange(value: string | number | undefined): void {
     if (!isCalendarSelectedView(value)) {
       return;
     }
