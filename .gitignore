@@ -60,6 +60,11 @@ server/data/images/
 # for /run/secrets — e.g. firebase_service_account_json, never committed
 /nas-secrets
 
+# Firebase client config — machine-local, copied in by
+# scripts/bootstrap-ios-firebase-plist.mjs from ~/.config/go-gather/ios/,
+# never committed (contains this Firebase project's API keys/IDs)
+ios/App/App/Firebase/
+
 # OTA live-update artifacts served by the server (baked in at Docker build
 # time by build-ios-live-update-artifacts.mjs; see /ota above for the
 # repo-root default output location that gets copied in from there)
