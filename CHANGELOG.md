@@ -203,3 +203,7 @@
 ## v0.9.2 - 2026-07-23
 
 - 5c07a85 fix(docker): remove unnecessary rebuild step for better-sqlite3 in Dockerfile
+
+## v0.10.0 - 2026-07-23
+
+- 7a07b87 feat(fastlane): add bootstrap function for Firebase plist in Fastfile
