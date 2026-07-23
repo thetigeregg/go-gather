@@ -148,6 +148,10 @@ ion-badge[color='success'] {
 
 .extra-block {
   margin-bottom: 6px;
+
+  strong {
+    margin-right: 4px;
+  }
 }
 
 .bonus-time-range {
@@ -181,5 +185,6 @@ ion-badge[color='success'] {
 .footer-buttons {
   display: flex;
   align-items: center;
+  gap: 8px;
   flex: 0 0 auto;
 }
