@@ -1,6 +1,6 @@
 {
   "name": "go-gather",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "author": "Ionic Framework",
   "homepage": "https://ionicframework.com/",
   "workspaces": [

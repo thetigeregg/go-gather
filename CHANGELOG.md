@@ -213,3 +213,7 @@
 - dc0f4cc feat(calendar): add per-weekday daily-bonus toggle and notifications
 - 228bdc0 feat(calendar): add separate toggle for season daily bonuses
 - 519e07f fix(environment): update comments to clarify production backend configuration
+
+## v0.12.0 - 2026-07-23
+
+- d0b3a98 feat(user-data): backfill missing fields in loadSettings for pre-upgrade settings
