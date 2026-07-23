@@ -144,6 +144,9 @@ ion-content {
 
 .season-section {
   margin-bottom: 16px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--ion-background-color) 92%, var(--ion-color-tertiary) 8%);
 
   &:last-child {
     margin-bottom: 0;
@@ -153,6 +156,7 @@ ion-content {
 .season-section-header {
   display: block;
   margin-bottom: 16px;
+  color: var(--ion-color-tertiary);
 }
 
 .season-day {
@@ -165,6 +169,7 @@ ion-content {
 
 .season-day-name {
   font-weight: 600;
+  margin-bottom: 4px;
 }
 
 .season-group-title {
