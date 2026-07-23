@@ -40,10 +40,10 @@ COPY shared ./shared
 COPY server/package.json ./server/package.json
 # --ignore-scripts skips the root's husky "prepare" script (which would
 # otherwise fail: husky itself is a devDependency, omitted here, so the
-# `husky` binary doesn't exist to run) — but that also skips better-sqlite3's
-# own install script that fetches/builds its native binding, so rebuild it
-# explicitly afterward.
-RUN npm ci --ignore-scripts --omit=dev && npm rebuild better-sqlite3
+# `husky` binary doesn't exist to run). better-sqlite3 ships prebuilt
+# native bindings for every platform in the package itself, so no build
+# step is needed for it.
+RUN npm ci --ignore-scripts --omit=dev
 
 COPY server/src ./server/src
 COPY --from=builder /app/ota ./server/ota
