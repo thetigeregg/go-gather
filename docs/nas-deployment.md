@@ -4,11 +4,10 @@ A self-hosted deployment on your own NAS via Docker + Tailscale. Architecture is
 
 ## 1. Persistent directory
 
-Create one persistent directory on your NAS host:
+Create two persistent directories on your NAS host:
 
-- `nas-data/server-data`
-
-This holds the SQLite database (`gogather.db`, `-wal`, `-shm`) and the cached PokeAPI sprite images (`images/`) — the only data go-gather persists.
+- `nas-data/server-data` — the SQLite database (`gogather.db`, `-wal`, `-shm`) and the cached PokeAPI sprite images (`images/`).
+- `nas-data/server-backups` — JSON user-data backups (see section 4).
 
 ## 2. Confirm the image exists
 
@@ -36,6 +35,7 @@ Env vars (all optional, shown with their defaults):
 - `NAS_DATA_ROOT` (default `./nas-data`) — absolute host path recommended for real deployments, e.g. `/volume1/docker/go-gather`
 - `TZ` (default `Europe/Zurich`)
 - `SYNC_CATALOG_INTERVAL_HOURS` (default `24`), `SYNC_CALENDAR_EVENTS_INTERVAL_HOURS` (default `6`), `SYNC_SEASON_INTERVAL_HOURS` (default `6`), `SYNC_POKEMON_STATS_INTERVAL_HOURS` (default `24`) — see section 4
+- `BACKUP_AFTER_N_MODIFICATIONS` (default `0`, disabled) — see "Automatic backups" below
 
 ## 4. First-time data bootstrap
 
@@ -53,6 +53,12 @@ docker compose exec server npm run sync:pokemon-stats
 ```
 
 These are the same standalone scripts `scheduled-sync.ts` calls in-process — running them manually just forces an immediate refresh instead of waiting for the next scheduled tick.
+
+### Automatic backups
+
+The server also writes its own user-data backup (`user_progress`/`user_settings` — catch status, excluded-pattern filters, tags, preset queries) to `${NAS_DATA_ROOT}/server-backups` on every startup, in the exact same JSON format and `go-gather-backup-<timestamp>.json` filename scheme as the app's own Settings → Export Data button (`server/src/backup.ts`). No retention/pruning is applied — files accumulate indefinitely, so periodically clean out old ones if disk space matters.
+
+Set `BACKUP_AFTER_N_MODIFICATIONS` to also trigger a backup after that many catch add/remove operations, independent of the startup backup — e.g. `BACKUP_AFTER_N_MODIFICATIONS=25` backs up again every 25 catches/uncatches. Left at the default `0`, only the startup backup runs.
 
 ## 5. Publish over Tailscale
 

@@ -11,6 +11,7 @@ import type {
   Season,
   UserSettings,
 } from '@go-gather/shared';
+import { maybeBackupAfterModifications } from './backup.js';
 import { db } from './db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -339,6 +340,7 @@ export function buildApp() {
       });
 
       runPush(operations);
+      maybeBackupAfterModifications(request.log);
 
       return { results };
     }

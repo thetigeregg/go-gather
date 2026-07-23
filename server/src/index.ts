@@ -4,6 +4,7 @@
    go-gather-next (see docs/progress/phase-4-catalog-pipeline.md);
    go-gather-next's own ESLint config doesn't enforce these strictTypeChecked rules. */
 import { buildApp } from './api.js';
+import { writeBackup } from './backup.js';
 import { initSchema } from './db.js';
 import { startScheduledSync } from './scheduled-sync.js';
 
@@ -22,6 +23,8 @@ app
     app.log.error(err);
     process.exitCode = 1;
   });
+
+writeBackup(app.log);
 
 const stopScheduledSync = startScheduledSync(app.log);
 

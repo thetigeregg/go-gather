@@ -7,6 +7,7 @@ services:
       - "${SERVER_PORT:-3000}:3000"
     volumes:
       - ${NAS_DATA_ROOT:-./nas-data}/server-data:/app/server/data
+      - ${NAS_DATA_ROOT:-./nas-data}/server-backups:/app/server/backups
     environment:
       TZ: ${TZ:-Europe/Zurich}
       # Data-feed sync intervals (hours) — the server syncs all four feeds
@@ -16,6 +17,11 @@ services:
       # SYNC_CALENDAR_EVENTS_INTERVAL_HOURS: ${SYNC_CALENDAR_EVENTS_INTERVAL_HOURS:-6}
       # SYNC_SEASON_INTERVAL_HOURS: ${SYNC_SEASON_INTERVAL_HOURS:-6}
       # SYNC_POKEMON_STATS_INTERVAL_HOURS: ${SYNC_POKEMON_STATS_INTERVAL_HOURS:-24}
+      # User-data backup (same format/filename scheme as the app's own
+      # Export Data button) is written to server-backups/ on every startup.
+      # Set this to also trigger a backup after N catch add/remove
+      # modifications — 0 (default) disables the extra trigger.
+      # BACKUP_AFTER_N_MODIFICATIONS: ${BACKUP_AFTER_N_MODIFICATIONS:-0}
     healthcheck:
       test:
         [
