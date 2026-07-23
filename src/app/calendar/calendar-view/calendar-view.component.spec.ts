@@ -100,7 +100,9 @@ describe('CalendarViewComponent', () => {
       SingleDayEventComponent,
       EventDetailComponent,
     ]) {
-      TestBed.overrideComponent(cmp, { set: { template: '<div></div>', styleUrl: undefined } });
+      TestBed.overrideComponent(cmp, {
+        set: { template: '<div></div>', styleUrl: undefined, imports: [] },
+      });
     }
     await TestBed.compileComponents();
 

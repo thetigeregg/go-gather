@@ -16,7 +16,7 @@
     </div>
   }
 
-  @if (multiDayEvents.length > 0) {
+  @if (multiDayEventsHeight > 0) {
     <div class="multi-day-events" [style.height.px]="multiDayEventsHeight">
       @for (event of multiDayEvents; track event.eventID) {
         <div

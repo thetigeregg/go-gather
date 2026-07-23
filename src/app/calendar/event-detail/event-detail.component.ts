@@ -2,11 +2,20 @@ import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { Dayjs } from 'dayjs';
 import { IonButton, IonIcon, ToastController } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { close, eyeOffOutline } from 'ionicons/icons';
+import { arrowUpCircleOutline, close, eyeOffOutline, swapHorizontalOutline } from 'ionicons/icons';
 import { EventMetadata, PogoEvent } from '@go-gather/shared';
 import { getSourceEventID } from '../calendar-view/calendar-single-day-events.util';
 import { CalendarFilterService } from '../../core/services/calendar-filter.service';
 import { formatEventName } from '../../core/services/calendar-event-name.util';
+import {
+  getEventPokemonImages,
+  getEventSpriteEffect,
+} from '../../core/services/event-pokemon-images.util';
+import { SpriteEffect } from '../../core/services/event-sprite-url.util';
+import {
+  buildRaidTierGroupsWithImages,
+  RaidTierGroupWithImages,
+} from '../../core/services/raid-tier-groups.util';
 import {
   getTimelineEventExtras,
   TimelineEventExtras,
@@ -17,29 +26,40 @@ import {
   EventStatusInfo,
   TimeDisplayParts,
 } from '../../core/services/timeline-event-time-display.util';
+import {
+  buildTimelineScheduleDaySectionsWithTierGroups,
+  TimelineScheduleDaySection,
+} from '../../core/services/timeline-schedule.util';
+import { PokemonEventImagesComponent } from '../timeline-view/pokemon-event-images.component';
+import { TimelineRaidScheduleComponent } from '../timeline-view/timeline-raid-schedule.component';
 
 const HIDE_TOAST_DURATION_MS = 4000;
 
 /**
  * Ported from pogo-cal's EventTooltip.vue, collapsed to a single code path
  * (no desktop-popover/touch-drawer split, no useDeviceDetection.ts — see
- * OPEN-DECISIONS.md) and minus: `_isGrouped` per-grouped-event rendering
- * ("group similar events" deferred), all boss/tier-group art (raid-boss art
- * is text-only), and EventTooltipHeader.vue's add-to-calendar/edit-color
- * action buttons (both out of scope/deferred elsewhere in this port). The
- * hide button *is* ported (see `onHideClick()`) — source's choice modal
- * ("hide this event" vs. "hide this event type") is simplified to just the
- * per-instance half here, since "hide this event type" already exists as
- * its own feature (the filter menu's per-type toggles) — no second UI path
- * to the same toggle. Reuses the same text-only extras block and
- * time-display utils that timeline-event.component.ts already uses. Dumb/
- * presentational — hosted inside an `ion-modal` by calendar-view.
- * component.ts, which supplies `now` from its own already-computed `today`
- * field.
+ * OPEN-DECISIONS.md) and minus `_isGrouped` per-grouped-event rendering
+ * ("group similar events" deferred) and EventTooltipHeader.vue's
+ * add-to-calendar/edit-color action buttons (both out of scope/deferred
+ * elsewhere in this port). The hide button *is* ported (see
+ * `onHideClick()`) — source's choice modal ("hide this event" vs. "hide
+ * this event type") is simplified to just the per-instance half here, since
+ * "hide this event type" already exists as its own feature (the filter
+ * menu's per-type toggles) — no second UI path to the same toggle.
+ *
+ * Sprite/tier-group rendering (spotlight-bonus icons, the Pokemon image row,
+ * and the raid tier-group schedule) mirrors timeline-event.component.ts's
+ * always-expanded (`isActive`) branch — this modal has no collapsed state of
+ * its own, so there's no `isActive` input to gate on here.
+ *
+ * Reuses the same text-only extras block and time-display utils that
+ * timeline-event.component.ts already uses. Dumb/presentational — hosted
+ * inside an `ion-modal` by calendar-view.component.ts, which supplies `now`
+ * from its own already-computed `today` field.
  */
 @Component({
   selector: 'app-event-detail',
-  imports: [IonButton, IonIcon],
+  imports: [IonButton, IonIcon, PokemonEventImagesComponent, TimelineRaidScheduleComponent],
   templateUrl: './event-detail.component.html',
   styleUrl: './event-detail.component.scss',
 })
@@ -54,7 +74,12 @@ export class EventDetailComponent {
   @Output() closed = new EventEmitter<void>();
 
   constructor() {
-    addIcons({ close, 'eye-off-outline': eyeOffOutline });
+    addIcons({
+      close,
+      'eye-off-outline': eyeOffOutline,
+      'arrow-up-circle-outline': arrowUpCircleOutline,
+      'swap-horizontal-outline': swapHorizontalOutline,
+    });
   }
 
   get displayName(): string {
@@ -89,6 +114,51 @@ export class EventDetailComponent {
 
   get extras(): TimelineEventExtras | null {
     return getTimelineEventExtras(this.event);
+  }
+
+  get pokemonCount(): number {
+    return getEventPokemonImages(this.event).length;
+  }
+
+  get hasPokemon(): boolean {
+    return this.pokemonCount > 0;
+  }
+
+  get spriteEffect(): SpriteEffect | undefined {
+    return getEventSpriteEffect(this.event);
+  }
+
+  get defaultTierGroupsWithImages(): RaidTierGroupWithImages[] | null {
+    return buildRaidTierGroupsWithImages(this.metadata.raidBossTierGroups);
+  }
+
+  get timelineScheduleDaySectionsWithTierGroups(): TimelineScheduleDaySection[] | undefined {
+    return buildTimelineScheduleDaySectionsWithTierGroups(this.event);
+  }
+
+  /** See timeline-event.component.ts's identical getter — kept in sync with
+   * it rather than shared, since the two components' surrounding state
+   * (isActive vs. always-expanded) differs enough that a shared helper
+   * would need to take most of these fields as parameters anyway. */
+  get hasExpandedRaidSections(): boolean {
+    if (
+      this.timelineScheduleDaySectionsWithTierGroups &&
+      this.timelineScheduleDaySectionsWithTierGroups.length > 0
+    ) {
+      return true;
+    }
+
+    const tierGroups = this.defaultTierGroupsWithImages;
+    if (!tierGroups || tierGroups.length === 0) {
+      return false;
+    }
+
+    const totalImages = tierGroups.reduce((sum, group) => sum + group.images.length, 0);
+    return tierGroups.length > 1 || totalImages > 1;
+  }
+
+  get showPokemonRow(): boolean {
+    return this.hasPokemon && !this.hasExpandedRaidSections;
   }
 
   onCloseClick(): void {

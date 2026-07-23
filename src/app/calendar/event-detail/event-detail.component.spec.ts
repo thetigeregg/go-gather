@@ -87,7 +87,7 @@ describe('EventDetailComponent', () => {
       ],
     });
     TestBed.overrideComponent(EventDetailComponent, {
-      set: { template: '<div></div>', styleUrl: undefined },
+      set: { template: '<div></div>', styleUrl: undefined, imports: [] },
     });
     await TestBed.compileComponents();
 
@@ -180,6 +180,124 @@ describe('EventDetailComponent', () => {
       undoButton?.handler?.();
 
       expect(fakeCalendarFilterService.showEventById).toHaveBeenCalledWith('event-1');
+    });
+  });
+
+  describe('pokemon sprite/schedule chain', () => {
+    it('pokemonCount reflects the resolved Pokemon images for the event', () => {
+      component.event = makeEvent({
+        eventType: 'raid-battles',
+        extraData: {
+          raidbattles: { bosses: [{ name: 'Machamp', image: 'machamp.png', canBeShiny: false }] },
+        },
+      });
+      expect(component.pokemonCount).toBe(1);
+    });
+
+    it('hasPokemon is true when pokemonCount is positive, false otherwise', () => {
+      expect(component.hasPokemon).toBe(false);
+
+      component.event = makeEvent({
+        eventType: 'raid-battles',
+        extraData: {
+          raidbattles: { bosses: [{ name: 'Machamp', image: 'machamp.png', canBeShiny: false }] },
+        },
+      });
+      expect(component.hasPokemon).toBe(true);
+    });
+
+    it('spriteEffect reflects the event-level sprite effect', () => {
+      component.event = makeEvent({ eventType: 'max-mondays' });
+      expect(component.spriteEffect).toBe('dynamax');
+    });
+
+    it('defaultTierGroupsWithImages builds from metadata.raidBossTierGroups', () => {
+      component.metadata = makeMetadata({
+        raidBossTierGroups: [
+          { label: 'Tier 3', bosses: [{ name: 'Machamp', image: 'x.png', canBeShiny: false }] },
+        ],
+      });
+      expect(component.defaultTierGroupsWithImages).toEqual([
+        {
+          label: 'Tier 3',
+          showLabel: true,
+          images: [
+            {
+              name: 'Machamp',
+              imageUrl: 'x.png',
+              fallbackImageUrl: 'x.png',
+              shieldCount: undefined,
+            },
+          ],
+        },
+      ]);
+    });
+
+    it('timelineScheduleDaySectionsWithTierGroups builds from the event raid schedule', () => {
+      component.event = makeEvent({
+        extraData: {
+          raidSchedule: [
+            {
+              date: 'July 8',
+              bosses: [{ name: 'Machamp', image: 'x.png', canBeShiny: false }],
+              raidHours: [],
+            },
+          ],
+        },
+      });
+      expect(component.timelineScheduleDaySectionsWithTierGroups).toHaveLength(1);
+    });
+
+    it('hasExpandedRaidSections is true when there are day sections', () => {
+      component.event = makeEvent({
+        extraData: {
+          raidSchedule: [
+            {
+              date: 'July 8',
+              bosses: [{ name: 'Machamp', image: 'x.png', canBeShiny: false }],
+              raidHours: [],
+            },
+          ],
+        },
+      });
+      expect(component.hasExpandedRaidSections).toBe(true);
+    });
+
+    it('hasExpandedRaidSections is false for a single tier group holding a single Pokemon', () => {
+      component.metadata = makeMetadata({
+        raidBossTierGroups: [
+          { label: 'Tier 5', bosses: [{ name: 'Mewtwo', image: 'x.png', canBeShiny: false }] },
+        ],
+      });
+      expect(component.hasExpandedRaidSections).toBe(false);
+    });
+
+    it('showPokemonRow requires hasPokemon and no expanded raid sections', () => {
+      expect(component.showPokemonRow).toBe(false);
+
+      component.event = makeEvent({
+        eventType: 'raid-battles',
+        extraData: {
+          raidbattles: { bosses: [{ name: 'Machamp', image: 'machamp.png', canBeShiny: false }] },
+        },
+      });
+      expect(component.showPokemonRow).toBe(true);
+    });
+
+    it('showPokemonRow is false once raid sections are expanded, even with Pokemon to show', () => {
+      component.event = makeEvent({
+        eventType: 'raid-battles',
+        extraData: {
+          raidSchedule: [
+            {
+              date: 'July 8',
+              bosses: [{ name: 'Machamp', image: 'x.png', canBeShiny: false }],
+              raidHours: [],
+            },
+          ],
+        },
+      });
+      expect(component.showPokemonRow).toBe(false);
     });
   });
 });

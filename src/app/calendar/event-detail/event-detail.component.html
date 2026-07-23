@@ -1,7 +1,21 @@
 <div class="event-detail" [attr.data-event-type]="event.eventType">
   <div class="detail-banner" [style.background-color]="metadata.color">
     <div class="banner-text">
-      <div class="event-name">{{ displayName }}</div>
+      <div class="event-name-row">
+        <div class="event-name">{{ displayName }}</div>
+        @if (metadata.spotlightBonus) {
+          <div class="spotlight-bonus-icons">
+            @if (metadata.spotlightBonus.category === 'evolve') {
+              <ion-icon name="arrow-up-circle-outline" class="evolve-icon"></ion-icon>
+            } @else if (metadata.spotlightBonus.category === 'transfer') {
+              <ion-icon name="swap-horizontal-outline" class="transfer-icon"></ion-icon>
+            }
+            @if (metadata.spotlightBonusIconUrl) {
+              <img [src]="metadata.spotlightBonusIconUrl" alt="" class="bonus-type-icon" />
+            }
+          </div>
+        }
+      </div>
       <div class="event-type-label">{{ metadata.typeInfo.name }}</div>
     </div>
     <div class="banner-actions">
@@ -46,6 +60,15 @@
         </div>
       }
     </div>
+
+    @if (hasExpandedRaidSections) {
+      <app-timeline-raid-schedule
+        [daySections]="timelineScheduleDaySectionsWithTierGroups"
+        [defaultTierGroups]="defaultTierGroupsWithImages"
+        [eventType]="event.eventType"
+        [effect]="spriteEffect"
+      ></app-timeline-raid-schedule>
+    }
 
     @if (extras; as eventExtras) {
       <div class="event-extras">
@@ -117,8 +140,31 @@
       </div>
     }
 
-    <a class="view-link" [href]="event.link" target="_blank" rel="noopener noreferrer">
-      View on LeekDuck
-    </a>
+    <div class="card-footer">
+      <div class="footer-buttons">
+        <ion-button
+          color="primary"
+          size="small"
+          [href]="event.link"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          View on LeekDuck
+        </ion-button>
+      </div>
+
+      @if (showPokemonRow) {
+        <div class="pokemon-row">
+          <app-pokemon-event-images
+            [event]="event"
+            [height]="40"
+            [showPlaceholder]="true"
+            [showCP]="true"
+            overflowBadgeAlign="right"
+            [excludeTiers]="[]"
+          ></app-pokemon-event-images>
+        </div>
+      }
+    </div>
   </div>
 </div>
