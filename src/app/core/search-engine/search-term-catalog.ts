@@ -28,7 +28,7 @@ export interface TermCatalogEntry {
   smallEnumRange?: { min: number; max: number };
 }
 
-const SIMPLE_KEYWORDS: SimpleKeyword[] = [
+export const SIMPLE_KEYWORDS: SimpleKeyword[] = [
   'costume',
   'defender',
   'eggsonly',
@@ -77,7 +77,7 @@ const REGIONS: Region[] = [
 
 const GENDERS: Gender[] = ['male', 'female', 'genderunknown'];
 
-const SIZES: Size[] = ['xxs', 'xs', 'xl', 'xxl'];
+export const SIZES: Size[] = ['xxs', 'xs', 'xl', 'xxl'];
 
 const RAID_ORIGINS: RaidOrigin[] = ['raid', 'remoteraid', 'megaraid', 'exraid', 'primalraid'];
 

@@ -120,6 +120,7 @@ export class UserDataService {
       excludedShinyNamePatterns: this.userSettings.excludedShinyNamePatterns,
       userTags: this.userSettings.userTags,
       presetQueries: this.userSettings.presetQueries,
+      excludedSearchTermsByPokedex: this.userSettings.excludedSearchTermsByPokedex,
     };
   }
 
@@ -137,6 +138,7 @@ export class UserDataService {
       excludedShinyNamePatterns: bundle.excludedShinyNamePatterns,
       userTags: bundle.userTags,
       presetQueries: bundle.presetQueries,
+      excludedSearchTermsByPokedex: bundle.excludedSearchTermsByPokedex,
     };
 
     this.userSettings = { ...this.userSettings, ...settingsPartial };

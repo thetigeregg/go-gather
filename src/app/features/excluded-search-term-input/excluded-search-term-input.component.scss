@@ -1,0 +1,23 @@
+.excluded-search-term-draft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  ion-item {
+    --inner-padding-start: 0;
+    --padding-start: 0;
+    flex: 1;
+  }
+}
+
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-top: 12px;
+}
+
+ion-chip ion-icon {
+  cursor: pointer;
+  margin-left: 4px;
+}

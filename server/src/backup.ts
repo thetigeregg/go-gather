@@ -2,7 +2,13 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { FastifyBaseLogger } from 'fastify';
-import type { ExportBundle, PresetQuery, ProgressEntry } from '@go-gather/shared';
+import type {
+  ExcludedSearchTerm,
+  ExportBundle,
+  PokedexType,
+  PresetQuery,
+  ProgressEntry,
+} from '@go-gather/shared';
 import { db } from './db.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -21,6 +27,7 @@ interface SettingsRow {
   excluded_shiny_name_patterns: string;
   user_tags: string;
   preset_queries: string;
+  excluded_search_terms_by_pokedex: string;
 }
 
 /**
@@ -46,7 +53,8 @@ function buildExportBundle(): ExportBundle {
   const settingsRow = db
     .prepare(
       `SELECT excluded_name_patterns, excluded_dex_numbers, excluded_shiny_dex_numbers,
-              excluded_shiny_name_patterns, user_tags, preset_queries
+              excluded_shiny_name_patterns, user_tags, preset_queries,
+              excluded_search_terms_by_pokedex
        FROM user_settings WHERE id = 1`
     )
     .get() as SettingsRow;
@@ -61,6 +69,9 @@ function buildExportBundle(): ExportBundle {
     excludedShinyNamePatterns: JSON.parse(settingsRow.excluded_shiny_name_patterns) as string[],
     userTags: JSON.parse(settingsRow.user_tags) as string[],
     presetQueries: JSON.parse(settingsRow.preset_queries) as PresetQuery[],
+    excludedSearchTermsByPokedex: JSON.parse(
+      settingsRow.excluded_search_terms_by_pokedex
+    ) as Record<PokedexType, ExcludedSearchTerm[]>,
   };
 }
 

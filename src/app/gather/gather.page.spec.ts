@@ -93,7 +93,7 @@ describe('GatherPage', () => {
         {
           provide: SearchConfigService,
           useValue: {
-            loadConfig: () => of({ implicitlyExcludedSearchTerms: [], costumeGenderEnabled: true }),
+            loadConfig: () => of({ costumeGenderEnabled: true }),
           },
         },
       ],

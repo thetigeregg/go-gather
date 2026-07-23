@@ -103,6 +103,10 @@ describe('UserDataService', () => {
       excludedShinyNamePatterns: [],
       userTags: ['imported-tag'],
       presetQueries: [],
+      excludedSearchTermsByPokedex: {
+        ...DEFAULT_SETTINGS.excludedSearchTermsByPokedex,
+        regular: [{ kind: 'tag', value: 'Trade' }],
+      },
     };
 
     const progress = await new Promise((resolve) => {
@@ -114,6 +118,9 @@ describe('UserDataService', () => {
     expect(service.getItemState('y')).toBe(false);
     expect(service.getUserSettings().excludedNamePatterns).toEqual(['imported-pattern']);
     expect(service.getUserSettings().userTags).toEqual(['imported-tag']);
+    expect(service.getUserSettings().excludedSearchTermsByPokedex.regular).toEqual([
+      { kind: 'tag', value: 'Trade' },
+    ]);
   });
 
   it("importBundle doesn't clear progress entries absent from the bundle", async () => {
@@ -132,6 +139,7 @@ describe('UserDataService', () => {
       excludedShinyNamePatterns: [],
       userTags: [],
       presetQueries: [],
+      excludedSearchTermsByPokedex: DEFAULT_SETTINGS.excludedSearchTermsByPokedex,
     };
 
     await new Promise((resolve) => {

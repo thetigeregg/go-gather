@@ -1,11 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable, shareReplay, tap } from 'rxjs';
-import { ImplicitlyExcludedSearchTerm } from '@go-gather/shared';
 import { environment } from '../../../environments/environment';
 
 interface SearchConfigResponse {
-  implicitlyExcludedSearchTerms: ImplicitlyExcludedSearchTerm[];
   costumeGenderEnabled: boolean;
 }
 
@@ -19,14 +17,9 @@ interface SearchConfigResponse {
  */
 @Injectable({ providedIn: 'root' })
 export class SearchConfigService {
-  private _implicitlyExcludedSearchTerms: readonly ImplicitlyExcludedSearchTerm[] = [];
   private _costumeGenderEnabled = true;
 
   private readonly http = inject(HttpClient);
-
-  get implicitlyExcludedSearchTerms(): readonly ImplicitlyExcludedSearchTerm[] {
-    return this._implicitlyExcludedSearchTerms;
-  }
 
   get costumeGenderEnabled(): boolean {
     return this._costumeGenderEnabled;
@@ -35,7 +28,6 @@ export class SearchConfigService {
   loadConfig(): Observable<SearchConfigResponse> {
     return this.http.get<SearchConfigResponse>(`${environment.apiUrl}/api/search-config`).pipe(
       tap((config) => {
-        this._implicitlyExcludedSearchTerms = config.implicitlyExcludedSearchTerms;
         this._costumeGenderEnabled = config.costumeGenderEnabled;
       }),
       shareReplay(1)

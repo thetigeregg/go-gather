@@ -20,28 +20,21 @@ describe('SearchConfigService', () => {
     httpMock.verify();
   });
 
-  it('defaults costumeGenderEnabled to true and exclusions to empty before loading', () => {
+  it('defaults costumeGenderEnabled to true before loading', () => {
     expect(service.costumeGenderEnabled).toBe(true);
-    expect(service.implicitlyExcludedSearchTerms).toEqual([]);
   });
 
-  it('loadConfig fetches from GET /api/search-config and hydrates the getters', async () => {
+  it('loadConfig fetches from GET /api/search-config and hydrates the getter', async () => {
     const loadPromise = new Promise((resolve) => {
       service.loadConfig().subscribe(resolve);
     });
 
     const req = httpMock.expectOne('http://localhost:3000/api/search-config');
     expect(req.request.method).toBe('GET');
-    req.flush({
-      implicitlyExcludedSearchTerms: [{ kind: 'keyword', value: 'shadow', enabled: true }],
-      costumeGenderEnabled: false,
-    });
+    req.flush({ costumeGenderEnabled: false });
 
     await loadPromise;
 
     expect(service.costumeGenderEnabled).toBe(false);
-    expect(service.implicitlyExcludedSearchTerms).toEqual([
-      { kind: 'keyword', value: 'shadow', enabled: true },
-    ]);
   });
 });

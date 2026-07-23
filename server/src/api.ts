@@ -4,13 +4,7 @@ import Fastify from 'fastify';
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type {
-  CatalogEntry,
-  ImplicitlyExcludedSearchTerm,
-  PogoEvent,
-  Season,
-  UserSettings,
-} from '@go-gather/shared';
+import type { CatalogEntry, PogoEvent, Season, UserSettings } from '@go-gather/shared';
 import { maybeBackupAfterModifications } from './backup.js';
 import { db } from './db.js';
 
@@ -132,7 +126,8 @@ function applySettingsUpsert(payload: UserSettings): void {
       excluded_shiny_dex_numbers = @excludedShinyDexNumbers,
       excluded_shiny_name_patterns = @excludedShinyNamePatterns,
       user_tags = @userTags,
-      preset_queries = @presetQueries
+      preset_queries = @presetQueries,
+      excluded_search_terms_by_pokedex = @excludedSearchTermsByPokedex
     WHERE id = 1`
   ).run({
     pokedexType: payload.pokedexType,
@@ -148,6 +143,7 @@ function applySettingsUpsert(payload: UserSettings): void {
     excludedShinyNamePatterns: JSON.stringify(payload.excludedShinyNamePatterns),
     userTags: JSON.stringify(payload.userTags),
     presetQueries: JSON.stringify(payload.presetQueries),
+    excludedSearchTermsByPokedex: JSON.stringify(payload.excludedSearchTermsByPokedex),
   });
 }
 
@@ -181,6 +177,21 @@ export function buildApp() {
 
   app.register(cors, {
     origin: ['http://localhost:4200', 'capacitor://localhost'],
+  });
+
+  // CapacitorHttp routes native requests through iOS's URLSession, which
+  // respects standard HTTP caching by default — with no explicit directive,
+  // a GET response can get cached on-device and keep being served from disk
+  // indefinitely, surviving app relaunches, even after the underlying data
+  // changes server-side. All /api/* routes are dynamic data, never intended
+  // to be cached by an intermediate HTTP cache — /images/ and /ota/ (static
+  // plugins registered below) set their own explicit Cache-Control and are
+  // untouched by this.
+  app.addHook('onSend', (request, reply, payload, done) => {
+    if (request.url.startsWith('/api/')) {
+      reply.header('Cache-Control', 'no-store');
+    }
+    done(null, payload);
   });
 
   // Sprite filenames are content-stable — sync.ts's downloadImages() skips
@@ -277,14 +288,8 @@ export function buildApp() {
   // immediately, no npm run sync or server restart needed.
   app.get('/api/search-config', async () => {
     const raw = await readFile(SYNC_OVERRIDES_PATH, 'utf-8');
-    const overrides = JSON.parse(raw) as {
-      implicitlyExcludedSearchTerms: ImplicitlyExcludedSearchTerm[];
-      costumeGenderEnabled: boolean;
-    };
-    return {
-      implicitlyExcludedSearchTerms: overrides.implicitlyExcludedSearchTerms,
-      costumeGenderEnabled: overrides.costumeGenderEnabled,
-    };
+    const overrides = JSON.parse(raw) as { costumeGenderEnabled: boolean };
+    return { costumeGenderEnabled: overrides.costumeGenderEnabled };
   });
 
   // Local-first sync: the client is the one deciding what to write (via its

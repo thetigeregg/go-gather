@@ -60,7 +60,8 @@ export function initSchema(): void {
       excluded_shiny_dex_numbers TEXT NOT NULL,
       excluded_shiny_name_patterns TEXT NOT NULL,
       user_tags TEXT NOT NULL,
-      preset_queries TEXT NOT NULL
+      preset_queries TEXT NOT NULL,
+      excluded_search_terms_by_pokedex TEXT NOT NULL
     );
 
     -- Local-first sync support (adapted from game-shelf's Postgres
@@ -131,6 +132,22 @@ export function initSchema(): void {
     db.exec(`ALTER TABLE pokemon_catalog ADD COLUMN pokedex_type TEXT NOT NULL DEFAULT 'regular'`);
   }
 
+  // Same rationale as above, for a pre-existing gogather.db from before
+  // per-pokedex search exclusions were introduced. Column is added nullable
+  // (SQLite's ALTER TABLE DEFAULT clause can't hold a computed JSON value)
+  // then immediately backfilled with the actual seeded defaults — not an
+  // empty object — so upgrading users see no change in generated search
+  // strings.
+  const settingsColumns = db.prepare(`PRAGMA table_info(user_settings)`).all() as {
+    name: string;
+  }[];
+  if (!settingsColumns.some((c) => c.name === 'excluded_search_terms_by_pokedex')) {
+    db.exec(`ALTER TABLE user_settings ADD COLUMN excluded_search_terms_by_pokedex TEXT`);
+    db.prepare(
+      `UPDATE user_settings SET excluded_search_terms_by_pokedex = @value WHERE id = 1`
+    ).run({ value: JSON.stringify(DEFAULT_SETTINGS.excludedSearchTermsByPokedex) });
+  }
+
   // Single-row settings table (id is always 1) — seeded once from
   // DEFAULT_SETTINGS on first run; `INSERT OR IGNORE` is a no-op on every
   // subsequent startup once the row exists.
@@ -140,13 +157,13 @@ export function initSchema(): void {
       show_regional, show_alternate, show_gender, show_uncaught_only,
       excluded_name_patterns, excluded_dex_numbers,
       excluded_shiny_dex_numbers, excluded_shiny_name_patterns,
-      user_tags, preset_queries
+      user_tags, preset_queries, excluded_search_terms_by_pokedex
     ) VALUES (
       1, @pokedexType, @shinyFilter, @regionFilter,
       @showRegional, @showAlternate, @showGender, @showUncaughtOnly,
       @excludedNamePatterns, @excludedDexNumbers,
       @excludedShinyDexNumbers, @excludedShinyNamePatterns,
-      @userTags, @presetQueries
+      @userTags, @presetQueries, @excludedSearchTermsByPokedex
     )`
   ).run({
     pokedexType: DEFAULT_SETTINGS.pokedexType,
@@ -162,5 +179,6 @@ export function initSchema(): void {
     excludedShinyNamePatterns: JSON.stringify(DEFAULT_SETTINGS.excludedShinyNamePatterns),
     userTags: JSON.stringify(DEFAULT_SETTINGS.userTags),
     presetQueries: JSON.stringify(DEFAULT_SETTINGS.presetQueries),
+    excludedSearchTermsByPokedex: JSON.stringify(DEFAULT_SETTINGS.excludedSearchTermsByPokedex),
   });
 }

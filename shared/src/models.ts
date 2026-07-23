@@ -37,6 +37,13 @@ export type PokemonClass =
  */
 export type PokedexType = 'regular' | 'mega' | 'max' | 'dmax' | 'costume' | 'xxl' | 'xxs';
 
+/** All 7 `PokedexType` values — used to seed a full `Record<PokedexType, ...>`
+ * (e.g. `DEFAULT_SETTINGS.excludedSearchTermsByPokedex`) without missing an
+ * entry. Duplicated from `POKEDEX_TYPE_OPTIONS`
+ * (`src/app/features/side-menu/side-menu.component.ts`) since `shared`
+ * cannot import from the app. */
+const POKEDEX_TYPES: PokedexType[] = ['regular', 'mega', 'max', 'dmax', 'xxl', 'xxs', 'costume'];
+
 /**
  * One catchable variant: a species + form + costume + gender + shiny
  * combination. This is the flattened row the sync script writes to
@@ -73,20 +80,16 @@ export interface ProgressEntry {
 }
 
 /**
- * One entry in sync-overrides.json's `implicitlyExcludedSearchTerms` list —
- * a built-in Pokemon GO search keyword/size/tag that generated search
- * strings exclude by default (e.g. `shadow`, `xxl`, `Trade`), so the app
- * doesn't suggest catching Pokemon the user isn't actually looking for.
- * Server-owned config (see `server/src/sync-overrides.json`), served to the
- * frontend via `GET /api/search-config` rather than baked into the synced
- * catalog/DB, since it's a runtime search-string concern rather than a
- * sync-time catalog one — editing the file and refreshing the app picks up
- * a change immediately, no `npm run sync` needed.
+ * One user-defined exclusion rule for a pokedex's generated search strings
+ * (Search Strings page) — a Pokemon GO search keyword/size/tag that
+ * generated strings for that pokedex exclude, e.g. `shadow`, `xxl`, `Trade`,
+ * so the app doesn't suggest catching Pokemon the user isn't looking for.
+ * Presence in `UserSettings.excludedSearchTermsByPokedex` is what makes an
+ * entry active — there's no separate enabled flag to toggle.
  */
-export interface ImplicitlyExcludedSearchTerm {
+export interface ExcludedSearchTerm {
   kind: 'keyword' | 'size' | 'tag';
   value: string;
-  enabled: boolean;
 }
 
 /**
@@ -105,6 +108,7 @@ export interface ExportBundle {
   excludedShinyNamePatterns: string[];
   userTags: string[];
   presetQueries: PresetQuery[];
+  excludedSearchTermsByPokedex: Record<PokedexType, ExcludedSearchTerm[]>;
 }
 
 /**
@@ -237,6 +241,12 @@ export interface UserSettings {
   userTags: string[];
   /** User-defined, reusable named search-query presets (Preset Queries). */
   presetQueries: PresetQuery[];
+  /** Custom search-string exclusions (Search Strings page), scoped
+   * independently per pokedex type — e.g. the Regular dex's list is edited
+   * separately from the XXL dex's. Every `PokedexType` always has an entry
+   * (possibly empty), never a partial map, so callers can index it by the
+   * current pokedex type without a fallback. */
+  excludedSearchTermsByPokedex: Record<PokedexType, ExcludedSearchTerm[]>;
 }
 
 /** Also used server-side (see `server/src/db.ts`'s `initSchema()`) to seed
@@ -257,4 +267,30 @@ export const DEFAULT_SETTINGS: UserSettings = {
   excludedShinyNamePatterns: [],
   userTags: [],
   presetQueries: [],
+  excludedSearchTermsByPokedex: Object.fromEntries(
+    POKEDEX_TYPES.map((pokedexType) => [pokedexType, defaultExcludedSearchTermsFor(pokedexType)])
+  ) as Record<PokedexType, ExcludedSearchTerm[]>,
 };
+
+/** Seeded default exclusions for one pokedex type — mirrors the old global
+ * `implicitlyExcludedSearchTerms` config this feature replaces (Trade, 2x
+ * Transfer, shadow, applied everywhere; xxl/xxs size applied everywhere
+ * except each size's own matching dex, since excluding `xxl` while
+ * generating the XXL dex's own search string would exclude every result). */
+function defaultExcludedSearchTermsFor(pokedexType: PokedexType): ExcludedSearchTerm[] {
+  const terms: ExcludedSearchTerm[] = [
+    { kind: 'tag', value: 'Trade' },
+    { kind: 'tag', value: '2x Transfer' },
+    { kind: 'keyword', value: 'shadow' },
+  ];
+
+  if (pokedexType !== 'xxl') {
+    terms.push({ kind: 'size', value: 'xxl' });
+  }
+
+  if (pokedexType !== 'xxs') {
+    terms.push({ kind: 'size', value: 'xxs' });
+  }
+
+  return terms;
+}

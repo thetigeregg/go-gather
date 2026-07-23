@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { DEFAULT_SETTINGS, UserSettings } from '@go-gather/shared';
+import { ExcludedSearchTermInputComponent } from '../features/excluded-search-term-input/excluded-search-term-input.component';
 import { SearchStringsPage } from './search-strings.page';
 import { SearchStringService } from '../core/services/search-string.service';
 import { UserDataService } from '../core/services/user-data.service';
@@ -23,10 +24,14 @@ describe('SearchStringsPage', () => {
     getAltRegionSearchStrings: ReturnType<typeof vi.fn>;
   };
   let costumeGenderEnabled: boolean;
+  let updateUserSettings: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     userSettings = { ...DEFAULT_SETTINGS };
     costumeGenderEnabled = true;
+    updateUserSettings = vi.fn((partial: Partial<UserSettings>) => {
+      userSettings = { ...userSettings, ...partial };
+    });
 
     searchStringServiceFake = {
       init: vi.fn(),
@@ -42,7 +47,13 @@ describe('SearchStringsPage', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: SearchStringService, useValue: searchStringServiceFake },
-        { provide: UserDataService, useValue: { getUserSettings: () => userSettings } },
+        {
+          provide: UserDataService,
+          useValue: {
+            getUserSettings: () => userSettings,
+            updateUserSettings,
+          },
+        },
         {
           provide: SearchConfigService,
           useValue: {
@@ -60,6 +71,9 @@ describe('SearchStringsPage', () => {
       set: { template: '<div></div>', styleUrl: undefined },
     });
     TestBed.overrideComponent(MultiSearchStringComponent, {
+      set: { template: '<div></div>', styleUrl: undefined },
+    });
+    TestBed.overrideComponent(ExcludedSearchTermInputComponent, {
       set: { template: '<div></div>', styleUrl: undefined },
     });
     await TestBed.compileComponents();
@@ -166,5 +180,37 @@ describe('SearchStringsPage', () => {
     component.ionViewWillEnter();
 
     expect(component.altRegionConfigs).toBeNull();
+  });
+
+  it('ionViewWillEnter seeds excludedSearchTerms from the current pokedexType', () => {
+    userSettings = {
+      ...userSettings,
+      pokedexType: 'mega',
+      excludedSearchTermsByPokedex: {
+        ...userSettings.excludedSearchTermsByPokedex,
+        mega: [{ kind: 'tag', value: 'Trade' }],
+      },
+    };
+
+    component.ionViewWillEnter();
+
+    expect(component.excludedSearchTerms).toEqual([{ kind: 'tag', value: 'Trade' }]);
+  });
+
+  it('excludedSearchTermsChanged persists the merged per-pokedex map and re-runs search string generation', () => {
+    userSettings = { ...userSettings, pokedexType: 'regular' };
+    component.ionViewWillEnter();
+    searchStringServiceFake.init.mockClear();
+
+    component.excludedSearchTermsChanged([{ kind: 'keyword', value: 'shadow' }]);
+
+    expect(component.excludedSearchTerms).toEqual([{ kind: 'keyword', value: 'shadow' }]);
+    expect(updateUserSettings).toHaveBeenCalledWith({
+      excludedSearchTermsByPokedex: {
+        ...DEFAULT_SETTINGS.excludedSearchTermsByPokedex,
+        regular: [{ kind: 'keyword', value: 'shadow' }],
+      },
+    });
+    expect(searchStringServiceFake.init).toHaveBeenCalled();
   });
 });

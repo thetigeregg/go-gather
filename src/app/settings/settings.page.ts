@@ -17,7 +17,7 @@ import {
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { download, share } from 'ionicons/icons';
-import { ExportBundle } from '@go-gather/shared';
+import { DEFAULT_SETTINGS, ExportBundle } from '@go-gather/shared';
 import { UserDataService } from '../core/services/user-data.service';
 import { ChipListInputComponent } from '../features/chip-list-input/chip-list-input.component';
 import { presentShareFile } from '../core/utils/share-file.util';
@@ -148,6 +148,8 @@ export class SettingsPage implements ViewWillEnter {
         excludedShinyNamePatterns: this.userDataService.getUserSettings().excludedShinyNamePatterns,
         userTags: this.userDataService.getUserSettings().userTags,
         presetQueries: this.userDataService.getUserSettings().presetQueries,
+        excludedSearchTermsByPokedex:
+          this.userDataService.getUserSettings().excludedSearchTermsByPokedex,
       };
     }
 
@@ -168,6 +170,13 @@ export class SettingsPage implements ViewWillEnter {
         excludedShinyNamePatterns: bundle.excludedShinyNamePatterns ?? [],
         userTags: bundle.userTags ?? [],
         presetQueries: bundle.presetQueries ?? [],
+        // Not `?? {}` — a partial/empty map isn't safe for downstream code
+        // (search-strings.page.ts, search-string.service.ts) that indexes
+        // it by the current pokedex type without a further fallback, so an
+        // older backup missing this field falls back to the full seeded
+        // defaults instead.
+        excludedSearchTermsByPokedex:
+          bundle.excludedSearchTermsByPokedex ?? DEFAULT_SETTINGS.excludedSearchTermsByPokedex,
       };
       /* eslint-enable @typescript-eslint/no-unnecessary-condition */
     }

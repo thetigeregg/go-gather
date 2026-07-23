@@ -13,7 +13,7 @@ import {
   IonAccordionGroup,
   ViewWillEnter,
 } from '@ionic/angular/standalone';
-import { PokedexType } from '@go-gather/shared';
+import { ExcludedSearchTerm, PokedexType } from '@go-gather/shared';
 import { SearchStringService } from '../core/services/search-string.service';
 import { UserDataService } from '../core/services/user-data.service';
 import { SearchConfigService } from '../core/services/search-config.service';
@@ -23,6 +23,7 @@ import {
   SearchStringConfig,
 } from '../features/search-string/search-string.component';
 import { MultiSearchStringComponent } from '../features/multi-search-string/multi-search-string.component';
+import { ExcludedSearchTermInputComponent } from '../features/excluded-search-term-input/excluded-search-term-input.component';
 
 const DEFAULT_LABELS: Record<PokedexType, string> = {
   regular: 'Default (Non-Shiny)',
@@ -62,6 +63,7 @@ const SHINY_LABELS: Record<PokedexType, string> = {
     IonAccordionGroup,
     SearchStringComponent,
     MultiSearchStringComponent,
+    ExcludedSearchTermInputComponent,
   ],
 })
 export class SearchStringsPage implements ViewWillEnter {
@@ -73,6 +75,7 @@ export class SearchStringsPage implements ViewWillEnter {
   shinyConfig: SearchStringConfig | null = null;
   genderConfigs: SearchStringConfig[] | null = null;
   altRegionConfigs: SearchStringConfig[] | null = null;
+  excludedSearchTerms: ExcludedSearchTerm[] = [];
 
   ionViewWillEnter(): void {
     this.defaultConfig = null;
@@ -80,6 +83,19 @@ export class SearchStringsPage implements ViewWillEnter {
     this.genderConfigs = null;
     this.altRegionConfigs = null;
 
+    const { pokedexType, excludedSearchTermsByPokedex } = this.userDataService.getUserSettings();
+    this.excludedSearchTerms = excludedSearchTermsByPokedex[pokedexType];
+
+    this.searchStringService.init();
+    this.createConfigs();
+  }
+
+  excludedSearchTermsChanged(entries: ExcludedSearchTerm[]): void {
+    const { pokedexType, excludedSearchTermsByPokedex } = this.userDataService.getUserSettings();
+    this.excludedSearchTerms = entries;
+    this.userDataService.updateUserSettings({
+      excludedSearchTermsByPokedex: { ...excludedSearchTermsByPokedex, [pokedexType]: entries },
+    });
     this.searchStringService.init();
     this.createConfigs();
   }

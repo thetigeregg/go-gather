@@ -36,10 +36,10 @@ bootstrapApplication(AppComponent, {
     // (matching go-gather-next's APP_INITIALIZER guarantee) always have data,
     // even if SyncService's first pull is still in flight. SearchConfigService
     // is included here too (rather than left as a side effect of gather.page's
-    // ngOnInit) so its `costumeGenderEnabled`/`implicitlyExcludedSearchTerms`
-    // are never read at their optimistic constructor defaults — that gap let
-    // /search-strings render the Costume Gender section incorrectly when
-    // reached without first visiting /tabs/gather in the same session.
+    // ngOnInit) so its `costumeGenderEnabled` is never read at its optimistic
+    // constructor default — that gap let /search-strings render the Costume
+    // Gender section incorrectly when reached without first visiting
+    // /tabs/gather in the same session.
     // CalendarFilterService doesn't actually touch STORAGE_ENGINE (it's
     // PreferenceStorageService-backed) but is included here too since the
     // calendar-filter-menu is mounted globally in app.component.html and

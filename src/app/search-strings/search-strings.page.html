@@ -47,4 +47,20 @@
       </ion-card-content>
     </ion-card>
   }
+
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Search Exclusions</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p class="settings-hint">
+        Tags, keywords, and sizes excluded by default from every generated search string for this
+        pokedex.
+      </p>
+      <app-excluded-search-term-input
+        [values]="excludedSearchTerms"
+        (valuesChange)="excludedSearchTermsChanged($event)"
+      ></app-excluded-search-term-input>
+    </ion-card-content>
+  </ion-card>
 </ion-content>

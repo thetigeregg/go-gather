@@ -135,6 +135,7 @@ describe('SettingsPage', () => {
         excludedShinyNamePatterns: [],
         userTags: [],
         presetQueries: [],
+        excludedSearchTermsByPokedex: DEFAULT_SETTINGS.excludedSearchTermsByPokedex,
       };
       exportBundleMock.mockReturnValue(bundle);
 
@@ -162,6 +163,7 @@ describe('SettingsPage', () => {
       excludedShinyNamePatterns: [],
       userTags: [],
       presetQueries: [],
+      excludedSearchTermsByPokedex: DEFAULT_SETTINGS.excludedSearchTermsByPokedex,
     });
 
     it('does nothing when the file picker is cancelled', async () => {

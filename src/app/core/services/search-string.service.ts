@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import {
   CatalogEntry,
-  ImplicitlyExcludedSearchTerm,
+  ExcludedSearchTerm,
   PokedexType,
   Region as RegionEnum,
 } from '@go-gather/shared';
@@ -17,7 +17,6 @@ import {
   term,
 } from '../search-engine/search-query.model';
 import { PokeDataService } from './poke-data.service';
-import { SearchConfigService } from './search-config.service';
 import { UserDataService } from './user-data.service';
 
 type Palette = 'default' | 'shiny';
@@ -77,13 +76,15 @@ function toSearchRegion(region: RegionEnum): SearchRegion {
 }
 
 /**
- * `ImplicitlyExcludedSearchTerm.value` is a plain `string` (it comes from
- * hand-edited JSON — sync-overrides.json), but `keyword`/`size` term kinds
- * are typed as string-literal unions (`SimpleKeyword`/`Size`) here — a named
- * cast per kind, same pattern as `toSearchRegion` above, rather than a
- * runtime validation layer, since this is trusted server-owned config.
+ * `ExcludedSearchTerm.value` is a plain `string` (it comes from user input
+ * via the Search Strings page's exclusion form), but `keyword`/`size` term
+ * kinds are typed as string-literal unions (`SimpleKeyword`/`Size`) here — a
+ * named cast per kind, same pattern as `toSearchRegion` above, rather than a
+ * runtime validation layer, since the UI only ever lets a user pick a
+ * keyword/size value from those closed lists (`SIMPLE_KEYWORDS`/`SIZES` in
+ * `search-term-catalog.ts`).
  */
-function toExclusionTerm(entry: ImplicitlyExcludedSearchTerm): SearchTerm {
+function toExclusionTerm(entry: ExcludedSearchTerm): SearchTerm {
   switch (entry.kind) {
     case 'tag':
       return { kind: 'tag', value: entry.value };
@@ -100,9 +101,9 @@ function toExclusionTerm(entry: ImplicitlyExcludedSearchTerm): SearchTerm {
 export class SearchStringService {
   private readonly userDataService = inject(UserDataService);
   private readonly pokeDataService = inject(PokeDataService);
-  private readonly searchConfigService = inject(SearchConfigService);
   private missingEntries: CatalogEntry[] = [];
   private pokedexType: PokedexType = 'regular';
+  private excludedSearchTerms: ExcludedSearchTerm[] = [];
 
   init(): void {
     const entryStates = this.userDataService.getAllEntryStates();
@@ -112,9 +113,11 @@ export class SearchStringService {
       excludedDexNumbers,
       excludedShinyDexNumbers,
       excludedShinyNamePatterns,
+      excludedSearchTermsByPokedex,
     } = this.userDataService.getUserSettings();
 
     this.pokedexType = pokedexType;
+    this.excludedSearchTerms = excludedSearchTermsByPokedex[pokedexType];
 
     const excludedPatterns = this.compileExcludedPatterns(excludedNamePatterns);
     const excludedShinyPatterns = this.compileExcludedPatterns(excludedShinyNamePatterns);
@@ -302,11 +305,11 @@ export class SearchStringService {
 
     // Excluding a `size` entry that matches the CURRENT pokedex type would
     // exclude every result (e.g. excluding `xxl` while generating a search
-    // string for the XXL pokedex itself) — skipped structurally here rather
-    // than being a configurable field on the entry, since it's the only
-    // pokedex type a given size term is ever self-defeating for.
-    const implicitExclusionTerms = this.searchConfigService.implicitlyExcludedSearchTerms
-      .filter((entry) => entry.enabled)
+    // string for the XXL pokedex itself) — skipped structurally here as a
+    // safety net even though the UI already seeds each pokedex type without
+    // its own matching size by default, since it's the only pokedex type a
+    // given size term is ever self-defeating for.
+    const implicitExclusionTerms = this.excludedSearchTerms
       .filter((entry) => !(entry.kind === 'size' && entry.value === pokedexTypeSize))
       .map((entry) => not(term(toExclusionTerm(entry))));
 

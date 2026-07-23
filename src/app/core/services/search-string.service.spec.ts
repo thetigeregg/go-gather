@@ -1,7 +1,12 @@
 import { TestBed } from '@angular/core/testing';
-import { CatalogEntry, DEFAULT_SETTINGS, UserSettings } from '@go-gather/shared';
+import {
+  CatalogEntry,
+  DEFAULT_SETTINGS,
+  ExcludedSearchTerm,
+  PokedexType,
+  UserSettings,
+} from '@go-gather/shared';
 import { PokeDataService } from './poke-data.service';
-import { SearchConfigService } from './search-config.service';
 import { SearchStringService } from './search-string.service';
 import { UserDataService } from './user-data.service';
 
@@ -30,18 +35,32 @@ function makeEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
   };
 }
 
+/** No seeded default exclusions (Trade/2x Transfer/shadow/xxl/xxs) for any
+ * pokedex type — most tests want a clean baseline and opt into specific
+ * exclusions themselves, same as this file's pre-existing empty-array
+ * default for the old global mechanism. */
+function emptyExclusionsByPokedex(): Record<PokedexType, ExcludedSearchTerm[]> {
+  return {
+    regular: [],
+    mega: [],
+    max: [],
+    dmax: [],
+    costume: [],
+    xxl: [],
+    xxs: [],
+  };
+}
+
 describe('SearchStringService', () => {
   let catalog: CatalogEntry[];
   let entryStates: Map<string, boolean>;
   let settings: UserSettings;
-  let implicitlyExcludedSearchTerms: { kind: string; value: string; enabled: boolean }[];
   let service: SearchStringService;
 
   beforeEach(() => {
     catalog = [];
     entryStates = new Map();
-    settings = { ...DEFAULT_SETTINGS };
-    implicitlyExcludedSearchTerms = [];
+    settings = { ...DEFAULT_SETTINGS, excludedSearchTermsByPokedex: emptyExclusionsByPokedex() };
 
     TestBed.configureTestingModule({
       providers: [
@@ -59,14 +78,6 @@ describe('SearchStringService', () => {
           useValue: {
             getAllEntryStates: () => new Map(entryStates),
             getUserSettings: () => settings,
-          },
-        },
-        {
-          provide: SearchConfigService,
-          useValue: {
-            get implicitlyExcludedSearchTerms() {
-              return implicitlyExcludedSearchTerms;
-            },
           },
         },
       ],
@@ -136,15 +147,30 @@ describe('SearchStringService', () => {
     expect(regionStrings.has('galar')).toBe(false);
   });
 
-  it('applies enabled implicit exclusion terms from SearchConfigService', () => {
+  it("applies the current pokedex type's custom excluded search terms", () => {
     catalog = [makeEntry()];
-    implicitlyExcludedSearchTerms = [
-      { kind: 'keyword', value: 'shadow', enabled: true },
-      { kind: 'keyword', value: 'lucky', enabled: false },
-    ];
+    settings.excludedSearchTermsByPokedex.regular = [{ kind: 'keyword', value: 'shadow' }];
     service.init();
 
     expect(service.getDefaultSearchString()).toBe('!shiny&+bulbasaur&!#Living Dex&!shadow');
+  });
+
+  it("does not leak one pokedex type's custom exclusions into another", () => {
+    catalog = [makeEntry({ pokedexType: 'max' })];
+    settings = { ...settings, pokedexType: 'max' };
+    settings.excludedSearchTermsByPokedex.regular = [{ kind: 'keyword', value: 'shadow' }];
+    service.init();
+
+    expect(service.getDefaultSearchString()).toBe('!shiny&+bulbasaur&gigantamax&!#GMax');
+  });
+
+  it('skips a size exclusion that matches the CURRENT pokedex type, to avoid excluding every result', () => {
+    catalog = [makeEntry({ pokedexType: 'xxl' })];
+    settings = { ...settings, pokedexType: 'xxl' };
+    settings.excludedSearchTermsByPokedex.xxl = [{ kind: 'size', value: 'xxl' }];
+    service.init();
+
+    expect(service.getDefaultSearchString()).toBe('!shiny&+bulbasaur&xxl&!#[XXL]');
   });
 
   it('silently ignores an invalid excluded-name regex pattern', () => {

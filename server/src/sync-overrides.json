@@ -1,5 +1,5 @@
 {
-  "_readme": "Hand-edited config for known gaps in pokemon-go-api's upstream data that npm run sync patches in from PokeAPI. Edit freely — this file is read fresh on every sync, no code changes or redeploy needed. Note on releasedDynamaxDexNumbers specifically: unlike Gigantamax, Dynamax has no distinct sprite or per-species flag in pokemon-go-api OR PokeAPI (it's a universal mainline-game mechanic with no unique art) — entries here just mark a species as eligible for a DMax Pokedex entry that reuses its existing Regular sprite, no network fetch involved. dmaxOnlyFinalEvolution (applies to both releasedDynamaxDexNumbers AND formSplitDynamaxDexNumbers, not Gigantamax): when true, a listed species is silently skipped unless it's the final stage of its evolution line (pokemon-go-api's own evolutions: [] signal) — e.g. Bulbasaur/Ivysaur produce no DMax entry, only Venusaur does. Does NOT auto-redirect a mid-chain entry to its final form; list the final-form species itself to get its DMax entry. Set false to include every listed stage, matching pre-flag behavior. implicitlyExcludedSearchTerms: built-in Pokemon GO search keywords/sizes/tags that generated search strings exclude by default so the app doesn't suggest catching Pokemon the user isn't looking for (moved here from a hardcoded TypeScript constant so every implicit exclusion lives in one configurable place). Each entry has kind ('keyword'|'size'|'tag'), value, and enabled — set enabled:false to stop excluding that term. Served live to the frontend via GET /api/search-config (not baked into the synced catalog), so editing this list and refreshing the app takes effect immediately, no npm run sync needed. A 'size' entry (xxl/xxs) is automatically skipped when generating a search string for that exact matching pokedex type (e.g. xxl is never excluded on the XXL pokedex itself) — this exception is structural/hardcoded in SearchStringService, not a field in this list. regionFormAssetBackfill: species where pokemon-go-api has null assets for BOTH the base species AND every one of its regionForms (Squawkabilly, Wishiwashi, Silvally, Minior, Mimikyu, Magearna, Eiscue, Calyrex, Palafin, Koraidon, Miraidon) — entirely absent from the catalog otherwise, unlike missingAssetLinkDexNumbers/backfillMissingAssetsFromPokeApi which deliberately skip any species with regionForms (to avoid the Unown/Burmy/Wormadam duplicate-row bug). Each entry maps a specific regionForms key to an exact PokeAPI variety slug — hand-specified, not derived mechanically, since the mapping isn't uniform (Silvally's 17 types all share ONE PokeAPI sprite since no per-type art exists; Koraidon/Miraidon's GO-exclusive raid forms have no PokeAPI equivalent at all and fall back to the base sprite; Minior maps to PokeAPI's colored Core variety, not the generic rocky Meteor shell variety; Squawkabilly/Wishiwashi/Mimikyu/Eiscue/Palafin map cleanly but still need PokeAPI's exact slug spelling, which isn't always a mechanical lowercase of pokemon-go-api's own form name — e.g. Squawkabilly's colors need a trailing '-plumage'). regionFormNameOverrides: corrects known-wrong names.English values on specific regionForms — confirmed pokemon-go-api data bugs, not something transform.ts's existing genericName fallback catches. costumeGenderEnabled: controls whether the Costume Dex treats gendered costume pairs as two entries at all — both in the main grid (a female costume card is hidden, same as the existing 'Gender Forms' toggle but scoped just to the Costume pokedexType) and in the Search Strings dialog (hides the Male/Female breakdown section, in addition to Default/Shiny). Unlike Mega/GMax/DMax/XXL/XXS, costume entries sometimes come in real male/female pairs (see transform.ts's findGenderedFormKeys), so this is opt-out rather than structurally absent. Served live to the frontend via GET /api/search-config, same as implicitlyExcludedSearchTerms — no npm run sync needed to change it.",
+  "_readme": "Hand-edited config for known gaps in pokemon-go-api's upstream data that npm run sync patches in from PokeAPI. Edit freely — this file is read fresh on every sync, no code changes or redeploy needed. Note on releasedDynamaxDexNumbers specifically: unlike Gigantamax, Dynamax has no distinct sprite or per-species flag in pokemon-go-api OR PokeAPI (it's a universal mainline-game mechanic with no unique art) — entries here just mark a species as eligible for a DMax Pokedex entry that reuses its existing Regular sprite, no network fetch involved. dmaxOnlyFinalEvolution (applies to both releasedDynamaxDexNumbers AND formSplitDynamaxDexNumbers, not Gigantamax): when true, a listed species is silently skipped unless it's the final stage of its evolution line (pokemon-go-api's own evolutions: [] signal) — e.g. Bulbasaur/Ivysaur produce no DMax entry, only Venusaur does. Does NOT auto-redirect a mid-chain entry to its final form; list the final-form species itself to get its DMax entry. Set false to include every listed stage, matching pre-flag behavior. regionFormAssetBackfill: species where pokemon-go-api has null assets for BOTH the base species AND every one of its regionForms (Squawkabilly, Wishiwashi, Silvally, Minior, Mimikyu, Magearna, Eiscue, Calyrex, Palafin, Koraidon, Miraidon) — entirely absent from the catalog otherwise, unlike missingAssetLinkDexNumbers/backfillMissingAssetsFromPokeApi which deliberately skip any species with regionForms (to avoid the Unown/Burmy/Wormadam duplicate-row bug). Each entry maps a specific regionForms key to an exact PokeAPI variety slug — hand-specified, not derived mechanically, since the mapping isn't uniform (Silvally's 17 types all share ONE PokeAPI sprite since no per-type art exists; Koraidon/Miraidon's GO-exclusive raid forms have no PokeAPI equivalent at all and fall back to the base sprite; Minior maps to PokeAPI's colored Core variety, not the generic rocky Meteor shell variety; Squawkabilly/Wishiwashi/Mimikyu/Eiscue/Palafin map cleanly but still need PokeAPI's exact slug spelling, which isn't always a mechanical lowercase of pokemon-go-api's own form name — e.g. Squawkabilly's colors need a trailing '-plumage'). regionFormNameOverrides: corrects known-wrong names.English values on specific regionForms — confirmed pokemon-go-api data bugs, not something transform.ts's existing genericName fallback catches. costumeGenderEnabled: controls whether the Costume Dex treats gendered costume pairs as two entries at all — both in the main grid (a female costume card is hidden, same as the existing 'Gender Forms' toggle but scoped just to the Costume pokedexType) and in the Search Strings dialog (hides the Male/Female breakdown section, in addition to Default/Shiny). Unlike Mega/GMax/DMax/XXL/XXS, costume entries sometimes come in real male/female pairs (see transform.ts's findGenderedFormKeys), so this is opt-out rather than structurally absent. Served live to the frontend via GET /api/search-config — no npm run sync needed to change it.",
   "missingAssetLinkDexNumbers": [
     {
       "dexNr": 807,
@@ -687,38 +687,6 @@
       "name": "Urshifu",
       "forms": ["SINGLE_STRIKE", "RAPID_STRIKE"],
       "notes": "Dynamax Urshifu is separately listed for Single Strike Style and Rapid Strike Style (Pokemon GO Hub's list carries distinct URSHIFU_SINGLE_STRIKE/URSHIFU_RAPID_STRIKE entries) — split into one DMax entry per form, each reusing that form's own regular sprite (Dynamax has no distinct art of its own)."
-    }
-  ],
-  "implicitlyExcludedSearchTerms": [
-    {
-      "kind": "tag",
-      "value": "Trade",
-      "enabled": true,
-      "notes": "Pokemon earmarked for trading shouldn't be suggested as targets to go catch more of."
-    },
-    {
-      "kind": "tag",
-      "value": "2x Transfer",
-      "enabled": true,
-      "notes": "Same reasoning as Trade."
-    },
-    {
-      "kind": "keyword",
-      "value": "shadow",
-      "enabled": true,
-      "notes": "Shadow Pokemon aren't caught via normal means (Team Rocket encounters), so suggesting them as catch targets doesn't make sense for a regular search string."
-    },
-    {
-      "kind": "size",
-      "value": "xxl",
-      "enabled": true,
-      "notes": "Excluded by default so a regular/mega/etc. search string doesn't get diluted by size-specific results. Automatically NOT excluded when generating a search string for the XXL pokedex itself, where excluding xxl would exclude every result — this self-exception is structural/hardcoded, not configurable here."
-    },
-    {
-      "kind": "size",
-      "value": "xxs",
-      "enabled": true,
-      "notes": "Same reasoning as xxl, for the XXS pokedex."
     }
   ],
   "regionFormAssetBackfill": [

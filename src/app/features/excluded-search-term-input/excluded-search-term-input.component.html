@@ -1,0 +1,52 @@
+<div class="excluded-search-term-draft">
+  <ion-item>
+    <ion-select label="Kind" labelPlacement="stacked" [(ngModel)]="draftKind">
+      <ion-select-option value="tag">Tag</ion-select-option>
+      <ion-select-option value="keyword">Keyword</ion-select-option>
+      <ion-select-option value="size">Size</ion-select-option>
+    </ion-select>
+  </ion-item>
+
+  @switch (draftKind) {
+    @case ('tag') {
+      <ion-item>
+        <ion-input
+          label="Value"
+          labelPlacement="stacked"
+          placeholder="Tag name..."
+          [(ngModel)]="draftTagValue"
+          (keyup.enter)="addFromDraft()"
+        ></ion-input>
+      </ion-item>
+    }
+    @case ('keyword') {
+      <ion-item>
+        <ion-select label="Value" labelPlacement="stacked" [(ngModel)]="draftKeywordValue">
+          @for (keyword of simpleKeywords; track keyword) {
+            <ion-select-option [value]="keyword">{{ keyword }}</ion-select-option>
+          }
+        </ion-select>
+      </ion-item>
+    }
+    @case ('size') {
+      <ion-item>
+        <ion-select label="Value" labelPlacement="stacked" [(ngModel)]="draftSizeValue">
+          @for (size of sizes; track size) {
+            <ion-select-option [value]="size">{{ size }}</ion-select-option>
+          }
+        </ion-select>
+      </ion-item>
+    }
+  }
+
+  <ion-button fill="outline" (click)="addFromDraft()">Add</ion-button>
+</div>
+
+<div class="chip-list">
+  @for (entry of values; track $index; let i = $index) {
+    <ion-chip>
+      {{ entry.kind }}: {{ entry.value }}
+      <ion-icon name="close-circle" (click)="removeAt(i)"></ion-icon>
+    </ion-chip>
+  }
+</div>
