@@ -159,3 +159,29 @@
 - 7790669 feat(calendar): implement CalendarEventsService for managing calendar events
 - 751f5d6 feat(calendar): port calendar domain model types from pogo-cal and update shared exports
 - f5b608a feat(calendar): add calendar migration checklist and domain models for event types
+
+## v0.7.0 - 2026-07-23
+
+- 0b46992 feat(firebase): update marketing version to 0.5.0
+- c209e8a feat(docs): update NAS deployment
+- 7bc7205 feat(docs): update NAS deployment documentation for calendar-event push notifications
+- 9ab5d6b feat(notifications): add FCM push notifications for calendar events
+- 548190e feat(timeline): show season daily bonuses as individual timeline rows
+- 4dc9f22 fix(styles): correct margin-bottom value in season-section style feat(calendar): enhance onWillOpen method to refresh hidden events feat(calendar): update hiddenEvents logic to use formatted event names
+- fe79dd1 fix(styles): adjust margin-bottom for extra-block, season-section
+- e397081 fix(styles): update background color mixing and default color
+- 1b8f7d3 feat(calendar): replace IonSelect with IonSegment for view selection and remove unused styles
+- abd49f7 feat(styles): enhance season section styling with padding, border-radius, and background color
+- 80f02e9 feat(styles): enhance layout of season sections with improved margins and flex properties
+- 14d5e65 feat(event-detail): enhance event detail layout with spotlight bonus icons and improved styling
+- 71bcb48 fix(styles): adjust border-radius for single-day event bars and clean up styles
+- 957b2fe fix(styles): remove absolute positioning from host in multi-day event bar
+- 1c222cb fix(toast): update toast message from "Hidden" to "Hid" for consistency
+- eba2305 feat(styles): enhance layout of extra block and footer buttons with margin and gap adjustments
+- f35490e feat: update .gitignore to exclude server-side user-data backups and add .gitkeep
+- 173dbc6 feat: implement custom excluded search terms for each pokedex type
+- 18ebc0f feat(gather): match +<name> family search by prefix
+- 23c9d52 feat(server): write user-data backups on startup and after N catch changes
+- 130053e feat(server): sync data feeds automatically on startup and interval
+- bfc621b feat(calendar): add per-event hide button to detail modal and timeline
+- 8970c23 feat(gather): support +<name> family search in searchbar
