@@ -185,3 +185,7 @@
 - 130053e feat(server): sync data feeds automatically on startup and interval
 - bfc621b feat(calendar): add per-event hide button to detail modal and timeline
 - 8970c23 feat(gather): support +<name> family search in searchbar
+
+## v0.8.0 - 2026-07-23
+
+- 00cd043 feat(docker): update secrets volume configuration to use bind mount
