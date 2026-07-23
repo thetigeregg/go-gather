@@ -153,7 +153,7 @@ describe('EventDetailComponent', () => {
 
       expect(fakeCalendarFilterService.hideEventById).toHaveBeenCalledWith('event-1');
       expect(fakeToastController.create).toHaveBeenCalledWith(
-        expect.objectContaining({ message: 'Hidden "Test & Event"' })
+        expect.objectContaining({ message: 'Hid "Test & Event"' })
       );
       expect(fakeToastController.present).toHaveBeenCalled();
       expect(emitSpy).toHaveBeenCalled();

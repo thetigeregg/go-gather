@@ -233,7 +233,7 @@ export class TimelineEventComponent {
     this.calendarFilterService.hideEventById(eventID);
 
     const toast = await this.toastController.create({
-      message: `Hidden "${this.displayName}"`,
+      message: `Hid "${this.displayName}"`,
       duration: HIDE_TOAST_DURATION_MS,
       position: 'bottom',
       buttons: [
