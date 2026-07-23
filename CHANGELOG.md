@@ -217,3 +217,7 @@
 ## v0.12.0 - 2026-07-23
 
 - d0b3a98 feat(user-data): backfill missing fields in loadSettings for pre-upgrade settings
+
+## v0.12.1 - 2026-07-23
+
+- 7158d10 fix(timeline-category): add bottom border to hidden indicator for better visibility
