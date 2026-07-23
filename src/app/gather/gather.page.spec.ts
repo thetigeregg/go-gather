@@ -182,10 +182,12 @@ describe('GatherPage', () => {
       );
     });
 
-    it('does not fall back to a plain substring match on the family term', () => {
+    it('matches a partial prefix, pulling in the whole family', () => {
       component.onSearchChange('+bulba');
 
-      expect(component.visibleGenerations).toEqual([]);
+      expect(component.visibleGenerations[0].speciesList.map((group) => group.speciesName)).toEqual(
+        ['Bulbasaur', 'Ivysaur']
+      );
     });
 
     it('falls back to an exact match when the name is not a recognized species', () => {

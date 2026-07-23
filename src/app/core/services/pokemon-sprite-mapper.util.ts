@@ -48,35 +48,41 @@ export function getPokemonId(name: string): number | null {
   return getNormalizedNameToIdIndex().get(normalizedInput) ?? null;
 }
 
-// Same lazy-cached reverse-index pattern as getNormalizedNameToIdIndex()
-// above, built from POKEMON_FAMILY_ID instead of POKEMON_NAME_TO_ID.
-let normalizedFamilyIndex: Map<string, number> | null = null;
+// Same lazy-cached-once reasoning as getNormalizedNameToIdIndex() above —
+// POKEMON_FAMILY_ID is a static ~1000-entry constant, so normalizing every
+// name is worth doing exactly once rather than on every getFamilyMemberNames()
+// call (a prefix search, unlike getPokemonId's exact lookup, can't collapse
+// to a single Map.get() and needs to scan these pairs on every call, but a
+// ~1000-entry .filter() is still sub-millisecond per keystroke).
+let normalizedFamilyEntries: [string, number][] | null = null;
 
-function getNormalizedFamilyIndex(): Map<string, number> {
-  normalizedFamilyIndex ??= new Map(
-    Object.entries(POKEMON_FAMILY_ID).map(([name, id]) => [normalizePokemonName(name), id])
+function getNormalizedFamilyEntries(): [string, number][] {
+  normalizedFamilyEntries ??= Object.entries(POKEMON_FAMILY_ID).map(
+    ([name, id]) => [normalizePokemonName(name), id] as [string, number]
   );
-  return normalizedFamilyIndex;
+  return normalizedFamilyEntries;
 }
 
-/** Every species sharing an evolutionary line with `name` (normalized), e.g.
- * "pikachu" -> {pichu, pikachu, raichu}. Falls back to a single-member set
- * containing just the normalized input when the name isn't recognized, so
- * an unmatched search behaves like an exact match rather than matching
- * everything or nothing. */
-export function getFamilyMemberNames(name: string): Set<string> {
-  const normalizedInput = normalizePokemonName(name);
-  const familyId = getNormalizedFamilyIndex().get(normalizedInput);
+/** Every species belonging to a family that has at least one member whose
+ * name starts with `term` (normalized), e.g. "pikachu" -> {pichu, pikachu,
+ * raichu}, or a short prefix like "bu" -> the union of every family with a
+ * matching member (Bulbasaur's, Burmy's, Bunnelby's, etc). Falls back to a
+ * single-member set containing just the normalized input when nothing
+ * matches, so an unrecognized/empty search behaves like an exact match
+ * rather than matching everything or nothing. */
+export function getFamilyMemberNames(term: string): Set<string> {
+  const normalizedTerm = normalizePokemonName(term);
+  const entries = getNormalizedFamilyEntries();
 
-  if (familyId === undefined) {
-    return new Set([normalizedInput]);
+  const matchingFamilyIds = new Set(
+    entries.filter(([name]) => name.startsWith(normalizedTerm)).map(([, id]) => id)
+  );
+
+  if (matchingFamilyIds.size === 0) {
+    return new Set([normalizedTerm]);
   }
 
-  return new Set(
-    Object.entries(POKEMON_FAMILY_ID)
-      .filter(([, id]) => id === familyId)
-      .map(([speciesName]) => normalizePokemonName(speciesName))
-  );
+  return new Set(entries.filter(([, id]) => matchingFamilyIds.has(id)).map(([name]) => name));
 }
 
 export function isValidStaticSprite(spriteName: string): boolean {

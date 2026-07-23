@@ -64,6 +64,18 @@ describe('getFamilyMemberNames', () => {
   it('falls back to a single-member set of the normalized input for an unknown name', () => {
     expect(getFamilyMemberNames('Not A Real Pokemon')).toEqual(new Set(['not a real pokemon']));
   });
+
+  it('unions every family with a member matching a short prefix', () => {
+    const result = getFamilyMemberNames('bu');
+
+    // Bulbasaur's family and Burmy's family are distinct evolutionary
+    // lines, both with a member starting with "bu" - a short prefix should
+    // pull in every such family, not just the first match.
+    for (const name of ['bulbasaur', 'ivysaur', 'venusaur', 'burmy', 'mothim', 'wormadam']) {
+      expect(result.has(name)).toBe(true);
+    }
+    expect(result.has('charmander')).toBe(false);
+  });
 });
 
 describe('isValidStaticSprite', () => {
