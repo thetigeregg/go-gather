@@ -32,6 +32,7 @@ export const INFO_PLIST_KEY_ORDER = [
   'LSRequiresIPhoneOS',
   'NSLocalNetworkUsageDescription',
   'NSAppTransportSecurity',
+  'UIBackgroundModes',
   'UILaunchStoryboardName',
   'UIMainStoryboardFile',
   'UIRequiredDeviceCapabilities',

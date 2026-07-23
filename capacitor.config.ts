@@ -26,6 +26,9 @@ const config: CapacitorConfig = {
       readyTimeout: 10000,
       publicKey: readLiveUpdatePublicKey(),
     },
+    FirebaseMessaging: {
+      presentationOptions: ['badge', 'sound', 'alert'],
+    },
   },
 };
 

@@ -2,11 +2,9 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, Subject, from, map, tap } from 'rxjs';
 import { EVENT_TYPES } from '@go-gather/shared';
 import { PreferenceStorageService } from '../storage/preference-storage.service';
+import { UserDataService } from './user-data.service';
 
 const PREFERENCE_KEY = 'calendarFilterState';
-
-/** Denylist defaults ported verbatim from pogo-cal's src/stores/eventFilter.ts. */
-const DEFAULT_DISABLED_EVENT_TYPES: readonly string[] = ['go-pass', 'season'];
 
 export interface CalendarFilterState {
   disabledEventTypes: string[];
@@ -14,69 +12,84 @@ export interface CalendarFilterState {
   filtersApplyToTimeline: boolean;
 }
 
-function defaultFilterState(): CalendarFilterState {
-  return {
-    disabledEventTypes: [...DEFAULT_DISABLED_EVENT_TYPES],
-    hiddenEventIds: [],
-    filtersApplyToTimeline: false,
-  };
+/** The only part of CalendarFilterState still persisted device-locally —
+ * disabledEventTypes/hiddenEventIds moved to UserSettings (synced,
+ * backend-authoritative) so the server-side notification scheduler can
+ * filter events out before sending a push; a push can't be recalled once
+ * delivered. filtersApplyToTimeline is a pure UI display toggle with no
+ * server-side relevance, so it stays here. */
+interface LocalFilterState {
+  filtersApplyToTimeline: boolean;
 }
 
-/** True only when `value` looks like a well-formed CalendarFilterState — a
- * corrupt/partial stored blob falls back to defaultFilterState() rather than
- * being trusted as-is, matching pogo-cal's own try/catch-to-[] serializer. */
-function isValidFilterState(value: unknown): value is CalendarFilterState {
+function defaultLocalFilterState(): LocalFilterState {
+  return { filtersApplyToTimeline: false };
+}
+
+/** True only when `value` looks like a well-formed LocalFilterState — a
+ * corrupt/partial stored blob falls back to defaultLocalFilterState()
+ * rather than being trusted as-is. */
+function isValidLocalFilterState(value: unknown): value is LocalFilterState {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
-  const candidate = value as Partial<CalendarFilterState>;
-  return (
-    Array.isArray(candidate.disabledEventTypes) &&
-    Array.isArray(candidate.hiddenEventIds) &&
-    typeof candidate.filtersApplyToTimeline === 'boolean'
-  );
+  const candidate = value as Partial<LocalFilterState>;
+  return typeof candidate.filtersApplyToTimeline === 'boolean';
 }
 
 /**
- * Ported from pogo-cal's src/stores/eventFilter.ts (event-type denylist +
- * per-event hide list) plus its calendarSettings store's
- * filtersApplyToTimeline flag (folded in here rather than a second service —
- * one boolean didn't warrant its own store). Persisted via
- * PreferenceStorageService rather than a StorageEngine scope — small,
- * per-device, UI-chrome-shaped state, not synced domain data.
- *
- * Shape mirrors UserDataService: in-memory field + Subject, not
- * StorageEngine-backed like PokeDataService (this is the first real
- * consumer of PreferenceStorageService).
+ * Event-type denylist + per-event hide list (`disabledEventTypes`/
+ * `hiddenEventIds`) are backed by `UserDataService`/`UserSettings` — synced,
+ * backend-authoritative, so the server can filter hidden/disabled events out
+ * before sending a calendar-event push notification. `filtersApplyToTimeline`
+ * remains device-local via `PreferenceStorageService`, since it's a display
+ * toggle with no server-side meaning.
  */
 @Injectable({ providedIn: 'root' })
 export class CalendarFilterService {
   private readonly preferenceStorage = inject(PreferenceStorageService);
-  private state: CalendarFilterState = defaultFilterState();
+  private readonly userDataService = inject(UserDataService);
+  private localState: LocalFilterState = defaultLocalFilterState();
   private readonly _filterChange$ = new Subject<CalendarFilterState>();
 
-  /** Hydrates state from PreferenceStorageService. Awaited by an app
-   * initializer in main.ts — the filter menu is mounted globally and should
-   * reflect real persisted state the instant it's opened. */
+  constructor() {
+    // Re-emit on this service's own change stream whenever the migrated
+    // fields change via UserDataService, so existing subscribers (calendar/
+    // timeline components) don't need to change their subscription target.
+    this.userDataService.listenForUserSettingsChanges().subscribe(() => {
+      this._filterChange$.next(this.getFilterState());
+    });
+  }
+
+  /** Hydrates the local-only part of state from PreferenceStorageService.
+   * Awaited by an app initializer in main.ts alongside
+   * UserDataService.loadSettings() — the filter menu is mounted globally and
+   * should reflect real persisted state the instant it's opened. */
   loadFilterState(): Observable<CalendarFilterState> {
     return from(this.preferenceStorage.getItem(PREFERENCE_KEY)).pipe(
       map((raw) => {
         if (!raw) {
-          return defaultFilterState();
+          return defaultLocalFilterState();
         }
         try {
           const parsed: unknown = JSON.parse(raw);
-          return isValidFilterState(parsed) ? parsed : defaultFilterState();
+          return isValidLocalFilterState(parsed) ? parsed : defaultLocalFilterState();
         } catch {
-          return defaultFilterState();
+          return defaultLocalFilterState();
         }
       }),
-      tap((state) => (this.state = state))
+      tap((state) => (this.localState = state)),
+      map(() => this.getFilterState())
     );
   }
 
   getFilterState(): CalendarFilterState {
-    return this.state;
+    const settings = this.userDataService.getUserSettings();
+    return {
+      disabledEventTypes: settings.disabledEventTypes,
+      hiddenEventIds: settings.hiddenEventIds,
+      filtersApplyToTimeline: this.localState.filtersApplyToTimeline,
+    };
   }
 
   listenForFilterChanges(): Observable<CalendarFilterState> {
@@ -84,11 +97,11 @@ export class CalendarFilterService {
   }
 
   isEventTypeEnabled(eventType: string): boolean {
-    return !this.state.disabledEventTypes.includes(eventType);
+    return !this.userDataService.getUserSettings().disabledEventTypes.includes(eventType);
   }
 
   isEventHiddenById(eventId: string): boolean {
-    return this.state.hiddenEventIds.includes(eventId);
+    return this.userDataService.getUserSettings().hiddenEventIds.includes(eventId);
   }
 
   /** Combined visibility check — the one predicate calendar/timeline-view
@@ -108,57 +121,63 @@ export class CalendarFilterService {
   }
 
   enableEventType(eventType: string): void {
-    this.updateState({
-      disabledEventTypes: this.state.disabledEventTypes.filter((type) => type !== eventType),
-    });
+    const disabledEventTypes = this.userDataService
+      .getUserSettings()
+      .disabledEventTypes.filter((type) => type !== eventType);
+    this.updateDisabledEventTypes(disabledEventTypes);
   }
 
   disableEventType(eventType: string): void {
-    if (this.state.disabledEventTypes.includes(eventType)) {
+    const current = this.userDataService.getUserSettings().disabledEventTypes;
+    if (current.includes(eventType)) {
       return;
     }
-    this.updateState({
-      disabledEventTypes: [...this.state.disabledEventTypes, eventType],
-    });
+    this.updateDisabledEventTypes([...current, eventType]);
   }
 
   enableAllEventTypes(): void {
-    this.updateState({ disabledEventTypes: [] });
+    this.updateDisabledEventTypes([]);
   }
 
   disableAllEventTypes(): void {
-    this.updateState({ disabledEventTypes: Object.keys(EVENT_TYPES) });
+    this.updateDisabledEventTypes(Object.keys(EVENT_TYPES));
   }
 
   hideEventById(eventId: string): void {
-    if (this.state.hiddenEventIds.includes(eventId)) {
+    const current = this.userDataService.getUserSettings().hiddenEventIds;
+    if (current.includes(eventId)) {
       return;
     }
-    this.updateState({ hiddenEventIds: [...this.state.hiddenEventIds, eventId] });
+    this.updateHiddenEventIds([...current, eventId]);
   }
 
   showEventById(eventId: string): void {
-    this.updateState({
-      hiddenEventIds: this.state.hiddenEventIds.filter((id) => id !== eventId),
-    });
+    const hiddenEventIds = this.userDataService
+      .getUserSettings()
+      .hiddenEventIds.filter((id) => id !== eventId);
+    this.updateHiddenEventIds(hiddenEventIds);
   }
 
   showAllHiddenEvents(): void {
-    this.updateState({ hiddenEventIds: [] });
+    this.updateHiddenEventIds([]);
   }
 
   setFiltersApplyToTimeline(value: boolean): void {
-    this.updateState({ filtersApplyToTimeline: value });
-  }
-
-  private updateState(partial: Partial<CalendarFilterState>): void {
-    this.state = { ...this.state, ...partial };
-    this._filterChange$.next(this.state);
+    this.localState = { ...this.localState, filtersApplyToTimeline: value };
+    this._filterChange$.next(this.getFilterState());
 
     this.preferenceStorage
-      .setItem(PREFERENCE_KEY, JSON.stringify(this.state))
+      .setItem(PREFERENCE_KEY, JSON.stringify(this.localState))
       .catch((err: unknown) => {
         console.error('Failed to save calendar filter state', err);
       });
+  }
+
+  private updateDisabledEventTypes(disabledEventTypes: string[]): void {
+    this.userDataService.updateUserSettings({ disabledEventTypes });
+  }
+
+  private updateHiddenEventIds(hiddenEventIds: string[]): void {
+    this.userDataService.updateUserSettings({ hiddenEventIds });
   }
 }

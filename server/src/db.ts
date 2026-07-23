@@ -61,7 +61,12 @@ export function initSchema(): void {
       excluded_shiny_name_patterns TEXT NOT NULL,
       user_tags TEXT NOT NULL,
       preset_queries TEXT NOT NULL,
-      excluded_search_terms_by_pokedex TEXT NOT NULL
+      excluded_search_terms_by_pokedex TEXT NOT NULL,
+      hidden_event_ids TEXT NOT NULL DEFAULT '[]',
+      disabled_event_types TEXT NOT NULL DEFAULT '["go-pass","season"]',
+      notifications_enabled INTEGER NOT NULL DEFAULT 0,
+      notification_timed_event_offset_minutes INTEGER NOT NULL DEFAULT 15,
+      notification_all_day_event_time TEXT NOT NULL DEFAULT '09:00'
     );
 
     -- Local-first sync support (adapted from game-shelf's Postgres
@@ -122,6 +127,35 @@ export function initSchema(): void {
       id INTEGER PRIMARY KEY CHECK (id = 1),
       payload TEXT NOT NULL
     );
+
+    -- FCM device registrations for calendar-event push notifications. No
+    -- userId/deviceId concept exists elsewhere in this schema (single-user
+    -- app) — a "device" IS a token row; multiple rows exist only because one
+    -- user may have this app installed on more than one device.
+    CREATE TABLE IF NOT EXISTS fcm_tokens (
+      token TEXT PRIMARY KEY,
+      platform TEXT NOT NULL,
+      is_active INTEGER NOT NULL DEFAULT 1,
+      timezone TEXT,
+      app_version TEXT,
+      user_agent TEXT,
+      last_seen_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    -- Reservation/idempotency log for the notification scheduler (mirrors
+    -- game-shelf's release_notification_log pattern) — one row reserved
+    -- BEFORE a push send is attempted, per (event, category) pair, so a
+    -- scheduler restart/re-run never double-sends.
+    CREATE TABLE IF NOT EXISTS notification_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      event_id TEXT NOT NULL,
+      category TEXT NOT NULL CHECK (category IN ('timed', 'all-day')),
+      event_key TEXT NOT NULL UNIQUE,
+      sent_count INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL
+    );
   `);
 
   // `CREATE TABLE IF NOT EXISTS` above is a no-op against a pre-existing
@@ -148,6 +182,37 @@ export function initSchema(): void {
     ).run({ value: JSON.stringify(DEFAULT_SETTINGS.excludedSearchTermsByPokedex) });
   }
 
+  // Same rationale as above, for a pre-existing gogather.db from before
+  // calendar-event push notifications were introduced. hidden_event_ids
+  // needs no backfill ('[]' is correct for every existing install, since
+  // this state never existed server-side before); disabled_event_types is
+  // backfilled to match DEFAULT_SETTINGS so upgrading users keep the same
+  // event types they already had hidden from the calendar/timeline view.
+  if (!settingsColumns.some((c) => c.name === 'hidden_event_ids')) {
+    db.exec(`ALTER TABLE user_settings ADD COLUMN hidden_event_ids TEXT NOT NULL DEFAULT '[]'`);
+  }
+  if (!settingsColumns.some((c) => c.name === 'disabled_event_types')) {
+    db.exec(`ALTER TABLE user_settings ADD COLUMN disabled_event_types TEXT NOT NULL DEFAULT '[]'`);
+    db.prepare(`UPDATE user_settings SET disabled_event_types = @value WHERE id = 1`).run({
+      value: JSON.stringify(DEFAULT_SETTINGS.disabledEventTypes),
+    });
+  }
+  if (!settingsColumns.some((c) => c.name === 'notifications_enabled')) {
+    db.exec(
+      `ALTER TABLE user_settings ADD COLUMN notifications_enabled INTEGER NOT NULL DEFAULT 0`
+    );
+  }
+  if (!settingsColumns.some((c) => c.name === 'notification_timed_event_offset_minutes')) {
+    db.exec(
+      `ALTER TABLE user_settings ADD COLUMN notification_timed_event_offset_minutes INTEGER NOT NULL DEFAULT 15`
+    );
+  }
+  if (!settingsColumns.some((c) => c.name === 'notification_all_day_event_time')) {
+    db.exec(
+      `ALTER TABLE user_settings ADD COLUMN notification_all_day_event_time TEXT NOT NULL DEFAULT '09:00'`
+    );
+  }
+
   // Single-row settings table (id is always 1) — seeded once from
   // DEFAULT_SETTINGS on first run; `INSERT OR IGNORE` is a no-op on every
   // subsequent startup once the row exists.
@@ -157,13 +222,17 @@ export function initSchema(): void {
       show_regional, show_alternate, show_gender, show_uncaught_only,
       excluded_name_patterns, excluded_dex_numbers,
       excluded_shiny_dex_numbers, excluded_shiny_name_patterns,
-      user_tags, preset_queries, excluded_search_terms_by_pokedex
+      user_tags, preset_queries, excluded_search_terms_by_pokedex,
+      hidden_event_ids, disabled_event_types, notifications_enabled,
+      notification_timed_event_offset_minutes, notification_all_day_event_time
     ) VALUES (
       1, @pokedexType, @shinyFilter, @regionFilter,
       @showRegional, @showAlternate, @showGender, @showUncaughtOnly,
       @excludedNamePatterns, @excludedDexNumbers,
       @excludedShinyDexNumbers, @excludedShinyNamePatterns,
-      @userTags, @presetQueries, @excludedSearchTermsByPokedex
+      @userTags, @presetQueries, @excludedSearchTermsByPokedex,
+      @hiddenEventIds, @disabledEventTypes, @notificationsEnabled,
+      @notificationTimedEventOffsetMinutes, @notificationAllDayEventTime
     )`
   ).run({
     pokedexType: DEFAULT_SETTINGS.pokedexType,
@@ -180,5 +249,10 @@ export function initSchema(): void {
     userTags: JSON.stringify(DEFAULT_SETTINGS.userTags),
     presetQueries: JSON.stringify(DEFAULT_SETTINGS.presetQueries),
     excludedSearchTermsByPokedex: JSON.stringify(DEFAULT_SETTINGS.excludedSearchTermsByPokedex),
+    hiddenEventIds: JSON.stringify(DEFAULT_SETTINGS.hiddenEventIds),
+    disabledEventTypes: JSON.stringify(DEFAULT_SETTINGS.disabledEventTypes),
+    notificationsEnabled: DEFAULT_SETTINGS.notificationsEnabled ? 1 : 0,
+    notificationTimedEventOffsetMinutes: DEFAULT_SETTINGS.notificationTimedEventOffsetMinutes,
+    notificationAllDayEventTime: DEFAULT_SETTINGS.notificationAllDayEventTime,
   });
 }

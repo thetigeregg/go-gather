@@ -10,7 +10,7 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['src/vitest.setup.ts'],
-    include: ['src/**/*.spec.ts'],
+    include: ['src/**/*.spec.ts', 'server/src/**/*.spec.ts'],
     server: {
       deps: {
         inline: ['@ionic/angular', '@ionic/angular/standalone', '@ionic/core'],

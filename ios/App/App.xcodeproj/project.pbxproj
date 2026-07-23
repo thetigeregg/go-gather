@@ -45,6 +45,8 @@
 		E7840E99FE01DB5CB1367074 /* Info.prod.overlay.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.prod.overlay.plist; sourceTree = "<group>"; };
 		9B625573D5DD64A28FC59965 /* Info.dev.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.dev.plist; sourceTree = "<group>"; };
 		8D3CD7DAA7B60D40FDE55244 /* Info.prod.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.prod.plist; sourceTree = "<group>"; };
+		DF771D9FFD7EA3C583441E58 /* App.dev.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.dev.entitlements; sourceTree = "<group>"; };
+		F14A7AE612736AEAE8176D0F /* App.prod.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.prod.entitlements; sourceTree = "<group>"; };
 		50B271D01FEDC1A000F3C39B /* public */ = {isa = PBXFileReference; lastKnownFileType = folder; path = public; sourceTree = "<group>"; };
 		958DCC722DB07C7200EA8C5F /* debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; name = debug.xcconfig; path = ../debug.xcconfig; sourceTree = SOURCE_ROOT; };
 		BCFFACA414D38DF39EC2CEDF /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -103,6 +105,8 @@
 				E7840E99FE01DB5CB1367074 /* Info.prod.overlay.plist */,
 				9B625573D5DD64A28FC59965 /* Info.dev.plist */,
 				8D3CD7DAA7B60D40FDE55244 /* Info.prod.plist */,
+				DF771D9FFD7EA3C583441E58 /* App.dev.entitlements */,
+				F14A7AE612736AEAE8176D0F /* App.prod.entitlements */,
 				2FAD9762203C412B000D30F8 /* config.xml */,
 				50B271D01FEDC1A000F3C39B /* public */,
 				BCFFACA414D38DF39EC2CEDF /* PrivacyInfo.xcprivacy */,
@@ -382,6 +386,7 @@
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.dev.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 6V392K7X46;
 				CURRENT_PROJECT_VERSION = 1;
@@ -405,6 +410,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.dev.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 6V392K7X46;
 				CURRENT_PROJECT_VERSION = 1;
@@ -428,6 +434,7 @@
 			baseConfigurationReference = 958DCC722DB07C7200EA8C5F /* debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.prod.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 6V392K7X46;
 				CURRENT_PROJECT_VERSION = 1;
@@ -451,6 +458,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.prod.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = 6V392K7X46;
 				CURRENT_PROJECT_VERSION = 1;

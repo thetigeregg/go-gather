@@ -4,6 +4,7 @@ import { of, throwError } from 'rxjs';
 import { DEFAULT_SETTINGS, ExportBundle, ProgressEntry, UserSettings } from '@go-gather/shared';
 import { ToastController } from '@ionic/angular/standalone';
 import { SettingsPage } from './settings.page';
+import { NotificationService } from '../core/services/notification.service';
 import { UserDataService } from '../core/services/user-data.service';
 import { ChipListInputComponent } from '../features/chip-list-input/chip-list-input.component';
 import { presentShareFile } from '../core/utils/share-file.util';
@@ -25,6 +26,9 @@ describe('SettingsPage', () => {
   let importBundleMock: ReturnType<typeof vi.fn>;
   let toastCreateSpy: ReturnType<typeof vi.fn>;
   let toastPresentSpy: ReturnType<typeof vi.fn>;
+  let isPushSupportedMock: ReturnType<typeof vi.fn>;
+  let requestPermissionAndRegisterMock: ReturnType<typeof vi.fn>;
+  let unregisterCurrentDeviceMock: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     userSettings = {
@@ -34,6 +38,9 @@ describe('SettingsPage', () => {
       excludedShinyDexNumbers: [25],
       excludedShinyNamePatterns: ['existing-shiny-pattern'],
       userTags: ['existing-tag'],
+      notificationsEnabled: false,
+      notificationTimedEventOffsetMinutes: 15,
+      notificationAllDayEventTime: '09:00',
     };
     updateUserSettingsCalls = [];
     vi.mocked(presentShareFile).mockClear().mockResolvedValue(undefined);
@@ -42,6 +49,13 @@ describe('SettingsPage', () => {
     importBundleMock = vi.fn();
     toastPresentSpy = vi.fn().mockResolvedValue(undefined);
     toastCreateSpy = vi.fn().mockResolvedValue({ present: toastPresentSpy });
+    isPushSupportedMock = vi.fn().mockReturnValue(true);
+    requestPermissionAndRegisterMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, message: 'Notifications enabled on this device.' });
+    unregisterCurrentDeviceMock = vi
+      .fn()
+      .mockResolvedValue({ ok: true, message: 'Notifications disabled on this device.' });
 
     TestBed.configureTestingModule({
       providers: [
@@ -54,6 +68,14 @@ describe('SettingsPage', () => {
             },
             exportBundle: exportBundleMock,
             importBundle: importBundleMock,
+          },
+        },
+        {
+          provide: NotificationService,
+          useValue: {
+            isPushSupported: isPushSupportedMock,
+            requestPermissionAndRegister: requestPermissionAndRegisterMock,
+            unregisterCurrentDevice: unregisterCurrentDeviceMock,
           },
         },
         { provide: ToastController, useValue: { create: toastCreateSpy } },
@@ -115,6 +137,114 @@ describe('SettingsPage', () => {
 
     expect(component.shinyDexNumbers).toEqual(['25']);
     expect(updateUserSettingsCalls).toEqual([{ excludedShinyDexNumbers: [25] }]);
+  });
+
+  describe('notifications', () => {
+    it('hydrates notification fields from UserDataService on ionViewWillEnter', () => {
+      userSettings = {
+        ...userSettings,
+        notificationsEnabled: true,
+        notificationTimedEventOffsetMinutes: 30,
+        notificationAllDayEventTime: '08:15',
+      };
+
+      component.ionViewWillEnter();
+
+      expect(component.notificationsEnabled).toBe(true);
+      expect(component.notificationTimedEventOffsetMinutes).toBe(30);
+      expect(component.notificationAllDayEventTime).toBe('08:15');
+    });
+
+    it('enabling requests permission, registers the device, and persists the setting on success', async () => {
+      const event = new CustomEvent<{ checked: boolean }>('ionChange', {
+        detail: { checked: true },
+      });
+
+      await component.notificationsEnabledChanged(event);
+
+      expect(requestPermissionAndRegisterMock).toHaveBeenCalled();
+      expect(component.notificationsEnabled).toBe(true);
+      expect(updateUserSettingsCalls).toEqual([{ notificationsEnabled: true }]);
+    });
+
+    it('enabling reverts and shows a toast when permission/registration fails', async () => {
+      requestPermissionAndRegisterMock.mockResolvedValue({
+        ok: false,
+        message: 'Notification permission was not granted.',
+      });
+      const event = new CustomEvent<{ checked: boolean }>('ionChange', {
+        detail: { checked: true },
+      });
+
+      await component.notificationsEnabledChanged(event);
+
+      expect(component.notificationsEnabled).toBe(false);
+      expect(updateUserSettingsCalls).toEqual([]);
+      expect(toastCreateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ message: 'Notification permission was not granted.' })
+      );
+    });
+
+    it('disabling unregisters the device and persists the setting', async () => {
+      const event = new CustomEvent<{ checked: boolean }>('ionChange', {
+        detail: { checked: false },
+      });
+
+      await component.notificationsEnabledChanged(event);
+
+      expect(unregisterCurrentDeviceMock).toHaveBeenCalled();
+      expect(component.notificationsEnabled).toBe(false);
+      expect(updateUserSettingsCalls).toEqual([{ notificationsEnabled: false }]);
+    });
+
+    it('timedOffsetChanged persists a valid non-negative integer', () => {
+      const event = new CustomEvent<{ value?: string | null }>('ionChange', {
+        detail: { value: '45' },
+      });
+
+      component.timedOffsetChanged(event);
+
+      expect(component.notificationTimedEventOffsetMinutes).toBe(45);
+      expect(updateUserSettingsCalls).toEqual([{ notificationTimedEventOffsetMinutes: 45 }]);
+    });
+
+    it('timedOffsetChanged accepts 0 as a valid offset', () => {
+      const event = new CustomEvent<{ value?: string | null }>('ionChange', {
+        detail: { value: '0' },
+      });
+
+      component.timedOffsetChanged(event);
+
+      expect(component.notificationTimedEventOffsetMinutes).toBe(0);
+      expect(updateUserSettingsCalls).toEqual([{ notificationTimedEventOffsetMinutes: 0 }]);
+    });
+
+    it('timedOffsetChanged ignores a negative or non-numeric value', () => {
+      component.timedOffsetChanged(
+        new CustomEvent<{ value?: string | null }>('ionChange', { detail: { value: '-5' } })
+      );
+      component.timedOffsetChanged(
+        new CustomEvent<{ value?: string | null }>('ionChange', { detail: { value: null } })
+      );
+
+      expect(updateUserSettingsCalls).toEqual([]);
+    });
+
+    it('allDayTimeChanged extracts and persists the HH:mm portion of the ISO value', () => {
+      const event = new CustomEvent<{ value?: string | string[] | null }>('ionChange', {
+        detail: { value: '2000-01-01T14:30:00' },
+      });
+
+      component.allDayTimeChanged(event);
+
+      expect(component.notificationAllDayEventTime).toBe('14:30');
+      expect(updateUserSettingsCalls).toEqual([{ notificationAllDayEventTime: '14:30' }]);
+    });
+
+    it('notificationAllDayEventTimeIso wraps the stored HH:mm as a full ISO string', () => {
+      component.notificationAllDayEventTime = '09:00';
+      expect(component.notificationAllDayEventTimeIso).toBe('2000-01-01T09:00:00');
+    });
   });
 
   describe('exportBundle', () => {

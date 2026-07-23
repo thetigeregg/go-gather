@@ -1,7 +1,31 @@
 import { TestBed } from '@angular/core/testing';
+import { Subject } from 'rxjs';
 import { vi } from 'vitest';
+import { DEFAULT_SETTINGS, UserSettings } from '@go-gather/shared';
 import { PreferenceStorageService } from '../storage/preference-storage.service';
 import { CalendarFilterService, CalendarFilterState } from './calendar-filter.service';
+import { UserDataService } from './user-data.service';
+
+/** Minimal fake mirroring UserDataService's real merge-and-emit behavior for
+ * updateUserSettings, so CalendarFilterService's delegation can be tested in
+ * isolation from the real service's StorageEngine/outbox dependency chain. */
+class FakeUserDataService {
+  private settings: UserSettings = { ...DEFAULT_SETTINGS };
+  private readonly change$ = new Subject<UserSettings>();
+
+  getUserSettings(): UserSettings {
+    return this.settings;
+  }
+
+  updateUserSettings(partial: Partial<UserSettings>): void {
+    this.settings = { ...this.settings, ...partial };
+    this.change$.next(this.settings);
+  }
+
+  listenForUserSettingsChanges() {
+    return this.change$.asObservable();
+  }
+}
 
 describe('CalendarFilterService', () => {
   let store: Record<string, string>;
@@ -26,6 +50,7 @@ describe('CalendarFilterService', () => {
             },
           },
         },
+        { provide: UserDataService, useClass: FakeUserDataService },
       ],
     });
 
@@ -39,19 +64,14 @@ describe('CalendarFilterService', () => {
     expect(state.filtersApplyToTimeline).toBe(false);
   });
 
-  it('loadFilterState hydrates from PreferenceStorageService when a valid value is stored', async () => {
-    store['calendarFilterState'] = JSON.stringify({
-      disabledEventTypes: ['raid-hour'],
-      hiddenEventIds: ['event-1'],
-      filtersApplyToTimeline: true,
-    });
+  it('loadFilterState hydrates filtersApplyToTimeline from PreferenceStorageService when stored', async () => {
+    store['calendarFilterState'] = JSON.stringify({ filtersApplyToTimeline: true });
 
     const result = await new Promise<CalendarFilterState>((resolve) => {
       service.loadFilterState().subscribe(resolve);
     });
 
-    expect(result.disabledEventTypes).toEqual(['raid-hour']);
-    expect(service.getFilterState().hiddenEventIds).toEqual(['event-1']);
+    expect(result.filtersApplyToTimeline).toBe(true);
     expect(service.getFilterState().filtersApplyToTimeline).toBe(true);
   });
 
@@ -60,7 +80,7 @@ describe('CalendarFilterService', () => {
       service.loadFilterState().subscribe(resolve);
     });
 
-    expect(result.disabledEventTypes).toEqual(['go-pass', 'season']);
+    expect(result.filtersApplyToTimeline).toBe(false);
   });
 
   it('loadFilterState falls back to defaults when the stored value is valid JSON but not an object', async () => {
@@ -70,7 +90,7 @@ describe('CalendarFilterService', () => {
       service.loadFilterState().subscribe(resolve);
     });
 
-    expect(result.disabledEventTypes).toEqual(['go-pass', 'season']);
+    expect(result.filtersApplyToTimeline).toBe(false);
   });
 
   it('loadFilterState falls back to defaults when stored JSON is corrupt', async () => {
@@ -80,11 +100,11 @@ describe('CalendarFilterService', () => {
       service.loadFilterState().subscribe(resolve);
     });
 
-    expect(result.disabledEventTypes).toEqual(['go-pass', 'season']);
+    expect(result.filtersApplyToTimeline).toBe(false);
   });
 
   it('loadFilterState falls back to defaults when stored value is missing required fields', async () => {
-    store['calendarFilterState'] = JSON.stringify({ disabledEventTypes: ['x'] });
+    store['calendarFilterState'] = JSON.stringify({ somethingElse: true });
 
     const result = await new Promise<CalendarFilterState>((resolve) => {
       service.loadFilterState().subscribe(resolve);
@@ -108,14 +128,19 @@ describe('CalendarFilterService', () => {
     expect(service.isEventVisible('go-pass', 'event-1')).toBe(false);
   });
 
-  it('toggleEventType flips membership in the denylist and persists', () => {
+  it('toggleEventType flips membership in the denylist and persists via UserDataService', () => {
+    const userDataService = TestBed.inject(UserDataService);
+    const updateSpy = vi.spyOn(userDataService, 'updateUserSettings');
+
     service.toggleEventType('community-day');
     expect(service.isEventTypeEnabled('community-day')).toBe(false);
-    expect(setItemCalls).toHaveLength(1);
+    expect(updateSpy).toHaveBeenCalledWith({
+      disabledEventTypes: ['go-pass', 'season', 'community-day'],
+    });
 
     service.toggleEventType('community-day');
     expect(service.isEventTypeEnabled('community-day')).toBe(true);
-    expect(setItemCalls).toHaveLength(2);
+    expect(updateSpy).toHaveBeenCalledTimes(2);
   });
 
   it('enableEventType/disableEventType are idempotent', () => {
@@ -157,12 +182,15 @@ describe('CalendarFilterService', () => {
     expect(service.getFilterState().hiddenEventIds).toEqual([]);
   });
 
-  it('setFiltersApplyToTimeline updates the flag', () => {
+  it('setFiltersApplyToTimeline updates the flag and persists locally', () => {
     service.setFiltersApplyToTimeline(true);
     expect(service.getFilterState().filtersApplyToTimeline).toBe(true);
+    expect(setItemCalls).toHaveLength(1);
+    expect(setItemCalls[0].key).toBe('calendarFilterState');
+    expect(JSON.parse(setItemCalls[0].value)).toEqual({ filtersApplyToTimeline: true });
   });
 
-  it('emits on listenForFilterChanges for every mutation', () => {
+  it('emits on listenForFilterChanges for every mutation, whether synced or local-only', () => {
     const emitted: CalendarFilterState[] = [];
     service.listenForFilterChanges().subscribe((state) => emitted.push(state));
 
@@ -174,17 +202,7 @@ describe('CalendarFilterService', () => {
     expect(emitted[2].filtersApplyToTimeline).toBe(true);
   });
 
-  it('persists every mutation via PreferenceStorageService.setItem', () => {
-    service.toggleEventType('community-day');
-    expect(setItemCalls[0].key).toBe('calendarFilterState');
-    expect(JSON.parse(setItemCalls[0].value)).toEqual({
-      disabledEventTypes: ['go-pass', 'season', 'community-day'],
-      hiddenEventIds: [],
-      filtersApplyToTimeline: false,
-    });
-  });
-
-  it('applies the mutation in-memory even if persistence fails, and logs the error', async () => {
+  it('applies the local-only mutation in-memory even if persistence fails, and logs the error', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
@@ -196,12 +214,13 @@ describe('CalendarFilterService', () => {
             setItem: () => Promise.reject(new Error('disk full')),
           },
         },
+        { provide: UserDataService, useClass: FakeUserDataService },
       ],
     });
     const failingService = TestBed.inject(CalendarFilterService);
 
-    failingService.toggleEventType('community-day');
-    expect(failingService.isEventTypeEnabled('community-day')).toBe(false);
+    failingService.setFiltersApplyToTimeline(true);
+    expect(failingService.getFilterState().filtersApplyToTimeline).toBe(true);
 
     await Promise.resolve();
     await Promise.resolve();

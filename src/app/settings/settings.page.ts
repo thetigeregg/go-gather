@@ -12,16 +12,29 @@ import {
   IonCardTitle,
   IonCardContent,
   IonIcon,
+  IonItem,
+  IonLabel,
+  IonInput,
+  IonToggle,
+  IonDatetime,
+  IonDatetimeButton,
+  IonModal,
   ToastController,
   ViewWillEnter,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { download, share } from 'ionicons/icons';
 import { DEFAULT_SETTINGS, ExportBundle } from '@go-gather/shared';
+import { NotificationService } from '../core/services/notification.service';
 import { UserDataService } from '../core/services/user-data.service';
 import { ChipListInputComponent } from '../features/chip-list-input/chip-list-input.component';
 import { presentShareFile } from '../core/utils/share-file.util';
 import { pickJsonTextFile } from '../core/utils/pick-file.util';
+
+/** ion-datetime works with ISO 8601 strings, not bare "HH:mm" — this
+ * arbitrary fixed date is only ever used as a wrapper so the time picker has
+ * a full ISO value to bind to; only the "HH:mm" substring is ever persisted. */
+const ALL_DAY_TIME_PICKER_DATE = '2000-01-01';
 
 @Component({
   selector: 'app-settings',
@@ -40,11 +53,19 @@ import { pickJsonTextFile } from '../core/utils/pick-file.util';
     IonCardTitle,
     IonCardContent,
     IonIcon,
+    IonItem,
+    IonLabel,
+    IonInput,
+    IonToggle,
+    IonDatetime,
+    IonDatetimeButton,
+    IonModal,
     ChipListInputComponent,
   ],
 })
 export class SettingsPage implements ViewWillEnter {
   private readonly userDataService = inject(UserDataService);
+  private readonly notificationService = inject(NotificationService);
   private readonly toastController = inject(ToastController);
 
   patterns: string[] = [];
@@ -53,12 +74,65 @@ export class SettingsPage implements ViewWillEnter {
   shinyPatterns: string[] = [];
   userTags: string[] = [];
 
+  notificationsSupported = false;
+  notificationsEnabled = false;
+  notificationTimedEventOffsetMinutes = 0;
+  notificationAllDayEventTime = '09:00';
+
   constructor() {
     addIcons({ download, share });
+    this.notificationsSupported = this.notificationService.isPushSupported();
   }
 
   ionViewWillEnter(): void {
     this.refreshFromUserSettings();
+  }
+
+  async notificationsEnabledChanged(event: CustomEvent<{ checked: boolean }>): Promise<void> {
+    const enabled = event.detail.checked;
+
+    if (!enabled) {
+      this.notificationsEnabled = false;
+      this.userDataService.updateUserSettings({ notificationsEnabled: false });
+      await this.notificationService.unregisterCurrentDevice();
+      return;
+    }
+
+    const result = await this.notificationService.requestPermissionAndRegister();
+    if (!result.ok) {
+      this.notificationsEnabled = false;
+      await this.showToast(result.message);
+      return;
+    }
+
+    this.notificationsEnabled = true;
+    this.userDataService.updateUserSettings({ notificationsEnabled: true });
+  }
+
+  timedOffsetChanged(event: CustomEvent<{ value?: string | null }>): void {
+    const raw = event.detail.value;
+    const parsed = typeof raw === 'string' ? Number.parseInt(raw, 10) : NaN;
+    if (!Number.isInteger(parsed) || parsed < 0) {
+      return;
+    }
+    this.notificationTimedEventOffsetMinutes = parsed;
+    this.userDataService.updateUserSettings({ notificationTimedEventOffsetMinutes: parsed });
+  }
+
+  allDayTimeChanged(event: CustomEvent<{ value?: string | string[] | null }>): void {
+    const value = event.detail.value;
+    if (typeof value !== 'string') {
+      return;
+    }
+    // ion-datetime emits a full ISO string; only the "HH:mm" portion is
+    // persisted, since that's all UserSettings.notificationAllDayEventTime holds.
+    const time = value.slice(11, 16);
+    this.notificationAllDayEventTime = time;
+    this.userDataService.updateUserSettings({ notificationAllDayEventTime: time });
+  }
+
+  get notificationAllDayEventTimeIso(): string {
+    return `${ALL_DAY_TIME_PICKER_DATE}T${this.notificationAllDayEventTime}:00`;
   }
 
   patternsChanged(patterns: string[]): void {
@@ -200,5 +274,8 @@ export class SettingsPage implements ViewWillEnter {
     this.shinyDexNumbers = userSettings.excludedShinyDexNumbers.map(String);
     this.shinyPatterns = [...userSettings.excludedShinyNamePatterns];
     this.userTags = [...userSettings.userTags];
+    this.notificationsEnabled = userSettings.notificationsEnabled;
+    this.notificationTimedEventOffsetMinutes = userSettings.notificationTimedEventOffsetMinutes;
+    this.notificationAllDayEventTime = userSettings.notificationAllDayEventTime;
   }
 }

@@ -4,6 +4,7 @@ import { SideMenuComponent } from './features/side-menu/side-menu.component';
 import { NavMenuComponent } from './features/nav-menu/nav-menu.component';
 import { CalendarFilterMenuComponent } from './features/calendar-filter-menu/calendar-filter-menu.component';
 import { LiveUpdateService } from './core/services/live-update.service';
+import { NotificationService } from './core/services/notification.service';
 
 @Component({
   selector: 'app-root',
@@ -19,6 +20,7 @@ import { LiveUpdateService } from './core/services/live-update.service';
 export class AppComponent implements OnInit {
   private readonly alertController = inject(AlertController);
   private readonly liveUpdateService = inject(LiveUpdateService);
+  private readonly notificationService = inject(NotificationService);
 
   ngOnInit(): void {
     void this.liveUpdateService.markReady();
@@ -26,6 +28,8 @@ export class AppComponent implements OnInit {
     this.liveUpdateService.staged$.subscribe(({ semver }) => {
       void this.presentUpdateReadyAlert(semver);
     });
+
+    void this.notificationService.initialize();
   }
 
   private async presentUpdateReadyAlert(semver: string): Promise<void> {

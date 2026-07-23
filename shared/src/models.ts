@@ -247,6 +247,24 @@ export interface UserSettings {
    * (possibly empty), never a partial map, so callers can index it by the
    * current pokedex type without a fallback. */
   excludedSearchTermsByPokedex: Record<PokedexType, ExcludedSearchTerm[]>;
+  /** Server-authoritative mirror of the calendar filter state (see
+   * CalendarFilterService) — lives here (rather than device-local storage)
+   * so the server-side notification scheduler can filter events out
+   * before sending a push, since a push can't be recalled once delivered. */
+  hiddenEventIds: string[];
+  /** Event types excluded from the calendar/timeline view and from
+   * notifications. */
+  disabledEventTypes: string[];
+  /** Master on/off switch for calendar-event push notifications. */
+  notificationsEnabled: boolean;
+  /** Minutes before a timed event's actual start to fire its notification
+   * (0 is valid — notify exactly at start). Applies only to events whose
+   * start clock time is not exactly local midnight. */
+  notificationTimedEventOffsetMinutes: number;
+  /** Local time-of-day ("HH:mm", 24h) at which all-day events' notifications
+   * fire on the event's start day. Applies only to events whose start clock
+   * time is exactly local midnight. */
+  notificationAllDayEventTime: string;
 }
 
 /** Also used server-side (see `server/src/db.ts`'s `initSchema()`) to seed
@@ -270,6 +288,11 @@ export const DEFAULT_SETTINGS: UserSettings = {
   excludedSearchTermsByPokedex: Object.fromEntries(
     POKEDEX_TYPES.map((pokedexType) => [pokedexType, defaultExcludedSearchTermsFor(pokedexType)])
   ) as Record<PokedexType, ExcludedSearchTerm[]>,
+  hiddenEventIds: [],
+  disabledEventTypes: ['go-pass', 'season'],
+  notificationsEnabled: false,
+  notificationTimedEventOffsetMinutes: 15,
+  notificationAllDayEventTime: '09:00',
 };
 
 /** Seeded default exclusions for one pokedex type — mirrors the old global

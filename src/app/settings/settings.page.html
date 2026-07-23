@@ -8,6 +8,56 @@
 </ion-header>
 
 <ion-content>
+  @if (notificationsSupported) {
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Notifications</ion-card-title>
+      </ion-card-header>
+      <ion-card-content>
+        <p class="settings-hint">
+          Get a push notification when a calendar event is about to start. Hidden events and
+          disabled event types (set via the calendar filter menu) are never sent.
+        </p>
+        <ion-item lines="none">
+          <ion-toggle
+            [checked]="notificationsEnabled"
+            (ionChange)="notificationsEnabledChanged($event)"
+          >
+            Enable notifications
+          </ion-toggle>
+        </ion-item>
+
+        <ion-item [disabled]="!notificationsEnabled">
+          <ion-label position="stacked">
+            Notify this many minutes before a timed event starts
+          </ion-label>
+          <ion-input
+            type="number"
+            min="0"
+            inputmode="numeric"
+            [value]="notificationTimedEventOffsetMinutes"
+            (ionChange)="timedOffsetChanged($event)"
+          ></ion-input>
+        </ion-item>
+
+        <ion-item [disabled]="!notificationsEnabled">
+          <ion-label position="stacked">Notify at this time of day for all-day events</ion-label>
+          <ion-datetime-button datetime="allDayTimePicker"></ion-datetime-button>
+          <ion-modal [keepContentsMounted]="true">
+            <ng-template>
+              <ion-datetime
+                id="allDayTimePicker"
+                presentation="time"
+                [value]="notificationAllDayEventTimeIso"
+                (ionChange)="allDayTimeChanged($event)"
+              ></ion-datetime>
+            </ng-template>
+          </ion-modal>
+        </ion-item>
+      </ion-card-content>
+    </ion-card>
+  }
+
   <ion-card>
     <ion-card-header>
       <ion-card-title>Excluded Name Patterns</ion-card-title>

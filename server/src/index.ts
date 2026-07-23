@@ -6,6 +6,7 @@
 import { buildApp } from './api.js';
 import { writeBackup } from './backup.js';
 import { initSchema } from './db.js';
+import { startNotificationScheduler } from './notification-scheduler-loop.js';
 import { startScheduledSync } from './scheduled-sync.js';
 
 const PORT = 3000;
@@ -27,6 +28,7 @@ app
 writeBackup(app.log);
 
 const stopScheduledSync = startScheduledSync(app.log);
+const stopNotificationScheduler = startNotificationScheduler(app.log);
 
 // Without this, `tsx watch` has no graceful way to stop the server on
 // restart (e.g. after a source file change) and has to force-kill it after
@@ -34,6 +36,7 @@ const stopScheduledSync = startScheduledSync(app.log);
 for (const signal of ['SIGTERM', 'SIGINT'] as const) {
   process.on(signal, () => {
     stopScheduledSync();
+    stopNotificationScheduler();
     app.close().finally(() => process.exit(0));
   });
 }

@@ -22,6 +22,12 @@ services:
       # Set this to also trigger a backup after N catch add/remove
       # modifications — 0 (default) disables the extra trigger.
       # BACKUP_AFTER_N_MODIFICATIONS: ${BACKUP_AFTER_N_MODIFICATIONS:-0}
+      # Calendar-event push notifications (FCM). Required for any push to
+      # send — service-account JSON from Firebase Console -> Project
+      # Settings -> Service Accounts -> Generate new private key.
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${FIREBASE_SERVICE_ACCOUNT_JSON:-}
+      # How often (minutes) the server checks for due notifications.
+      # NOTIFICATION_CHECK_INTERVAL_MINUTES: ${NOTIFICATION_CHECK_INTERVAL_MINUTES:-2}
     healthcheck:
       test:
         [

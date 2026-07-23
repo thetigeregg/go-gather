@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import type { CatalogEntry, PogoEvent, Season, UserSettings } from '@go-gather/shared';
 import { maybeBackupAfterModifications } from './backup.js';
 import { db } from './db.js';
+import { registerNotificationRoutes } from './notifications.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -127,7 +128,12 @@ function applySettingsUpsert(payload: UserSettings): void {
       excluded_shiny_name_patterns = @excludedShinyNamePatterns,
       user_tags = @userTags,
       preset_queries = @presetQueries,
-      excluded_search_terms_by_pokedex = @excludedSearchTermsByPokedex
+      excluded_search_terms_by_pokedex = @excludedSearchTermsByPokedex,
+      hidden_event_ids = @hiddenEventIds,
+      disabled_event_types = @disabledEventTypes,
+      notifications_enabled = @notificationsEnabled,
+      notification_timed_event_offset_minutes = @notificationTimedEventOffsetMinutes,
+      notification_all_day_event_time = @notificationAllDayEventTime
     WHERE id = 1`
   ).run({
     pokedexType: payload.pokedexType,
@@ -144,6 +150,11 @@ function applySettingsUpsert(payload: UserSettings): void {
     userTags: JSON.stringify(payload.userTags),
     presetQueries: JSON.stringify(payload.presetQueries),
     excludedSearchTermsByPokedex: JSON.stringify(payload.excludedSearchTermsByPokedex),
+    hiddenEventIds: JSON.stringify(payload.hiddenEventIds),
+    disabledEventTypes: JSON.stringify(payload.disabledEventTypes),
+    notificationsEnabled: payload.notificationsEnabled ? 1 : 0,
+    notificationTimedEventOffsetMinutes: payload.notificationTimedEventOffsetMinutes,
+    notificationAllDayEventTime: payload.notificationAllDayEventTime,
   });
 }
 
@@ -217,6 +228,8 @@ export function buildApp() {
       }
     },
   });
+
+  registerNotificationRoutes(app);
 
   // Enveloped with `syncedAt` (not a bare array) so the client can track
   // catalog freshness in its local `syncMeta` scope without a separate
