@@ -159,6 +159,27 @@ ion-badge[color='success'] {
   opacity: 0.8;
 }
 
+.season-section {
+  margin-bottom: 6px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.season-section-header {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.season-day {
+  margin-bottom: 6px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
 .season-day-name {
   font-weight: 600;
 }

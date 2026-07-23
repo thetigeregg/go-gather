@@ -1,33 +1,37 @@
-<div class="event-detail" [attr.data-event-type]="event.eventType">
-  <div class="detail-banner" [style.background-color]="metadata.color">
-    <div class="banner-text">
-      <div class="event-name-row">
-        <div class="event-name">{{ displayName }}</div>
-        @if (metadata.spotlightBonus) {
-          <div class="spotlight-bonus-icons">
-            @if (metadata.spotlightBonus.category === 'evolve') {
-              <ion-icon name="arrow-up-circle-outline" class="evolve-icon"></ion-icon>
-            } @else if (metadata.spotlightBonus.category === 'transfer') {
-              <ion-icon name="swap-horizontal-outline" class="transfer-icon"></ion-icon>
-            }
-            @if (metadata.spotlightBonusIconUrl) {
-              <img [src]="metadata.spotlightBonusIconUrl" alt="" class="bonus-type-icon" />
-            }
-          </div>
-        }
-      </div>
-      <div class="event-type-label">{{ metadata.typeInfo.name }}</div>
+<div
+  class="detail-banner"
+  [style.background-color]="metadata.color"
+  [attr.data-event-type]="event.eventType"
+>
+  <div class="banner-text">
+    <div class="event-name-row">
+      <div class="event-name">{{ displayName }}</div>
+      @if (metadata.spotlightBonus) {
+        <div class="spotlight-bonus-icons">
+          @if (metadata.spotlightBonus.category === 'evolve') {
+            <ion-icon name="arrow-up-circle-outline" class="evolve-icon"></ion-icon>
+          } @else if (metadata.spotlightBonus.category === 'transfer') {
+            <ion-icon name="swap-horizontal-outline" class="transfer-icon"></ion-icon>
+          }
+          @if (metadata.spotlightBonusIconUrl) {
+            <img [src]="metadata.spotlightBonusIconUrl" alt="" class="bonus-type-icon" />
+          }
+        </div>
+      }
     </div>
-    <div class="banner-actions">
-      <ion-button fill="clear" size="small" (click)="onHideClick()" aria-label="Hide event">
-        <ion-icon slot="icon-only" name="eye-off-outline"></ion-icon>
-      </ion-button>
-      <ion-button fill="clear" size="small" (click)="onCloseClick()" aria-label="Close">
-        <ion-icon slot="icon-only" name="close"></ion-icon>
-      </ion-button>
-    </div>
+    <div class="event-type-label">{{ metadata.typeInfo.name }}</div>
   </div>
+  <div class="banner-actions">
+    <ion-button fill="clear" size="small" (click)="onHideClick()" aria-label="Hide event">
+      <ion-icon slot="icon-only" name="eye-off-outline"></ion-icon>
+    </ion-button>
+    <ion-button fill="clear" size="small" (click)="onCloseClick()" aria-label="Close">
+      <ion-icon slot="icon-only" name="close"></ion-icon>
+    </ion-button>
+  </div>
+</div>
 
+<ion-content>
   <div class="detail-body">
     <div class="event-time-display">
       <div class="time-row" [class.is-completed]="timeDisplayParts.isCompleted">
@@ -114,26 +118,30 @@
         @if (eventExtras.seasonData; as season) {
           <div class="extra-block">
             @if (season.dailyBonuses.length) {
-              <strong>Daily Discoveries</strong>
-              @for (day of season.dailyBonuses; track day.dayOfWeek) {
-                <div class="season-day">
-                  <div class="season-day-name">{{ day.day }}</div>
-                  @for (group of day.bonuses; track $index) {
-                    @if (group.title) {
-                      <div class="season-group-title">{{ group.title }}</div>
+              <div class="season-section">
+                <strong class="season-section-header">Daily Discoveries</strong>
+                @for (day of season.dailyBonuses; track day.dayOfWeek) {
+                  <div class="season-day">
+                    <div class="season-day-name">{{ day.day }}</div>
+                    @for (group of day.bonuses; track $index) {
+                      @if (group.title) {
+                        <div class="season-group-title">{{ group.title }}</div>
+                      }
+                      @for (item of group.items; track item) {
+                        <div>{{ item }}</div>
+                      }
                     }
-                    @for (item of group.items; track item) {
-                      <div>{{ item }}</div>
-                    }
-                  }
-                </div>
-              }
+                  </div>
+                }
+              </div>
             }
             @if (season.seasonBonuses.length) {
-              <strong>Season Bonuses</strong>
-              @for (bonus of season.seasonBonuses; track $index) {
-                <div>{{ bonus.text }}</div>
-              }
+              <div class="season-section">
+                <strong class="season-section-header">Season Bonuses</strong>
+                @for (bonus of season.seasonBonuses; track $index) {
+                  <div>{{ bonus.text }}</div>
+                }
+              </div>
             }
           </div>
         }
@@ -167,4 +175,4 @@
       }
     </div>
   </div>
-</div>
+</ion-content>

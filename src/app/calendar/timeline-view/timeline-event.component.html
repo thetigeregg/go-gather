@@ -138,26 +138,30 @@
         @if (eventExtras.seasonData; as season) {
           <div class="extra-block">
             @if (season.dailyBonuses.length) {
-              <strong>Daily Discoveries</strong>
-              @for (day of season.dailyBonuses; track day.dayOfWeek) {
-                <div class="season-day">
-                  <div class="season-day-name">{{ day.day }}</div>
-                  @for (group of day.bonuses; track $index) {
-                    @if (group.title) {
-                      <div class="season-group-title">{{ group.title }}</div>
+              <div class="season-section">
+                <strong class="season-section-header">Daily Discoveries</strong>
+                @for (day of season.dailyBonuses; track day.dayOfWeek) {
+                  <div class="season-day">
+                    <div class="season-day-name">{{ day.day }}</div>
+                    @for (group of day.bonuses; track $index) {
+                      @if (group.title) {
+                        <div class="season-group-title">{{ group.title }}</div>
+                      }
+                      @for (item of group.items; track item) {
+                        <div>{{ item }}</div>
+                      }
                     }
-                    @for (item of group.items; track item) {
-                      <div>{{ item }}</div>
-                    }
-                  }
-                </div>
-              }
+                  </div>
+                }
+              </div>
             }
             @if (season.seasonBonuses.length) {
-              <strong>Season Bonuses</strong>
-              @for (bonus of season.seasonBonuses; track $index) {
-                <div>{{ bonus.text }}</div>
-              }
+              <div class="season-section">
+                <strong class="season-section-header">Season Bonuses</strong>
+                @for (bonus of season.seasonBonuses; track $index) {
+                  <div>{{ bonus.text }}</div>
+                }
+              </div>
             }
           </div>
         }
