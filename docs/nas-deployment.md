@@ -4,10 +4,11 @@ A self-hosted deployment on your own NAS via Docker + Tailscale. Architecture is
 
 ## 1. Persistent directory
 
-Create two persistent directories on your NAS host:
+Create these directories on your NAS host:
 
 - `nas-data/server-data` — the SQLite database (`gogather.db`, `-wal`, `-shm`) and the cached PokeAPI sprite images (`images/`).
 - `nas-data/server-backups` — JSON user-data backups (see section 4).
+- `nas-secrets` — plain files bind-mounted read-only into the container at `/run/secrets`, one file per secret (e.g. `firebase_service_account_json` — see "Push notifications" below). No Docker Compose `secrets:` construct involved, just a host directory.
 
 ## 2. Confirm the image exists
 
@@ -36,7 +37,7 @@ Env vars (all optional, shown with their defaults):
 - `TZ` (default `Europe/Zurich`)
 - `SYNC_CATALOG_INTERVAL_HOURS` (default `24`), `SYNC_CALENDAR_EVENTS_INTERVAL_HOURS` (default `6`), `SYNC_SEASON_INTERVAL_HOURS` (default `6`), `SYNC_POKEMON_STATS_INTERVAL_HOURS` (default `24`) — see section 4
 - `BACKUP_AFTER_N_MODIFICATIONS` (default `0`, disabled) — see "Automatic backups" below
-- `FIREBASE_SERVICE_ACCOUNT_JSON` (no default, required for calendar-event push notifications) — see "Push notifications" below
+- `SECRETS_HOST_DIR` (default `./nas-secrets`) — see section 1
 - `NOTIFICATION_CHECK_INTERVAL_MINUTES` (default `2`) — how often the server checks for due calendar-event push notifications
 
 ## 4. First-time data bootstrap
@@ -64,13 +65,13 @@ Set `BACKUP_AFTER_N_MODIFICATIONS` to also trigger a backup after that many catc
 
 ### Push notifications
 
-Calendar-event push notifications (FCM) require `FIREBASE_SERVICE_ACCOUNT_JSON` to be set — without it, `server/src/fcm.ts` logs a one-time `[fcm] not_configured` warning and skips sending (the rest of the server functions normally). To enable:
+Calendar-event push notifications (FCM) require a Firebase service-account JSON file at `${SECRETS_HOST_DIR:-./nas-secrets}/firebase_service_account_json` — without it, `server/src/fcm.ts` logs a one-time `[fcm] not_configured` warning and skips sending (the rest of the server functions normally). To enable:
 
 1. In the Firebase Console, create/select a project, then **Project Settings → Service Accounts → Generate new private key** to download the service-account JSON.
-2. Set `FIREBASE_SERVICE_ACCOUNT_JSON` to that file's contents as a single-line JSON string (e.g. `FIREBASE_SERVICE_ACCOUNT_JSON=$(cat service-account.json | tr -d '\n')` in your shell before `docker compose up`, or paste it directly into whatever secret store Portainer/your NAS uses).
+2. Save it as `${SECRETS_HOST_DIR:-./nas-secrets}/firebase_service_account_json` on the NAS host (no extension — matches the filename the server reads via `/run/secrets`, the same bind-mount pattern as `nas-data`). Override the path with `FIREBASE_SERVICE_ACCOUNT_JSON_FILE` if you'd rather name/place it differently.
 3. The iOS app also needs a matching `GoogleService-Info.plist` bootstrapped client-side — see the README's iOS section.
 
-The server checks for due notifications every `NOTIFICATION_CHECK_INTERVAL_MINUTES` (default 2) via a separate in-process loop (`server/src/notification-scheduler-loop.ts`), independent of the four data-feed sync jobs above. Device registration happens from the app's Settings page — no server-side action is needed beyond setting the service-account JSON.
+The server checks for due notifications every `NOTIFICATION_CHECK_INTERVAL_MINUTES` (default 2) via a separate in-process loop (`server/src/notification-scheduler-loop.ts`), independent of the four data-feed sync jobs above. Device registration happens from the app's Settings page — no server-side action is needed beyond dropping the service-account file in place.
 
 ## 5. Publish over Tailscale
 

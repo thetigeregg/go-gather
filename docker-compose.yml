@@ -8,6 +8,7 @@ services:
     volumes:
       - ${NAS_DATA_ROOT:-./nas-data}/server-data:/app/server/data
       - ${NAS_DATA_ROOT:-./nas-data}/server-backups:/app/server/backups
+      - ${SECRETS_HOST_DIR:-./nas-secrets}:/run/secrets:ro
     environment:
       TZ: ${TZ:-Europe/Zurich}
       # Data-feed sync intervals (hours) — the server syncs all four feeds
@@ -23,9 +24,10 @@ services:
       # modifications — 0 (default) disables the extra trigger.
       # BACKUP_AFTER_N_MODIFICATIONS: ${BACKUP_AFTER_N_MODIFICATIONS:-0}
       # Calendar-event push notifications (FCM). Required for any push to
-      # send — service-account JSON from Firebase Console -> Project
-      # Settings -> Service Accounts -> Generate new private key.
-      FIREBASE_SERVICE_ACCOUNT_JSON: ${FIREBASE_SERVICE_ACCOUNT_JSON:-}
+      # send — drop the service-account JSON (Firebase Console -> Project
+      # Settings -> Service Accounts -> Generate new private key) at
+      # ${SECRETS_HOST_DIR:-./nas-secrets}/firebase_service_account_json.
+      FIREBASE_SERVICE_ACCOUNT_JSON_FILE: ${FIREBASE_SERVICE_ACCOUNT_JSON_FILE:-/run/secrets/firebase_service_account_json}
       # How often (minutes) the server checks for due notifications.
       # NOTIFICATION_CHECK_INTERVAL_MINUTES: ${NOTIFICATION_CHECK_INTERVAL_MINUTES:-2}
     healthcheck:

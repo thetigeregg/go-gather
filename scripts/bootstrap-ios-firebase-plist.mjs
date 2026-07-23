@@ -9,9 +9,9 @@ const DEFAULT_SHARED_PATH = resolve(os.homedir(), '.config/go-gather/ios/GoogleS
 
 /**
  * go-gather uses a single Firebase project (no dev/prod split — this is a
- * single-user app with no auth/multi-tenant boundary, unlike game-shelf's
- * two-project setup). GoogleService-Info.plist is machine-local, not
- * committed (gitignored) — copied in from ~/.config or an env override.
+ * single-user app with no auth/multi-tenant boundary). GoogleService-Info.plist
+ * is machine-local, not committed (gitignored) — copied in from ~/.config or
+ * an env override.
  */
 export function resolveSharedPlistPath(envValues = process.env) {
   const override = envValues.IOS_FIREBASE_PLIST_PATH?.trim();

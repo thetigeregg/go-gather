@@ -56,6 +56,10 @@ server/data/images/
 # local-only when running the compose stack from a repo checkout
 /nas-data
 
+# docker-compose.yml's default bind-mount target (SECRETS_HOST_DIR default)
+# for /run/secrets — e.g. firebase_service_account_json, never committed
+/nas-secrets
+
 # OTA live-update artifacts served by the server (baked in at Docker build
 # time by build-ios-live-update-artifacts.mjs; see /ota above for the
 # repo-root default output location that gets copied in from there)

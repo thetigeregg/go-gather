@@ -187,10 +187,10 @@ function readCandidateEvents(): CandidateEvent[] {
 
 /**
  * Reserves and sends every currently-due notification. Reservation happens
- * BEFORE the send attempt (mirrors game-shelf's release_notification_log
- * pattern) so a scheduler restart/re-run never double-sends; the reservation
- * is only released again if the send outright failed (not merely because
- * every token was already invalid), allowing a legitimate retry next tick.
+ * BEFORE the send attempt so a scheduler restart/re-run never double-sends;
+ * the reservation is only released again if the send outright failed (not
+ * merely because every token was already invalid), allowing a legitimate
+ * retry next tick.
  */
 export async function checkAndSendDueNotifications(): Promise<void> {
   const settings = readSettings();

@@ -1,5 +1,20 @@
+import { existsSync, readFileSync } from 'node:fs';
 import { cert, getApps, initializeApp, type ServiceAccount } from 'firebase-admin/app';
 import { getMessaging, type BatchResponse, type Messaging } from 'firebase-admin/messaging';
+
+// A plain host directory (${SECRETS_HOST_DIR:-./nas-secrets}) bind-mounted
+// read-only at /run/secrets, one file per secret. No raw-JSON env var path —
+// even local dev points FIREBASE_SERVICE_ACCOUNT_JSON_FILE at a real file.
+function readFirebaseServiceAccountJsonFile(): string {
+  const filePath =
+    process.env.FIREBASE_SERVICE_ACCOUNT_JSON_FILE ?? '/run/secrets/firebase_service_account_json';
+
+  if (!existsSync(filePath)) {
+    return '';
+  }
+
+  return readFileSync(filePath, 'utf8').trim();
+}
 
 export interface FcmSendPayload {
   title: string;
@@ -26,7 +41,7 @@ export function resetFcmStateForTests(): void {
 }
 
 export function hasConfiguredFcm(): boolean {
-  return (process.env.FIREBASE_SERVICE_ACCOUNT_JSON ?? '').length > 0;
+  return readFirebaseServiceAccountJsonFile().length > 0;
 }
 
 export async function sendFcmMulticast(
@@ -185,16 +200,18 @@ function resolveServiceAccount(): ServiceAccount {
   }
 
   try {
-    const parsedUnknown = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON ?? '') as unknown;
+    const parsedUnknown = JSON.parse(readFirebaseServiceAccountJsonFile()) as unknown;
     if (!parsedUnknown || typeof parsedUnknown !== 'object') {
-      throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON must be a JSON object.');
+      throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON_FILE must contain a JSON object.');
     }
     cachedServiceAccount = parsedUnknown;
     return cachedServiceAccount;
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : 'FIREBASE_SERVICE_ACCOUNT_JSON is invalid JSON.';
-    cachedServiceAccountError = new Error(`Invalid FIREBASE_SERVICE_ACCOUNT_JSON: ${message}`);
+      error instanceof Error
+        ? error.message
+        : 'FIREBASE_SERVICE_ACCOUNT_JSON_FILE is invalid JSON.';
+    cachedServiceAccountError = new Error(`Invalid FIREBASE_SERVICE_ACCOUNT_JSON_FILE: ${message}`);
     throw cachedServiceAccountError;
   }
 }
