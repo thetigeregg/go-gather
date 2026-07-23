@@ -42,4 +42,5 @@ ion-item[slot='header'] {
   color: var(--ion-color-medium);
   font-style: italic;
   padding: 4px;
+  border-bottom: 1px solid var(--ion-color-step-150, rgba(0, 0, 0, 0.1));
 }
