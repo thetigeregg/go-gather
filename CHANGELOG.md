@@ -193,3 +193,9 @@
 ## v0.9.0 - 2026-07-23
 
 - 027f12e feat(firebase): update environment variable references for production Firebase plist
+
+## v0.9.1 - 2026-07-23
+
+- ed06b3a fix(deps): add firebase package required by capacitor messaging
+- ae0fcfd build(server): bump better-sqlite3 to ^13.0.1
+- 8d66ccb chore(dependencies): update @ionic/angular, lint-staged, prettier, and firebase-admin versions
