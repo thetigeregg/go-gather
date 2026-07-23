@@ -56,7 +56,7 @@ npm run sync:ios:prod
 
 See `.env.example` for the env vars these read (`IOS_LAN_HOST`, `IOS_BACKEND_ORIGIN_LOCAL`, `IOS_BACKEND_ORIGIN_PROD`).
 
-`npm run prebuild:ios*` also bootstraps `ios/App/App/Firebase/GoogleService-Info.plist` (needed for calendar-event push notifications) from `~/.config/go-gather/ios/GoogleService-Info.plist` — download it from the Firebase Console once and place it there (override the source path with `IOS_FIREBASE_PLIST_PATH`, see `.env.example`). Missing it only logs a warning; the rest of the build still succeeds, but push notifications won't work on that build. The server side needs a Firebase service-account JSON file dropped in — see `docs/nas-deployment.md`'s "Push notifications" section.
+`npm run prebuild:ios*` also bootstraps `ios/App/App/Firebase/GoogleService-Info.plist` (needed for calendar-event push notifications) from `~/.config/go-gather/ios/GoogleService-Info.plist` — download it from the Firebase Console once and place it there (override the source path with `IOS_FIREBASE_PROD_PLIST_PATH`, see `.env.example`). Missing it only logs a warning; the rest of the build still succeeds, but push notifications won't work on that build. The server side needs a Firebase service-account JSON file dropped in — see `docs/nas-deployment.md`'s "Push notifications" section.
 
 For the full history of how the native shell, signing, CI, and OTA live-update pipeline were built:
 

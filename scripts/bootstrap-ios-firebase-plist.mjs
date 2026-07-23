@@ -14,7 +14,7 @@ const DEFAULT_SHARED_PATH = resolve(os.homedir(), '.config/go-gather/ios/GoogleS
  * an env override.
  */
 export function resolveSharedPlistPath(envValues = process.env) {
-  const override = envValues.IOS_FIREBASE_PLIST_PATH?.trim();
+  const override = envValues.IOS_FIREBASE_PROD_PLIST_PATH?.trim();
   return override ? resolve(override) : DEFAULT_SHARED_PATH;
 }
 
@@ -35,7 +35,7 @@ export function bootstrapIosFirebasePlist({
       'One-time setup:',
       `  mkdir -p ${dirname(sharedPath)}`,
       `  # Download GoogleService-Info.plist from Firebase Console and save it there`,
-      'Override the source path with IOS_FIREBASE_PLIST_PATH if needed.',
+      'Override the source path with IOS_FIREBASE_PROD_PLIST_PATH if needed.',
     ].join('\n');
 
     if (failOnMissing) {

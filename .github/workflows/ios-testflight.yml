@@ -132,16 +132,16 @@ jobs:
 
       - name: Decode Firebase plist
         env:
-          IOS_FIREBASE_PLIST_BASE64: ${{ secrets.IOS_FIREBASE_PLIST_BASE64 }}
+          IOS_FIREBASE_PROD_PLIST_BASE64: ${{ secrets.IOS_FIREBASE_PROD_PLIST_BASE64 }}
         run: |
-          if [ -z "$IOS_FIREBASE_PLIST_BASE64" ]; then
-            echo "IOS_FIREBASE_PLIST_BASE64 secret is required." >&2
+          if [ -z "$IOS_FIREBASE_PROD_PLIST_BASE64" ]; then
+            echo "IOS_FIREBASE_PROD_PLIST_BASE64 secret is required." >&2
             exit 1
           fi
 
           PLIST_PATH="${RUNNER_TEMP}/GoogleService-Info.plist"
-          echo "$IOS_FIREBASE_PLIST_BASE64" | base64 -D > "$PLIST_PATH"
-          echo "IOS_FIREBASE_PLIST_PATH=$PLIST_PATH" >> "$GITHUB_ENV"
+          echo "$IOS_FIREBASE_PROD_PLIST_BASE64" | base64 -D > "$PLIST_PATH"
+          echo "IOS_FIREBASE_PROD_PLIST_PATH=$PLIST_PATH" >> "$GITHUB_ENV"
 
       - name: Validate iOS deploy configuration
         env:
