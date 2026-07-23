@@ -45,6 +45,23 @@ describe('UserDataService', () => {
     expect(service.getUserSettings()).toEqual(DEFAULT_SETTINGS);
   });
 
+  it('loadSettings backfills fields missing from a stored settings object pre-dating them', async () => {
+    // Simulates a settings blob persisted before a newer UserSettings field
+    // existed (every real install pre-upgrade, or a fresh sync-pull replaying
+    // pre-upgrade history) — the cast mirrors what a real stale JSON blob
+    // looks like at runtime despite TypeScript now requiring the field.
+    const staleSettings = { ...DEFAULT_SETTINGS } as Partial<typeof DEFAULT_SETTINGS>;
+    delete staleSettings.disabledSeasonDailyBonusDays;
+    const repository = TestBed.inject(LocalUserDataRepository);
+    await repository.updateSettings(staleSettings as unknown as typeof DEFAULT_SETTINGS);
+
+    await new Promise((resolve) => {
+      service.loadSettings().subscribe(resolve);
+    });
+
+    expect(service.getUserSettings().disabledSeasonDailyBonusDays).toEqual([]);
+  });
+
   it('setEntryState updates in-memory state immediately and persists via the repository', async () => {
     service.setEntryState('bulbasaur-regular', true);
 

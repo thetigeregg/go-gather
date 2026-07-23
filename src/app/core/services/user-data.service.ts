@@ -55,10 +55,14 @@ export class UserDataService {
    * several components (side-menu, preset-query-editor) read
    * `getUserSettings()` synchronously in their own constructors, so this
    * must resolve before Angular bootstraps, not just before some later
-   * `ngOnInit()`. */
+   * `ngOnInit()`. Merged over DEFAULT_SETTINGS (rather than used as-is) so a
+   * settings object persisted before a new field existed — every existing
+   * install, or any fresh sync-pull replaying pre-upgrade history — gets that
+   * field backfilled instead of leaving it `undefined` for downstream code
+   * that assumes it's always present. */
   loadSettings(): Observable<UserSettings> {
     return from(this.repository.getSettings()).pipe(
-      map((settings) => settings ?? DEFAULT_SETTINGS),
+      map((settings) => ({ ...DEFAULT_SETTINGS, ...settings })),
       tap((settings) => (this.userSettings = settings))
     );
   }
