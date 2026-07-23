@@ -207,3 +207,9 @@
 ## v0.10.0 - 2026-07-23
 
 - 7a07b87 feat(fastlane): add bootstrap function for Firebase plist in Fastfile
+
+## v0.11.0 - 2026-07-23
+
+- dc0f4cc feat(calendar): add per-weekday daily-bonus toggle and notifications
+- 228bdc0 feat(calendar): add separate toggle for season daily bonuses
+- 519e07f fix(environment): update comments to clarify production backend configuration
