@@ -76,7 +76,7 @@
     "@eslint/eslintrc": "^3.3.6",
     "@eslint/js": "^10.0.1",
     "@ionic/angular-toolkit": "^12.3.0",
-    "@playwright/test": "^1.61.1",
+    "@playwright/test": "^1.62.0",
     "@thetigeregg/commitlint-config": "^2.0.0",
     "@thetigeregg/dev-cli": "^5.0.0",
     "@thetigeregg/lint-staged-config": "^2.0.0",
