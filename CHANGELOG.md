@@ -221,3 +221,10 @@
 ## v0.12.1 - 2026-07-23
 
 - 7158d10 fix(timeline-category): add bottom border to hidden indicator for better visibility
+
+## v0.13.0 - 2026-07-29
+
+- 836f37d Merge pull request #24 from thetigeregg/feat/fix
+- 00763a2 fix(pokemon-image): handle loadPokemonData errors to prevent unhandled rejection
+- d2d1c71 test(live-update): add check for downloadBundle failure due to checksum mismatch
+- a649576 feat(live-update): add error handling for already downloaded bundles
