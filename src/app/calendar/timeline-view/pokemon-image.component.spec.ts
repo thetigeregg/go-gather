@@ -230,8 +230,8 @@ describe('PokemonImageComponent', () => {
     it('recomputes once Pokemon stats finish loading after this component already settled', () => {
       let loadCallback: (() => void) | undefined;
       fakeStatsService.loadPokemonData.mockReturnValue({
-        subscribe: (cb: () => void) => {
-          loadCallback = cb;
+        subscribe: (observer: { next: () => void }) => {
+          loadCallback = observer.next;
         },
       });
       component.showCP = true;

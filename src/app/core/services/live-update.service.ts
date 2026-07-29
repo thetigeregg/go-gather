@@ -6,6 +6,7 @@ import { Observable, ReplaySubject } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   buildLiveUpdateManifestUrl,
+  isBundleAlreadyDownloadedError,
   parseIosLiveUpdateManifest,
   resolveBackendOriginFromApiUrl,
   shouldStageLiveUpdateManifest,
@@ -155,12 +156,24 @@ export class LiveUpdateService {
         return;
       }
 
-      await LiveUpdate.downloadBundle({
-        url: manifest.url,
-        bundleId: manifest.bundleId,
-        checksum: manifest.checksum,
-        signature: manifest.signature,
-      });
+      try {
+        await LiveUpdate.downloadBundle({
+          url: manifest.url,
+          bundleId: manifest.bundleId,
+          checksum: manifest.checksum,
+          signature: manifest.signature,
+        });
+      } catch (error: unknown) {
+        if (!isBundleAlreadyDownloadedError(error)) {
+          throw error;
+        }
+        // Already on disk from an earlier check that never got as far as
+        // setNextBundle() (e.g. a native version-code change reset the
+        // next/current pointers first) — the plugin's own hasBundleById
+        // pre-check in downloadBundle() would otherwise fail this exact
+        // bundleId forever, since re-downloading is never attempted.
+        console.info('live_update.bundle_already_downloaded', { bundleId: manifest.bundleId });
+      }
 
       await LiveUpdate.setNextBundle({ bundleId: manifest.bundleId });
 
