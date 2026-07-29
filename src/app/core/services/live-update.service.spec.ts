@@ -346,6 +346,22 @@ describe('LiveUpdateService', () => {
     expect(loggedKeys(consoleErrorSpy)).not.toContain('live_update.check_failed');
   });
 
+  it('reports check_failed when downloadBundle fails for a reason other than an existing bundle', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(validManifest), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+    liveUpdateDownloadBundleMock.mockRejectedValueOnce(new Error('checksum mismatch.'));
+
+    await service.checkAndStageUpdate(true);
+
+    expect(liveUpdateSetNextBundleMock).not.toHaveBeenCalled();
+    expect(loggedKeys(consoleInfoSpy)).not.toContain('live_update.bundle_already_downloaded');
+    expect(loggedKeys(consoleErrorSpy)).toContain('live_update.check_failed');
+  });
+
   it('respects the resume check interval unless forced', async () => {
     vi.useFakeTimers();
     globalThis.fetch = vi.fn().mockResolvedValue(

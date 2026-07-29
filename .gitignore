@@ -111,3 +111,5 @@ testem.log
 .DS_Store
 Thumbs.db
 .claude/settings.json
+/worktrees/
+prompts/
