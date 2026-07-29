@@ -82,11 +82,17 @@ export class PokemonImageComponent implements OnInit, OnChanges {
   }
 
   ngOnInit(): void {
-    this.pokemonStatsService.loadPokemonData().subscribe(() => {
-      // Stats may finish loading after this component's own inputs have
-      // already settled (ngOnChanges already ran) — recompute once more so
-      // the CP badge appears once the data actually arrives.
-      this.cachedCpData = this.computeCpData();
+    this.pokemonStatsService.loadPokemonData().subscribe({
+      next: () => {
+        // Stats may finish loading after this component's own inputs have
+        // already settled (ngOnChanges already ran) — recompute once more so
+        // the CP badge appears once the data actually arrives.
+        this.cachedCpData = this.computeCpData();
+      },
+      // Without an error handler, a failed/cancelled request (e.g. torn
+      // down mid-flight in tests) becomes an unhandled RxJS error instead
+      // of just leaving the CP badge unset — the CP badge is best-effort.
+      error: () => {},
     });
   }
 
