@@ -329,6 +329,23 @@ describe('LiveUpdateService', () => {
     expect(loggedKeys(consoleInfoSpy)).toContain('live_update.staged');
   });
 
+  it('stages the bundle anyway when downloadBundle fails because it already exists on disk', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(validManifest), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+    liveUpdateDownloadBundleMock.mockRejectedValueOnce(new Error('bundle already exists.'));
+
+    await service.checkAndStageUpdate(true);
+
+    expect(liveUpdateSetNextBundleMock).toHaveBeenCalledWith({ bundleId: validManifest.bundleId });
+    expect(loggedKeys(consoleInfoSpy)).toContain('live_update.bundle_already_downloaded');
+    expect(loggedKeys(consoleInfoSpy)).toContain('live_update.staged');
+    expect(loggedKeys(consoleErrorSpy)).not.toContain('live_update.check_failed');
+  });
+
   it('respects the resume check interval unless forced', async () => {
     vi.useFakeTimers();
     globalThis.fetch = vi.fn().mockResolvedValue(

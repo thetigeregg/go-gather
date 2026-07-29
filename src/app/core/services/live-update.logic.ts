@@ -75,6 +75,19 @@ export function shouldStageLiveUpdateManifest(options: {
   return { shouldStage: true, reason: 'update_available' };
 }
 
+/**
+ * `LiveUpdate.downloadBundle()` throws this when a bundle folder for the
+ * given ID is already on disk (see the plugin's native `hasBundleById`
+ * pre-check — it never re-verifies or re-links an existing bundle to
+ * `next`/`current`). Without this check, an already-downloaded-but-never-
+ * promoted bundle (e.g. left behind by a native version-code change reset,
+ * or an interrupted previous check) would fail every future check forever,
+ * since the same bundleId keeps colliding with the same on-disk folder.
+ */
+export function isBundleAlreadyDownloadedError(error: unknown): boolean {
+  return error instanceof Error && /bundle already exists/i.test(error.message);
+}
+
 export function buildLiveUpdateManifestUrl(
   backendOrigin: string,
   nativeBuildNumber: string

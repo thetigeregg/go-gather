@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   buildLiveUpdateManifestUrl,
+  isBundleAlreadyDownloadedError,
   parseIosLiveUpdateManifest,
   resolveBackendOriginFromApiUrl,
   shouldStageLiveUpdateManifest,
@@ -119,5 +120,14 @@ describe('live-update.logic', () => {
         nextBundleId: 'v1.0.0-b42',
       })
     ).toEqual({ shouldStage: false, reason: 'already_staged_or_active' });
+  });
+
+  it('isBundleAlreadyDownloadedError matches the plugin\'s "bundle already exists" error', () => {
+    expect(isBundleAlreadyDownloadedError(new Error('bundle already exists.'))).toBe(true);
+    expect(isBundleAlreadyDownloadedError(new Error('Bundle Already Exists'))).toBe(true);
+    expect(isBundleAlreadyDownloadedError(new Error('checksum mismatch.'))).toBe(false);
+    expect(isBundleAlreadyDownloadedError('bundle already exists.')).toBe(false);
+    expect(isBundleAlreadyDownloadedError(null)).toBe(false);
+    expect(isBundleAlreadyDownloadedError(undefined)).toBe(false);
   });
 });
