@@ -100,7 +100,7 @@
     "plist": "^5.0.0",
     "prettier": "3.9.6",
     "sql.js": "^1.14.1",
-    "typescript": "~5.9.3",
+    "typescript": "~6.0.3",
     "typescript-eslint": "^8.67.0",
     "vitest": "^4.1.10"
   },
