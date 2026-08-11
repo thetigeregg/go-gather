@@ -228,3 +228,13 @@
 - 00763a2 fix(pokemon-image): handle loadPokemonData errors to prevent unhandled rejection
 - d2d1c71 test(live-update): add check for downloadBundle failure due to checksum mismatch
 - a649576 feat(live-update): add error handling for already downloaded bundles
+
+## v0.13.1 - 2026-08-11
+
+- ea059cc Merge pull request #36 from thetigeregg/feat/fix
+- 4455bd0 chore: update permissions in release-publish.yml and add GitHub App token step
+- b7406ba Merge pull request #34 from thetigeregg/dependabot/docker/server/node-24.19.0-slim
+- 563bdab chore(docker): bump node from 24.18.0-slim to 24.19.0-slim in /server
+- ea3819b Merge pull request #35 from thetigeregg/feat/bump
+- 11fec7d chore: update Ruby version and dependencies in Gemfile.lock
+- a27351b chore: update dependencies in package.json and server/package.json
