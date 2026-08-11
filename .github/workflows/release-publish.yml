@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: go-gather-release-${{ github.ref }}
@@ -17,6 +17,8 @@ jobs:
   release:
     name: Bump Version and Tag
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     outputs:
       version: ${{ steps.version.outputs.version }}
       major: ${{ steps.version.outputs.major }}
@@ -24,9 +26,17 @@ jobs:
       tag: ${{ steps.version.outputs.tag }}
       release_sha: ${{ steps.push.outputs.release_sha }}
     steps:
+      - name: Create GitHub App token
+        id: app_token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ vars.AUTOCOMMIT_CLIENT_ID }}
+          private-key: ${{ secrets.AUTOCOMMIT_APP_PRIVATE_KEY }}
+
       - name: Checkout
         uses: actions/checkout@v7
         with:
+          token: ${{ steps.app_token.outputs.token }}
           fetch-depth: 0
 
       - name: Setup Node.js
