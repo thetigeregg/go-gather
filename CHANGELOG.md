@@ -248,3 +248,7 @@
 ## v0.13.3 - 2026-08-18
 
 - a8838b6 fix(worktree): resolve bootstrap context from worktreePath, not process.cwd() (#43)
+
+## v0.13.4 - 2026-08-18
+
+- 100986a fix(ncu-config): resolve angular updates within pinned major (#44)
