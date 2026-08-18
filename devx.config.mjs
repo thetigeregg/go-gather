@@ -6,6 +6,9 @@ export default {
   },
   branchPrefix: 'feat/',
   baseBranch: 'main',
+  worktree: {
+    adapterModule: 'scripts/worktree-dev.mjs',
+  },
   pr: {
     baseRef: 'origin/main',
     prepOutputFile: 'prompts/pr-prep-prompt.md',
