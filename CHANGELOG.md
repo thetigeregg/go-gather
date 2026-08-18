@@ -244,3 +244,7 @@
 - e8d2b34 Merge pull request #42 from thetigeregg/feat/fix
 - 66b791c chore: update TypeScript version to 7.0.2 in package.json and package-lock.json
 - 6fc95cf chore: update dependencies to latest versions in package.json and package-lock.json
+
+## v0.13.3 - 2026-08-18
+
+- a8838b6 fix(worktree): resolve bootstrap context from worktreePath, not process.cwd() (#43)
