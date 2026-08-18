@@ -238,3 +238,9 @@
 - ea3819b Merge pull request #35 from thetigeregg/feat/bump
 - 11fec7d chore: update Ruby version and dependencies in Gemfile.lock
 - a27351b chore: update dependencies in package.json and server/package.json
+
+## v0.13.2 - 2026-08-18
+
+- e8d2b34 Merge pull request #42 from thetigeregg/feat/fix
+- 66b791c chore: update TypeScript version to 7.0.2 in package.json and package-lock.json
+- 6fc95cf chore: update dependencies to latest versions in package.json and package-lock.json
