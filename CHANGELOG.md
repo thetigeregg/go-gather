@@ -252,3 +252,7 @@
 ## v0.13.4 - 2026-08-18
 
 - 100986a fix(ncu-config): resolve angular updates within pinned major (#44)
+
+## v0.13.5 - 2026-08-18
+
+- 5d08311 fix(dependencies): bump capacitor-live-update, dev-cli, and vitest (#45)
