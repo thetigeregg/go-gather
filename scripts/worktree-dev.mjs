@@ -7,17 +7,19 @@ import {
   loadDevxConfig,
 } from '@thetigeregg/dev-cli';
 
-const cwd = process.cwd();
-const config = await loadDevxConfig({ cwd });
-const context = await createWorktreeContext({ cwd, config });
+async function buildContext(cwd) {
+  const config = await loadDevxConfig({ cwd });
+  return createWorktreeContext({ cwd, config });
+}
 
-export async function bootstrapWorktree() {
+export async function bootstrapWorktree({ cwd = process.cwd() } = {}) {
+  const context = await buildContext(cwd);
   ensureDependenciesInstalled(context);
 }
 
 export async function runWorktreeDev([command] = []) {
   if (command === 'bootstrap') {
-    await bootstrapWorktree();
+    await bootstrapWorktree({ cwd: process.cwd() });
     return;
   }
 
