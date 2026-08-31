@@ -260,3 +260,7 @@
 ## v0.13.6 - 2026-08-31
 
 - 7da9140 build(deps): bump Angular, Firebase, Capacitor, and server dependencies (#52)
+
+## v0.14.0 - 2026-08-31
+
+- 429fe25 feat(tabs): remember last active tab across app launches (#53)
