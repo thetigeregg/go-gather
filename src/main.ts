@@ -20,6 +20,7 @@ import { LiveUpdateService } from './app/core/services/live-update.service';
 import { PokeDataService } from './app/core/services/poke-data.service';
 import { SearchConfigService } from './app/core/services/search-config.service';
 import { SyncService } from './app/core/services/sync.service';
+import { TabStateService } from './app/core/services/tab-state.service';
 import { UserDataService } from './app/core/services/user-data.service';
 
 bootstrapApplication(AppComponent, {
@@ -40,17 +41,20 @@ bootstrapApplication(AppComponent, {
     // constructor default — that gap let /search-strings render the Costume
     // Gender section incorrectly when reached without first visiting
     // /tabs/gather in the same session.
-    // CalendarFilterService doesn't actually touch STORAGE_ENGINE (it's
-    // PreferenceStorageService-backed) but is included here too since the
-    // calendar-filter-menu is mounted globally in app.component.html and
-    // should reflect real persisted state the instant it's opened, not a
-    // default flash.
+    // CalendarFilterService and TabStateService don't actually touch
+    // STORAGE_ENGINE (they're PreferenceStorageService-backed) but are
+    // included here too: the calendar-filter-menu is mounted globally in
+    // app.component.html and should reflect real persisted state the instant
+    // it's opened, and TabStateService must be hydrated before the router's
+    // initial navigation so the /tabs default-tab redirect uses the real
+    // last-active tab instead of always falling back to Gather.
     provideAppInitializer(() => {
       const storageEngineFactory = inject(StorageEngineFactory);
       const userDataService = inject(UserDataService);
       const pokeDataService = inject(PokeDataService);
       const searchConfigService = inject(SearchConfigService);
       const calendarFilterService = inject(CalendarFilterService);
+      const tabStateService = inject(TabStateService);
       const syncService = inject(SyncService);
 
       return storageEngineFactory
@@ -62,6 +66,7 @@ bootstrapApplication(AppComponent, {
             firstValueFrom(pokeDataService.loadCatalog()),
             firstValueFrom(searchConfigService.loadConfig()),
             firstValueFrom(calendarFilterService.loadFilterState()),
+            firstValueFrom(tabStateService.loadLastActiveTab()),
           ])
         )
         .then(() => {

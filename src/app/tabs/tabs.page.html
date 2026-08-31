@@ -1,4 +1,4 @@
-<ion-tabs>
+<ion-tabs (ionTabsDidChange)="onTabChange($event)">
   <!-- id referenced as positionAnchor by toasts on pages nested under /tabs, so they sit above the bar instead of behind it -->
   <ion-tab-bar slot="bottom" id="main-tab-bar">
     <ion-tab-button tab="gather" href="/tabs/gather">
