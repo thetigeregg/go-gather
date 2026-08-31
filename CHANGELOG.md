@@ -256,3 +256,7 @@
 ## v0.13.5 - 2026-08-18
 
 - 5d08311 fix(dependencies): bump capacitor-live-update, dev-cli, and vitest (#45)
+
+## v0.13.6 - 2026-08-31
+
+- 7da9140 build(deps): bump Angular, Firebase, Capacitor, and server dependencies (#52)
