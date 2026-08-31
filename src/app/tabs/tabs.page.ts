@@ -18,8 +18,7 @@ export class TabsPage {
     addIcons({ apps, calendar });
   }
 
-  onTabChange(event: { tab: string }): void {
-    const tab = event.tab;
+  onTabChange(tab: string): void {
     if (tab === 'gather' || tab === 'calendar') {
       this.tabStateService.setLastActiveTab(tab);
     }

@@ -31,7 +31,7 @@ describe('TabsPage', () => {
   it('onTabChange persists a recognized tab', () => {
     const setLastActiveTab = vi.spyOn(tabStateService, 'setLastActiveTab');
 
-    component.onTabChange({ tab: 'calendar' });
+    component.onTabChange('calendar');
 
     expect(setLastActiveTab).toHaveBeenCalledWith('calendar');
   });
@@ -39,7 +39,7 @@ describe('TabsPage', () => {
   it('onTabChange ignores an unrecognized tab id', () => {
     const setLastActiveTab = vi.spyOn(tabStateService, 'setLastActiveTab');
 
-    component.onTabChange({ tab: 'something-else' });
+    component.onTabChange('something-else');
 
     expect(setLastActiveTab).not.toHaveBeenCalled();
   });
