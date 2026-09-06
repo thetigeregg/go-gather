@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url';
 
 import { listChangedFiles, writeGithubOutput } from './release-diff.mjs';
 
-const EDGE_IMAGE_PATH_PREFIXES = ['edge/', 'src/', 'shared/', 'config/', 'scripts/'];
+const EDGE_IMAGE_PATH_PREFIXES = ['edge/', 'src/', 'shared/'];
 
 const EDGE_IMAGE_ROOT_FILES = new Set([
   'package.json',

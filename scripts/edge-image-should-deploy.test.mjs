@@ -11,12 +11,15 @@ test('matchesEdgeImagePath matches edge/web build trees and manifests only', () 
   assert.equal(matchesEdgeImagePath('edge/Caddyfile'), true);
   assert.equal(matchesEdgeImagePath('src/app/foo.ts'), true);
   assert.equal(matchesEdgeImagePath('shared/src/models.ts'), true);
-  assert.equal(matchesEdgeImagePath('config/ios-live-update-public.pem'), true);
-  assert.equal(matchesEdgeImagePath('scripts/write-environment-ios.mjs'), true);
   assert.equal(matchesEdgeImagePath('angular.json'), true);
   assert.equal(matchesEdgeImagePath('package.json'), true);
   assert.equal(matchesEdgeImagePath('server/src/api.ts'), false);
   assert.equal(matchesEdgeImagePath('ios/App/AppDelegate.swift'), false);
+  // config/ and scripts/ hold iOS-only assets and scripts not read by `ng build`
+  // (edge/Dockerfile doesn't copy them in) — excluded so unrelated iOS/release
+  // changes don't trigger unnecessary edge image republishes.
+  assert.equal(matchesEdgeImagePath('config/ios-live-update-public.pem'), false);
+  assert.equal(matchesEdgeImagePath('scripts/write-environment-ios.mjs'), false);
 });
 
 test('evaluateEdgeImageDeploy publishes for edge/src/shared changes', () => {

@@ -9,8 +9,6 @@ COPY server/package.json ./server/package.json
 RUN npm ci --ignore-scripts
 
 COPY angular.json tsconfig.json tsconfig.app.json tsconfig.spec.json ionic.config.json capacitor.config.ts ./
-COPY config ./config
-COPY scripts ./scripts
 COPY src ./src
 RUN npm run build
 
