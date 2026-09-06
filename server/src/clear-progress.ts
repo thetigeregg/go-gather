@@ -57,13 +57,25 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (!process.stdin.isTTY) {
+    console.error(
+      'Refusing to run: stdin is not a TTY, so the confirmation prompt cannot be answered.'
+    );
+    process.exitCode = 1;
+    return;
+  }
+
   const rl = createInterface({ input: process.stdin, output: process.stdout });
-  const answer = await rl.question(
-    `This will permanently clear ${String(caughtCount)} caught Pokémon (progress only — ` +
-      `settings/exclusions/tags are untouched). A backup will be written first.\n` +
-      `Type CLEAR to continue: `
-  );
-  rl.close();
+  let answer: string;
+  try {
+    answer = await rl.question(
+      `This will permanently clear ${String(caughtCount)} caught Pokémon (progress only — ` +
+        `settings/exclusions/tags are untouched). A backup will be written first.\n` +
+        `Type CLEAR to continue: `
+    );
+  } finally {
+    rl.close();
+  }
 
   if (answer.trim() !== 'CLEAR') {
     console.log('Aborted — nothing was changed.');
@@ -75,7 +87,9 @@ async function main(): Promise<void> {
 
   const clearedCount = clearProgress();
   console.log(
-    `Cleared ${String(clearedCount)} caught Pokémon. Devices will pick this up on their next sync.`
+    `Cleared ${String(clearedCount)} caught Pokémon. Devices with no pending offline changes will ` +
+      `pick this up on their next sync; a device with a pending push can re-apply caught progress and ` +
+      `override the clear.`
   );
 }
 
