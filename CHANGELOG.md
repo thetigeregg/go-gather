@@ -264,3 +264,7 @@
 ## v0.14.0 - 2026-08-31
 
 - 429fe25 feat(tabs): remember last active tab across app launches (#53)
+
+## v0.14.1 - 2026-09-06
+
+- 90d19bf fix(server): make backup writer throw so clear-progress can abort (#54)
