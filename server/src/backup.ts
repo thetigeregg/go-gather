@@ -111,18 +111,35 @@ function countProgressSyncEvents(): number {
 }
 
 /**
- * Writes one backup file, matching the client's exported format/filename
- * scheme byte-for-byte in shape. Never throws — a failed write (e.g. the
- * mounted backups volume isn't writable) must not crash the server or a
+ * Builds and writes one backup file, matching the client's exported
+ * format/filename scheme byte-for-byte in shape. Throws on failure (e.g.
+ * the backups directory isn't writable) — callers that need a failed
+ * backup to hard-abort (like `clear-progress.ts`, before it deletes
+ * anything) should call this directly; callers that must never crash
+ * (server startup, mid-request) should go through `writeBackup()` instead.
+ */
+export function buildAndWriteBackupFile(): {
+  filename: string;
+  path: string;
+  bundle: ExportBundle;
+} {
+  mkdirSync(BACKUPS_DIR, { recursive: true });
+  const bundle = buildExportBundle();
+  const filename = backupFilename(new Date());
+  const path = join(BACKUPS_DIR, filename);
+  writeFileSync(path, JSON.stringify(bundle, null, 2), 'utf-8');
+  writeSyncMeta(LAST_BACKUP_PROGRESS_COUNT_KEY, String(countProgressSyncEvents()));
+  return { filename, path, bundle };
+}
+
+/**
+ * Writes one backup file. Never throws — a failed write (e.g. the mounted
+ * backups volume isn't writable) must not crash the server or a
  * `/api/sync/push` request, just get logged.
  */
 export function writeBackup(logger: FastifyBaseLogger): void {
   try {
-    mkdirSync(BACKUPS_DIR, { recursive: true });
-    const bundle = buildExportBundle();
-    const filename = backupFilename(new Date());
-    writeFileSync(join(BACKUPS_DIR, filename), JSON.stringify(bundle, null, 2), 'utf-8');
-    writeSyncMeta(LAST_BACKUP_PROGRESS_COUNT_KEY, String(countProgressSyncEvents()));
+    const { filename, bundle } = buildAndWriteBackupFile();
     logger.info({ filename, progressEntries: bundle.progress.length }, 'wrote server-side backup');
   } catch (err: unknown) {
     logger.error({ err }, 'failed to write server-side backup');

@@ -1,0 +1,85 @@
+import { createInterface } from 'node:readline/promises';
+import { buildAndWriteBackupFile } from './backup.js';
+import { db, initSchema } from './db.js';
+
+interface CaughtRow {
+  catalog_entry_id: string;
+}
+
+function countCaught(): number {
+  const row = db.prepare(`SELECT COUNT(*) as count FROM user_progress WHERE caught = 1`).get() as {
+    count: number;
+  };
+  return row.count;
+}
+
+/**
+ * Clears all caught progress and emits matching `caught: false` upsert
+ * `sync_events` (same shape `applyOperation` in api.ts inserts for a normal
+ * push) so connected clients converge to the cleared state on their next
+ * sync pull without any client-side changes.
+ */
+function clearProgress(): number {
+  const caughtRows = db
+    .prepare(`SELECT catalog_entry_id FROM user_progress WHERE caught = 1`)
+    .all() as CaughtRow[];
+
+  const clear = db.transaction((rows: CaughtRow[]) => {
+    const now = new Date().toISOString();
+    const insertEvent = db.prepare(
+      `INSERT INTO sync_events (entity_type, entity_key, operation, payload, server_timestamp)
+       VALUES ('progress', @entityKey, 'upsert', @payload, @serverTimestamp)`
+    );
+    for (const row of rows) {
+      insertEvent.run({
+        entityKey: row.catalog_entry_id,
+        payload: JSON.stringify({
+          catalogEntryId: row.catalog_entry_id,
+          caught: false,
+          updatedAt: now,
+        }),
+        serverTimestamp: now,
+      });
+    }
+    db.prepare('DELETE FROM user_progress').run();
+  });
+  clear(caughtRows);
+
+  return caughtRows.length;
+}
+
+async function main(): Promise<void> {
+  initSchema();
+
+  const caughtCount = countCaught();
+  if (caughtCount === 0) {
+    console.log('Nothing to clear — no caught progress found.');
+    return;
+  }
+
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  const answer = await rl.question(
+    `This will permanently clear ${String(caughtCount)} caught Pokémon (progress only — ` +
+      `settings/exclusions/tags are untouched). A backup will be written first.\n` +
+      `Type CLEAR to continue: `
+  );
+  rl.close();
+
+  if (answer.trim() !== 'CLEAR') {
+    console.log('Aborted — nothing was changed.');
+    return;
+  }
+
+  const { path, bundle } = buildAndWriteBackupFile();
+  console.log(`Backed up ${String(bundle.progress.length)} progress entries to ${path}`);
+
+  const clearedCount = clearProgress();
+  console.log(
+    `Cleared ${String(clearedCount)} caught Pokémon. Devices will pick this up on their next sync.`
+  );
+}
+
+main().catch((err: unknown) => {
+  console.error('Failed to clear progress:', err);
+  process.exitCode = 1;
+});

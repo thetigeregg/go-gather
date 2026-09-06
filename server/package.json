@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "sync": "tsx src/sync.ts",
+    "clear-progress": "tsx src/clear-progress.ts",
     "sync:calendar-events": "tsx src/sync-calendar-events.ts",
     "sync:season": "tsx src/sync-season.ts",
     "sync:pokemon-stats": "tsx src/sync-pokemon-stats.ts",
