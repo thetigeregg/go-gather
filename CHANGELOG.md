@@ -268,3 +268,7 @@
 ## v0.14.1 - 2026-09-06
 
 - 90d19bf fix(server): make backup writer throw so clear-progress can abort (#54)
+
+## v0.15.0 - 2026-09-06
+
+- 8fde9b6 feat(edge): serve Angular web build via Caddy edge container (#55)
