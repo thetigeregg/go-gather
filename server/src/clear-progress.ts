@@ -30,6 +30,9 @@ function clearProgress(): number {
       `INSERT INTO sync_events (entity_type, entity_key, operation, payload, server_timestamp)
        VALUES ('progress', @entityKey, 'upsert', @payload, @serverTimestamp)`
     );
+    const clearRow = db.prepare(
+      `UPDATE user_progress SET caught = 0, updated_at = @updatedAt WHERE catalog_entry_id = @entityKey`
+    );
     for (const row of rows) {
       insertEvent.run({
         entityKey: row.catalog_entry_id,
@@ -40,8 +43,8 @@ function clearProgress(): number {
         }),
         serverTimestamp: now,
       });
+      clearRow.run({ entityKey: row.catalog_entry_id, updatedAt: now });
     }
-    db.prepare('DELETE FROM user_progress').run();
   });
   clear(caughtRows);
 
