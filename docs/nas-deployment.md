@@ -1,6 +1,8 @@
 # NAS Deployment (Synology + Docker + Tailscale)
 
-A self-hosted deployment on your own NAS via Docker + Tailscale. Architecture is intentionally minimal: one deployable service (`server`, the Fastify API), SQLite for storage, no separate worker/scraper/backup containers.
+A self-hosted deployment on your own NAS via Docker + Tailscale. Architecture is intentionally minimal: two deployable services — `server` (the Fastify API, SQLite for storage) and `edge` (a Caddy container serving the built Angular web app and reverse-proxying `/api` and `/images` to `server`) — no separate worker/scraper/backup containers.
+
+`edge` exists only to serve the app in a browser. The native iOS app keeps talking to `server` directly, exactly as before — `edge` doesn't sit in front of it.
 
 ## 1. Persistent directory
 
@@ -10,15 +12,16 @@ Create these directories on your NAS host:
 - `nas-data/server-backups` — JSON user-data backups (see section 4).
 - `nas-secrets` — plain files bind-mounted read-only into the container at `/run/secrets`, one file per secret (e.g. `firebase_service_account_json` — see "Push notifications" below). No Docker Compose `secrets:` construct involved, just a host directory.
 
-## 2. Confirm the image exists
+## 2. Confirm the images exist
 
-CI already publishes `ghcr.io/thetigeregg/go-gather-server` on every push to `main` (see `.github/workflows/release-publish.yml`'s `publish_server_image` job). Confirm it's reachable before deploying:
+CI already publishes `ghcr.io/thetigeregg/go-gather-server` and `ghcr.io/thetigeregg/go-gather-edge` on every push to `main` that touches their respective paths (see `.github/workflows/release-publish.yml`'s `publish_server_image` and `publish_edge_image` jobs). Confirm both are reachable before deploying:
 
 ```bash
 docker manifest inspect ghcr.io/thetigeregg/go-gather-server:main
+docker manifest inspect ghcr.io/thetigeregg/go-gather-edge:main
 ```
 
-The image is **amd64-only**. This is fine for a Synology DS920+ (Intel Celeron J4125, x86_64) — if you ever deploy to an ARM-based NAS, `publish_server_image` would need a multi-arch (`linux/amd64,linux/arm64`) build first.
+Both images are **amd64-only**. This is fine for a Synology DS920+ (Intel Celeron J4125, x86_64) — if you ever deploy to an ARM-based NAS, `publish_server_image`/`publish_edge_image` would need a multi-arch (`linux/amd64,linux/arm64`) build first.
 
 ## 3. Deploy
 
@@ -33,6 +36,8 @@ Env vars (all optional, shown with their defaults):
 
 - `SERVER_IMAGE` (default `ghcr.io/thetigeregg/go-gather-server:main`)
 - `SERVER_PORT` (default `3000`) — host port the API is published on
+- `EDGE_IMAGE` (default `ghcr.io/thetigeregg/go-gather-edge:main`)
+- `EDGE_PORT` (default `8080`) — host port the web app is published on
 - `NAS_DATA_ROOT` (default `./nas-data`) — absolute host path recommended for real deployments, e.g. `/volume1/docker/go-gather`
 - `TZ` (default `Europe/Zurich`)
 - `SYNC_CATALOG_INTERVAL_HOURS` (default `24`), `SYNC_CALENDAR_EVENTS_INTERVAL_HOURS` (default `6`), `SYNC_SEASON_INTERVAL_HOURS` (default `6`), `SYNC_POKEMON_STATS_INTERVAL_HOURS` (default `24`) — see section 4
@@ -75,10 +80,11 @@ The server checks for due notifications every `NOTIFICATION_CHECK_INTERVAL_MINUT
 
 ## 5. Publish over Tailscale
 
-Run on the Synology host (where Tailscale is installed):
+Run on the Synology host (where Tailscale is installed). Keep the existing API mapping for the iOS app (`server`, port 3000) and add a second mapping on a different port for the web app (`edge`, port 8080) — Tailscale can serve multiple `https` ports from the same node:
 
 ```bash
-tailscale serve --https=443 http://127.0.0.1:3000
+tailscale serve --bg --https=443 http://127.0.0.1:3000
+tailscale serve --bg --https=8443 http://127.0.0.1:8080
 ```
 
 Verify:
@@ -88,7 +94,7 @@ tailscale status
 tailscale serve status
 ```
 
-Then use the tailnet URL shown by `tailscale serve status` as your backend origin.
+Use the `:443` tailnet URL from `tailscale serve status` as the iOS backend origin (step 6, unchanged), and the `:8443` tailnet URL to open the web app in a browser.
 
 ## 6. Point the iOS app at it
 
@@ -101,13 +107,16 @@ Set the `IOS_BACKEND_ORIGIN_PROD` GitHub secret to the tailnet URL from step 5.
 ```bash
 curl http://127.0.0.1:3000/api/search-config
 docker compose logs -f server
+
+curl http://127.0.0.1:8080/
+docker compose logs -f edge
 ```
 
-There's no dedicated `/health` route yet — `docker-compose.yml`'s healthcheck and the command above both reuse this existing, cheap route as a stand-in.
+There's no dedicated `/health` route yet — `docker-compose.yml`'s healthcheck and the command above both reuse this existing, cheap route as a stand-in. `edge` has no healthcheck defined in `docker-compose.yml`; a `curl` for `index.html` is the manual equivalent.
 
 ## 8. Known limitation: CORS
 
-`server/src/api.ts` registers a hardcoded CORS origin list (`http://localhost:4200`, `capacitor://localhost`) — no env var controls it. This doesn't block the iOS app itself (`CapacitorHttp: { enabled: true }` in `capacitor.config.ts` routes native requests around browser CORS entirely), but a future browser-based client hitting this NAS deployment directly would need a code change here first.
+`server/src/api.ts` registers a hardcoded CORS origin list (`http://localhost:4200`, `capacitor://localhost`) — no env var controls it. This doesn't block the iOS app itself (`CapacitorHttp: { enabled: true }` in `capacitor.config.ts` routes native requests around browser CORS entirely). It also doesn't affect the web app served via `edge`: the browser only ever talks to the `edge` container's own origin, which reverse-proxies `/api` and `/images` to `server` same-origin, so no cross-origin request (and therefore no CORS check) is involved. The limitation only matters if some other browser-based client were ever pointed directly at the `server` origin instead of going through `edge` — that would need a code change here first.
 
 ## 9. Backups
 

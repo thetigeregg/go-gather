@@ -91,3 +91,11 @@ jobs:
           file: server/Dockerfile
           push: false
           provenance: false
+
+      - name: Build edge image (no push)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: edge/Dockerfile
+          push: false
+          provenance: false
