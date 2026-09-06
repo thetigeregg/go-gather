@@ -1,0 +1,17 @@
+:8080 {
+	encode gzip zstd
+
+	handle /api/* {
+		reverse_proxy http://server:3000
+	}
+
+	handle /images/* {
+		reverse_proxy http://server:3000
+	}
+
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

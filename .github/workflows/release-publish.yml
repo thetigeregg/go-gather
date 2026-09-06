@@ -104,6 +104,32 @@ jobs:
             --head "$CURRENT" \
             --github-output "$GITHUB_OUTPUT"
 
+  detect_edge_image_changes:
+    name: Detect edge image changes
+    needs:
+      - release
+    runs-on: ubuntu-latest
+    outputs:
+      should_publish: ${{ steps.check.outputs.should_publish }}
+      matched_paths: ${{ steps.check.outputs.matched_paths }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.release.outputs.release_sha }}
+
+      - name: Evaluate edge image changes
+        id: check
+        env:
+          CURRENT: ${{ needs.release.outputs.tag }}
+        run: |
+          PREV=$(git tag --list 'v*' --sort=-v:refname | awk -v cur="$CURRENT" '$0==cur {getline; print; exit}')
+          node scripts/edge-image-should-deploy.mjs \
+            --base "$PREV" \
+            --head "$CURRENT" \
+            --github-output "$GITHUB_OUTPUT"
+
   detect_ios_live_update:
     name: Detect OTA live-update changes
     needs:
@@ -302,3 +328,58 @@ jobs:
           cache-to: type=gha,mode=max,scope=go-gather-server
           build-args: |
             BUILD_IOS_LIVE_UPDATE=false
+
+  publish_edge_image:
+    name: Publish Edge Docker Image
+    needs:
+      - release
+      - detect_edge_image_changes
+    if: >-
+      always() &&
+      needs.release.result == 'success' &&
+      needs.detect_edge_image_changes.result == 'success' &&
+      needs.detect_edge_image_changes.outputs.should_publish == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release.outputs.release_sha }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/go-gather-edge
+          tags: |
+            type=raw,value=main
+            type=raw,value=${{ needs.release.outputs.tag }}
+            type=raw,value=${{ needs.release.outputs.version }}
+            type=raw,value=${{ needs.release.outputs.major }}.${{ needs.release.outputs.minor }}
+            type=raw,value=${{ needs.release.outputs.major }}
+            type=sha,format=short
+
+      - name: Build and push
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: edge/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=go-gather-edge
+          cache-to: type=gha,mode=max,scope=go-gather-edge
