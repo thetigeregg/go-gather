@@ -2,16 +2,19 @@ const base = require('@thetigeregg/ncu-config');
 
 const ANGULAR_MAJOR = 21;
 const IONIC_MAJOR = 8;
+const IONIC_ANGULAR_TOOLKIT_MAJOR = 12;
 
 const isAngularPackage = (name) =>
   name.startsWith('@angular/') || name.startsWith('@angular-devkit/') || name === 'angular-eslint';
 
-const isIonicPackage = (name) => name.startsWith('@ionic/') && name !== '@ionic/angular-toolkit';
+const isIonicAngularToolkitPackage = (name) => name === '@ionic/angular-toolkit';
+
+const isIonicPackage = (name) => name.startsWith('@ionic/') && !isIonicAngularToolkitPackage(name);
 
 module.exports = {
   ...base,
   target: (name) => {
-    if (isAngularPackage(name) || isIonicPackage(name)) {
+    if (isAngularPackage(name) || isIonicPackage(name) || isIonicAngularToolkitPackage(name)) {
       return 'minor';
     }
 
@@ -25,6 +28,10 @@ module.exports = {
 
     if (isIonicPackage(packageName)) {
       return parseInt(upgradedVersionSemver?.major, 10) === IONIC_MAJOR;
+    }
+
+    if (isIonicAngularToolkitPackage(packageName)) {
+      return parseInt(upgradedVersionSemver?.major, 10) === IONIC_ANGULAR_TOOLKIT_MAJOR;
     }
 
     return true;
