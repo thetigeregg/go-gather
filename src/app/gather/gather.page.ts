@@ -116,7 +116,7 @@ export class GatherPage implements OnInit, AfterViewInit {
     // wasted work — skip it unless that setting is actually in effect.
     this.userDataService.listenForProgressChanges().subscribe(() => {
       if (this.userSettings.showUncaughtOnly) {
-        this.setGenerations(this.filterService.groupPokemonByGeneration(this.userSettings));
+        this.setGenerations(this.filterService.groupPokemonByGeneration(this.userSettings), false);
       }
       this.updateHeaderText();
     });
@@ -185,9 +185,9 @@ export class GatherPage implements OnInit, AfterViewInit {
     this.showStickyBar = this.flatRows[clampedIndex].kind !== 'generation-header';
   }
 
-  private setGenerations(generations: Generation[]): void {
+  private setGenerations(generations: Generation[], resetScrollToTop = true): void {
     this.generationToPokemonMap = generations;
-    this.applySearchFilter();
+    this.applySearchFilter(resetScrollToTop);
   }
 
   /** Narrows the display to species matching the search term without
@@ -196,7 +196,7 @@ export class GatherPage implements OnInit, AfterViewInit {
    * switches to an evolution-family match (e.g. "+pikachu" also surfaces
    * Pichu/Raichu), mirroring the `+name` family operator Pokemon GO's own
    * search bar supports (see search-query.serializer.ts). */
-  private applySearchFilter(): void {
+  private applySearchFilter(resetScrollToTop = true): void {
     const rawTerm = this.searchTerm.trim();
     const isFamilySearch = rawTerm.startsWith('+');
     const term = (isFamilySearch ? rawTerm.slice(1) : rawTerm).trim().toLowerCase();
@@ -219,8 +219,11 @@ export class GatherPage implements OnInit, AfterViewInit {
     this.flatRows = flattened.rows;
     this.generationHeaderIndexByRow = flattened.generationHeaderIndexByRow;
     this.virtualScrollStrategy.setItemSizes(flattened.rowSizes);
-    this.onScrolledIndexChange(0);
-    this.viewportRef?.scrollToIndex(0);
+
+    if (resetScrollToTop) {
+      this.onScrolledIndexChange(0);
+      this.viewportRef?.scrollToIndex(0);
+    }
   }
 
   private updateHeaderText(): void {

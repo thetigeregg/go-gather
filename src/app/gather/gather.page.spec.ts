@@ -224,6 +224,23 @@ describe('GatherPage', () => {
     expect(component.headerText).toBe('Regular Pokedex (1/1)');
   });
 
+  it('does not reset the viewport scroll position on a progress-change re-filter', () => {
+    fixture.detectChanges();
+    userSettings = { ...userSettings, showUncaughtOnly: true };
+    component.userSettings = userSettings;
+    const scrollToIndexSpy = vi.fn();
+    component.viewportRef = {
+      scrollToIndex: scrollToIndexSpy,
+      checkViewportSize: vi.fn(),
+    } as unknown as CdkVirtualScrollViewport;
+
+    caughtIds.add('bulbasaur-regular');
+    progressChange$.next();
+
+    expect(component.headerText).toBe('Regular Pokedex (1/1)');
+    expect(scrollToIndexSpy).not.toHaveBeenCalled();
+  });
+
   describe('flatRows and the sticky header bar', () => {
     it('flattens visibleGenerations into rows and points the sticky bar at the first row', () => {
       fixture.detectChanges();
