@@ -284,3 +284,10 @@
 ## v0.15.3 - 2026-09-11
 
 - 4401cb5 fix(gather): keep scroll position on catch/uncatch re-filter (#63)
+
+## v0.15.4 - 2026-09-11
+
+- 7b3922a Merge branch 'main' into feat/jumper
+- b019724 fix(gather): clear stale sticky bar when re-filter empties list
+- 24d9308 fix(gather): keep scroll position on catch/uncatch re-filter
+- 2b007b5 fix(gather): stop scroll reset when toggling caught state
