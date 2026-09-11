@@ -280,3 +280,7 @@
 ## v0.15.2 - 2026-09-11
 
 - 9b24a4d fix(deps): treat @ionic/angular-toolkit as its own ncu target (#62)
+
+## v0.15.3 - 2026-09-11
+
+- 4401cb5 fix(gather): keep scroll position on catch/uncatch re-filter (#63)
