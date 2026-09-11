@@ -127,9 +127,8 @@ export class SyncService implements SyncOutboxWriter {
     this.requestSyncNow();
   }
 
-  onOutboxEntryEnqueued(entry: OutboxEntry): void {
+  onOutboxEntryEnqueued(_entry: OutboxEntry): void {
     // Observability hook only — no logging service ported yet (Phase 5+).
-    void entry;
   }
 
   requestSyncNow(): void {

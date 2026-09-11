@@ -19,8 +19,8 @@
     "@go-gather/shared": "*",
     "better-sqlite3": "^13.0.3",
     "dayjs": "1.11.23",
-    "fastify": "^5.12.1",
-    "firebase-admin": "^14.3.0",
+    "fastify": "^5.12.4",
+    "firebase-admin": "^14.4.0",
     "tsx": "^4.23.13"
   },
   "devDependencies": {
