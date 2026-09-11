@@ -276,3 +276,7 @@
 ## v0.15.1 - 2026-09-11
 
 - d132646 build(deps): bump Angular, Ionic, and Capacitor dependencies (#61)
+
+## v0.15.2 - 2026-09-11
+
+- 9b24a4d fix(deps): treat @ionic/angular-toolkit as its own ncu target (#62)
