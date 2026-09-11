@@ -223,6 +223,8 @@ export class GatherPage implements OnInit, AfterViewInit {
     if (resetScrollToTop) {
       this.onScrolledIndexChange(0);
       this.viewportRef?.scrollToIndex(0);
+    } else if (this.flatRows.length === 0) {
+      this.onScrolledIndexChange(0);
     }
   }
 

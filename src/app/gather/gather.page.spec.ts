@@ -241,6 +241,24 @@ describe('GatherPage', () => {
     expect(scrollToIndexSpy).not.toHaveBeenCalled();
   });
 
+  it('clears the sticky bar without scrolling when a progress-change re-filter empties the list', () => {
+    fixture.detectChanges();
+    userSettings = { ...userSettings, showUncaughtOnly: true };
+    component.userSettings = userSettings;
+    const scrollToIndexSpy = vi.fn();
+    component.viewportRef = {
+      scrollToIndex: scrollToIndexSpy,
+      checkViewportSize: vi.fn(),
+    } as unknown as CdkVirtualScrollViewport;
+
+    generations = [];
+    progressChange$.next();
+
+    expect(component.flatRows).toEqual([]);
+    expect(component.showStickyBar).toBe(false);
+    expect(scrollToIndexSpy).not.toHaveBeenCalled();
+  });
+
   describe('flatRows and the sticky header bar', () => {
     it('flattens visibleGenerations into rows and points the sticky bar at the first row', () => {
       fixture.detectChanges();
