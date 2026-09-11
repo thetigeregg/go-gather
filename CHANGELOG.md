@@ -272,3 +272,7 @@
 ## v0.15.0 - 2026-09-06
 
 - 8fde9b6 feat(edge): serve Angular web build via Caddy edge container (#55)
+
+## v0.15.1 - 2026-09-11
+
+- d132646 build(deps): bump Angular, Ionic, and Capacitor dependencies (#61)
