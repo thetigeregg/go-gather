@@ -10,6 +10,7 @@ Create these directories on your NAS host:
 
 - `nas-data/server-data` — the SQLite database (`gogather.db`, `-wal`, `-shm`) and the cached PokeAPI sprite images (`images/`).
 - `nas-data/server-backups` — JSON user-data backups (see section 4).
+- `nas-data/server-config/sync-overrides.json` — hand-edited data overrides (Dynamax/Gigantamax dex lists, region-form asset backfills, etc.); seed it once before first start (see "Data overrides" below).
 - `nas-secrets` — plain files bind-mounted read-only into the container at `/run/secrets`, one file per secret (e.g. `firebase_service_account_json` — see "Push notifications" below). No Docker Compose `secrets:` construct involved, just a host directory.
 
 ## 2. Confirm the images exist
@@ -67,6 +68,15 @@ These are the same standalone scripts `scheduled-sync.ts` calls in-process — r
 The server also writes its own user-data backup (`user_progress`/`user_settings` — catch status, excluded-pattern filters, tags, preset queries) to `${NAS_DATA_ROOT}/server-backups` on every startup, in the exact same JSON format and `go-gather-backup-<timestamp>.json` filename scheme as the app's own Settings → Export Data button (`server/src/backup.ts`). No retention/pruning is applied — files accumulate indefinitely, so periodically clean out old ones if disk space matters.
 
 Set `BACKUP_AFTER_N_MODIFICATIONS` to also trigger a backup after that many catch add/remove operations, independent of the startup backup — e.g. `BACKUP_AFTER_N_MODIFICATIONS=25` backs up again every 25 catches/uncatches. Left at the default `0`, only the startup backup runs.
+
+### Data overrides
+
+`server/src/sync-overrides.json` (see its own `_readme` field for full details) is bind-mounted from `${NAS_DATA_ROOT:-./nas-data}/server-config/sync-overrides.json` so it can be hand-edited on the NAS without rebuilding or redeploying the image — both `npm run sync` and the `/api/search-config` route re-read it fresh on every use. Docker creates an empty _directory_ at the host path if no file exists there yet, which breaks the server on startup, so it must be seeded once:
+
+1. Before first `docker compose up`, copy the repo's default from `server/src/sync-overrides.json` to `${NAS_DATA_ROOT:-./nas-data}/server-config/sync-overrides.json` on the host.
+2. After that, edit the host copy directly — changes take effect immediately (a sync-triggering change needs `npm run sync` to run again; `costumeGenderEnabled` takes effect on the very next `/api/search-config` request).
+
+Note the tracked copy in the repo and the host copy are now independent: future edits committed to `server/src/sync-overrides.json` won't reach a NAS that already has its own seeded host file unless you manually port them over.
 
 ### Push notifications
 
