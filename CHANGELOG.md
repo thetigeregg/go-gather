@@ -291,3 +291,7 @@
 - b019724 fix(gather): clear stale sticky bar when re-filter empties list
 - 24d9308 fix(gather): keep scroll position on catch/uncatch re-filter
 - 2b007b5 fix(gather): stop scroll reset when toggling caught state
+
+## v0.15.5 - 2026-09-13
+
+- 50d4480 fix(deploy): mount sync-overrides.json read-only from NAS host (#64)
