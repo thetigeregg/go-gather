@@ -8,6 +8,7 @@ services:
     volumes:
       - ${NAS_DATA_ROOT:-./nas-data}/server-data:/app/server/data
       - ${NAS_DATA_ROOT:-./nas-data}/server-backups:/app/server/backups
+      - ${NAS_DATA_ROOT:-./nas-data}/server-config/sync-overrides.json:/app/server/src/sync-overrides.json
       - type: bind
         source: ${SECRETS_HOST_DIR:-./nas-secrets}
         target: /run/secrets
