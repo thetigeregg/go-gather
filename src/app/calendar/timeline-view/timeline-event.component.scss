@@ -99,6 +99,9 @@
 }
 
 .time-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
   font-size: 0.85rem;
   color: var(--ion-text-color);
 

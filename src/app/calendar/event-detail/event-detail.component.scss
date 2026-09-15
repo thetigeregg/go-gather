@@ -84,6 +84,9 @@ ion-content {
 }
 
 .time-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
   font-size: 0.95rem;
   color: var(--ion-text-color);
 
