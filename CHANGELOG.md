@@ -295,3 +295,7 @@
 ## v0.15.5 - 2026-09-13
 
 - 50d4480 fix(deploy): mount sync-overrides.json read-only from NAS host (#64)
+
+## v0.15.6 - 2026-09-15
+
+- 39995f3 fix(sync): backfill Cramorant base sprite and fix calendar time-row wrapping (#71)
