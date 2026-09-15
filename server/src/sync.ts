@@ -46,13 +46,19 @@ interface SyncOverrides {
     forms: { regionForm: string; slug: string }[];
   }[];
   regionFormNameOverrides: { dexNr: number; regionForm: string; name: string }[];
+  baseFormAssetBackfill: { dexNr: number; name?: string; slug: string; notes?: string }[];
 }
 
 const SYNC_OVERRIDES_PATH = join(__dirname, 'sync-overrides.json');
 
 async function loadSyncOverrides(): Promise<SyncOverrides> {
   const raw = await readFile(SYNC_OVERRIDES_PATH, 'utf-8');
-  return JSON.parse(raw) as SyncOverrides;
+  const overrides = JSON.parse(raw) as SyncOverrides;
+  // sync-overrides.json is bind-mounted from the NAS host (see
+  // docs/nas-deployment.md), so an existing deployment can still supply the
+  // pre-baseFormAssetBackfill file after upgrading the image.
+  overrides.baseFormAssetBackfill ??= [];
+  return overrides;
 }
 
 function assetUrlsForDexNumber(dexNr: number): { image: string; shinyImage: string } {
@@ -533,6 +539,51 @@ async function backfillCollidingMegaSpritesFromPokeApi(
  * sync-overrides.json and fetchPokeApiSpritesBySlug's own doc comment for
  * why this can't be a mechanical per-species derivation).
  */
+/**
+ * A hand-curated list for species where the base species has `assets: null`
+ * AND non-empty `regionForms`/`assetForms` — a combination
+ * `backfillMissingAssetsFromPokeApi` above deliberately skips, since for
+ * species like Unown/Burmy/Wormadam that combination means "no plain
+ * catchable form exists, only named ones" and backfilling a base sprite
+ * there would produce a spurious duplicate row. Cramorant (dex 845) is the
+ * first confirmed exception: it has non-empty `regionForms`
+ * (CRAMORANT_GULPING/CRAMORANT_GORGING), but those are battle-only
+ * transient states (triggered mid-battle by Surf/Dive, never independently
+ * catchable) with `assets: null` themselves — genuinely no sprite exists
+ * anywhere upstream for any Cramorant variant, and the base/Normal Form is
+ * the only one that should ever appear in the catalog. Listing a species
+ * here is a deliberate, per-species confirmation that its regionForms are
+ * never real catchable forms, so backfilling the base sprite can't collide
+ * with `transform.ts`'s `findBaseFormDuplicate` dedup logic.
+ */
+async function backfillBaseFormAssetsFromPokeApi(
+  pokedex: RawPokemon[],
+  overrides: SyncOverrides
+): Promise<RawPokemon[]> {
+  const bySpecies = new Map(overrides.baseFormAssetBackfill.map((e) => [e.dexNr, e.slug]));
+  const patched = [...pokedex];
+  let patchedCount = 0;
+
+  for (let index = 0; index < patched.length; index++) {
+    const pokemon = patched[index];
+    const slug = bySpecies.get(pokemon.dexNr);
+    if (!slug || pokemon.assets) {
+      continue;
+    }
+    const sprites = await fetchPokeApiSpritesBySlug(slug);
+    if (sprites) {
+      patched[index] = { ...pokemon, assets: sprites };
+      patchedCount++;
+    }
+  }
+
+  console.log(
+    `PokeAPI base-form backfill: ${patchedCount} of ${overrides.baseFormAssetBackfill.length} species patched.`
+  );
+
+  return patched;
+}
+
 async function backfillRegionFormAssetsFromPokeApi(
   pokedex: RawPokemon[],
   overrides: SyncOverrides
@@ -601,8 +652,9 @@ async function fetchPokedex(): Promise<RawPokemon[]> {
   const nameFixed = patchRegionFormNames(pokedex, overrides);
   const linkPatched = patchMissingAssetLinks(nameFixed, overrides);
   const assetsBackfilled = await backfillMissingAssetsFromPokeApi(linkPatched);
+  const baseFormBackfilled = await backfillBaseFormAssetsFromPokeApi(assetsBackfilled, overrides);
   const regionFormsBackfilled = await backfillRegionFormAssetsFromPokeApi(
-    assetsBackfilled,
+    baseFormBackfilled,
     overrides
   );
   const megasBackfilled = await backfillCollidingMegaSpritesFromPokeApi(regionFormsBackfilled);
