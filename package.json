@@ -56,7 +56,7 @@
     "@capawesome/capacitor-file-picker": "^8.1.0",
     "@capawesome/capacitor-live-update": "^8.4.2",
     "@go-gather/shared": "*",
-    "@ionic/angular": "^8.8.19",
+    "@ionic/angular": "^9.0.3",
     "dayjs": "1.11.23",
     "dexie": "^4.4.6",
     "firebase": "^12.19.0",
