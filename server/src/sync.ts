@@ -53,7 +53,12 @@ const SYNC_OVERRIDES_PATH = join(__dirname, 'sync-overrides.json');
 
 async function loadSyncOverrides(): Promise<SyncOverrides> {
   const raw = await readFile(SYNC_OVERRIDES_PATH, 'utf-8');
-  return JSON.parse(raw) as SyncOverrides;
+  const overrides = JSON.parse(raw) as SyncOverrides;
+  // sync-overrides.json is bind-mounted from the NAS host (see
+  // docs/nas-deployment.md), so an existing deployment can still supply the
+  // pre-baseFormAssetBackfill file after upgrading the image.
+  overrides.baseFormAssetBackfill ??= [];
+  return overrides;
 }
 
 function assetUrlsForDexNumber(dexNr: number): { image: string; shinyImage: string } {
