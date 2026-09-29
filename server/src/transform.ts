@@ -4,7 +4,8 @@
    go-gather-next (see docs/progress/phase-4-catalog-pipeline.md);
    go-gather-next's own ESLint config doesn't enforce these strictTypeChecked
    rules. Do not reinterpret this file's flattening logic. */
-import type { CatalogEntry, PokedexType, PokemonClass, Region } from '@go-gather/shared';
+import type { CatalogEntry, PokedexType, PokemonClass } from '@go-gather/shared';
+import { Region } from '@go-gather/shared';
 
 export interface RawNames {
   English: string;
@@ -86,12 +87,12 @@ export interface RawRegionPokemon {
  * the id is resilient to the inconsistent spelling.
  */
 const REGION_TOKENS: [token: string, region: Region][] = [
-  ['ALOLA', 'alola' as Region],
-  ['GALARIAN', 'galar' as Region],
-  ['GALAR', 'galar' as Region],
-  ['HISUIAN', 'hisui' as Region],
-  ['HISUI', 'hisui' as Region],
-  ['PALDEA', 'paldea' as Region],
+  ['ALOLA', Region.Alola],
+  ['GALARIAN', Region.Galar],
+  ['GALAR', Region.Galar],
+  ['HISUIAN', Region.Hisui],
+  ['HISUI', Region.Hisui],
+  ['PALDEA', Region.Paldea],
 ];
 
 export function regionFromFormId(formId: string): Region | null {

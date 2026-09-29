@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { CatalogEntry, DEFAULT_SETTINGS, UserSettings } from '@go-gather/shared';
+import { CatalogEntry, DEFAULT_SETTINGS, Region, UserSettings } from '@go-gather/shared';
 import { FilterService } from './filter.service';
 import { PokeDataService } from './poke-data.service';
 import { SearchConfigService } from './search-config.service';
@@ -163,7 +163,7 @@ describe('FilterService', () => {
   it('showRegional=false hides regional-form entries only when the species also has a plain entry', () => {
     catalog = [
       makeEntry({ id: 'plain', region: null }),
-      makeEntry({ id: 'alolan', region: 'alola', form: 'alolan' }),
+      makeEntry({ id: 'alolan', region: Region.Alola, form: 'alolan' }),
     ];
 
     const generations = service.groupPokemonByGeneration(makeSettings({ showRegional: false }));
@@ -174,7 +174,7 @@ describe('FilterService', () => {
   });
 
   it('showRegional=false does NOT hide a regional entry when it is the only entry for the species', () => {
-    catalog = [makeEntry({ id: 'alolan-only', region: 'alola', form: 'alolan' })];
+    catalog = [makeEntry({ id: 'alolan-only', region: Region.Alola, form: 'alolan' })];
 
     const generations = service.groupPokemonByGeneration(makeSettings({ showRegional: false }));
     const ids = generations.flatMap((g) =>
@@ -189,7 +189,7 @@ describe('FilterService', () => {
       makeEntry({
         id: 'alolan-form',
         generation: 3,
-        region: 'alola',
+        region: Region.Alola,
         form: 'alolan',
         speciesId: 'alolan-species',
       }),

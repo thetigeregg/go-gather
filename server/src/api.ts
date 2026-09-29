@@ -5,6 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { CatalogEntry, PogoEvent, Season, UserSettings } from '@go-gather/shared';
+import { Region } from '@go-gather/shared';
 import { maybeBackupAfterModifications } from './backup.js';
 import { db } from './db.js';
 import { registerNotificationRoutes } from './notifications.js';
@@ -39,6 +40,12 @@ interface CatalogRow {
   order: number;
 }
 
+const REGIONS: readonly Region[] = Object.values(Region);
+
+function toRegion(value: string | null): Region | null {
+  return REGIONS.find((region) => region === value) ?? null;
+}
+
 function catalogRowToEntry(row: CatalogRow): CatalogEntry {
   return {
     id: row.id,
@@ -53,7 +60,7 @@ function catalogRowToEntry(row: CatalogRow): CatalogEntry {
     isFemale: !!row.is_female,
     form: row.form,
     costume: row.costume,
-    region: row.region as CatalogEntry['region'],
+    region: toRegion(row.region),
     primaryType: row.primary_type,
     secondaryType: row.secondary_type,
     pokemonClass: row.pokemon_class as CatalogEntry['pokemonClass'],
