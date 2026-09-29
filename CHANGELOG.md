@@ -299,3 +299,7 @@
 ## v0.15.6 - 2026-09-15
 
 - 39995f3 fix(sync): backfill Cramorant base sprite and fix calendar time-row wrapping (#71)
+
+## v0.15.7 - 2026-09-29
+
+- d1893db chore(deps): bump npm, gem, and node image dependencies (#73)
