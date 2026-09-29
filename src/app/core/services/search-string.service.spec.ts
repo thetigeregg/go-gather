@@ -4,6 +4,7 @@ import {
   DEFAULT_SETTINGS,
   ExcludedSearchTerm,
   PokedexType,
+  Region,
   UserSettings,
 } from '@go-gather/shared';
 import { PokeDataService } from './poke-data.service';
@@ -139,7 +140,7 @@ describe('SearchStringService', () => {
   });
 
   it('getAltRegionSearchStrings only includes regions with at least one missing entry', () => {
-    catalog = [makeEntry({ id: 'alolan', region: 'alola', speciesName: 'Bulbasaur' })];
+    catalog = [makeEntry({ id: 'alolan', region: Region.Alola, speciesName: 'Bulbasaur' })];
     service.init();
 
     const regionStrings = service.getAltRegionSearchStrings();
