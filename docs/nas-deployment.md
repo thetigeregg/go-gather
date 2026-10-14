@@ -84,7 +84,7 @@ Which species, regional forms and Dynamax/Gigantamax Pokemon have been released,
 
 - Every catalog entry gets a `releasedOn` date (`server/src/release-dates.ts`), or none if the species isn't released. The app hides entries whose date hasn't arrived on the device, so announced releases appear on their date without a new sync, even while Bulbapedia is unreachable.
 - If Bulbapedia is unreachable or a page can't be parsed, that dataset keeps its saved data, records the error in `last_error`, and the catalog sync carries on. A warning is logged once saved data is a week old.
-- The catalog sync only fails on Bulbapedia's account on a fresh database where a dataset has never been fetched successfully.
+- The catalog sync only fails on Bulbapedia's account when the Dynamax or Gigantamax data has never been fetched successfully (e.g. on a fresh database). Species data that has never been fetched (e.g. the species table failing to parse on the first sync after upgrading) doesn't stop the sync: a warning is logged and every species is dated to Pokemon GO's launch, as if released, until a parse succeeds.
 
 `npm run sync:availability` (in `server/`) refreshes the saved data on its own, without a full catalog sync.
 
