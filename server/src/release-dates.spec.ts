@@ -1,6 +1,6 @@
 import { Region, type PokedexType } from '@go-gather/shared';
 import type { AvailabilityData } from './bulbapedia';
-import { GO_LAUNCH_DATE, stampReleaseDates } from './release-dates';
+import { GO_LAUNCH_DATE, stampReleaseDates, undatedMegaNames } from './release-dates';
 import type { UnstampedCatalogEntry } from './transform';
 
 function entry(
@@ -51,6 +51,11 @@ const availability: AvailabilityData = {
     { dexNr: 849, form: 'AMPED', releasedOn: '2024-11-17' },
     { dexNr: 892, form: null, releasedOn: '2025-03-01' },
   ],
+  mega: [
+    { dexNr: 6, form: 'MEGA_X', releasedOn: '2020-08-27' },
+    { dexNr: 6, form: 'MEGA_Y', releasedOn: '2020-09-01' },
+    { dexNr: 382, form: 'PRIMAL', releasedOn: '2023-02-18' },
+  ],
 };
 
 function releasedOn(unstamped: UnstampedCatalogEntry): string | null {
@@ -58,12 +63,11 @@ function releasedOn(unstamped: UnstampedCatalogEntry): string | null {
 }
 
 describe('stampReleaseDates', () => {
-  it("gives regular, costume, Mega and size-tier entries the species' earliest debut", () => {
+  it("gives regular, costume and size-tier entries the species' earliest debut", () => {
     expect(releasedOn(entry(386))).toBe('2018-11-01');
     expect(releasedOn(entry(386, { costume: 'HOLIDAY', pokedexType: 'costume' }))).toBe(
       '2018-11-01'
     );
-    expect(releasedOn(entry(386, { form: 'DEOXYS_MEGA', pokedexType: 'mega' }))).toBe('2018-11-01');
     expect(releasedOn(entry(386, { pokedexType: 'xxl' }))).toBe('2018-11-01');
   });
 
@@ -97,6 +101,39 @@ describe('stampReleaseDates', () => {
   it('marks a Max entry with no Max release as not released', () => {
     expect(releasedOn(entry(19, { form: 'DYNAMAX', pokedexType: 'dmax' }))).toBeNull();
     expect(releasedOn(entry(19, { form: 'GIGANTAMAX', pokedexType: 'max' }))).toBeNull();
+  });
+
+  function mega(dexNr: number, speciesId: string, suffix: string): UnstampedCatalogEntry {
+    return entry(dexNr, { speciesId, form: `${speciesId}_${suffix}`, pokedexType: 'mega' });
+  }
+
+  it('dates a Mega or Primal entry by its own form suffix', () => {
+    expect(releasedOn(mega(6, 'CHARIZARD', 'MEGA_X'))).toBe('2020-08-27');
+    expect(releasedOn(mega(6, 'CHARIZARD', 'MEGA_Y'))).toBe('2020-09-01');
+    expect(releasedOn(mega(382, 'KYOGRE', 'PRIMAL'))).toBe('2023-02-18');
+  });
+
+  it("doesn't date a Mega from its sibling Megas' releases", () => {
+    expect(releasedOn(mega(6, 'CHARIZARD', 'MEGA_Z'))).toBeNull();
+  });
+
+  it("can't match a Mega whose form doesn't start with its species id", () => {
+    expect(
+      releasedOn(entry(6, { speciesId: 'CHARIZARD', form: 'MEGA_X', pokedexType: 'mega' }))
+    ).toBeNull();
+  });
+
+  it('marks a Mega with no Mega release as not released', () => {
+    expect(releasedOn(mega(386, 'DEOXYS', 'MEGA'))).toBeNull();
+  });
+
+  it("dates Megas by their species' debut when no Mega data is saved yet", () => {
+    const [stamped] = stampReleaseDates([mega(386, 'DEOXYS', 'MEGA')], {
+      ...availability,
+      mega: null,
+    });
+
+    expect(stamped.releasedOn).toBe('2018-11-01');
   });
 
   it('treats every species as released when no species data is saved yet', () => {
@@ -135,5 +172,26 @@ describe('stampReleaseDates', () => {
       { ...entries[0], releasedOn: '2016-07-06' },
       { ...entries[1], releasedOn: '2018-11-01' },
     ]);
+  });
+});
+
+describe('undatedMegaNames', () => {
+  const megaEntry = (name: string, releasedOn: string | null, isShiny = false) => ({
+    ...entry(6, { name, pokedexType: 'mega', isShiny }),
+    releasedOn,
+  });
+  const entries = [
+    megaEntry('Mega Charizard X', '2020-08-27'),
+    megaEntry('Mega Charizard Z', null),
+    megaEntry('Mega Charizard Z', null, true),
+    { ...entry(1001), releasedOn: null },
+  ];
+
+  it('lists non-shiny Megas left without a date', () => {
+    expect(undatedMegaNames(entries, availability)).toEqual(['Mega Charizard Z']);
+  });
+
+  it('lists nothing when no Mega data is saved, since Megas then use species dates', () => {
+    expect(undatedMegaNames(entries, { ...availability, mega: null })).toEqual([]);
   });
 });

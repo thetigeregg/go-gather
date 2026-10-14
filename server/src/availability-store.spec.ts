@@ -4,7 +4,13 @@ import {
   loadAvailability,
   syncAvailability,
 } from './availability-store';
-import { availabilityPage, dynamaxPage, row, speciesSections } from './bulbapedia.test-helpers';
+import {
+  availabilityPage,
+  dynamaxPage,
+  megaSection,
+  row,
+  speciesSections,
+} from './bulbapedia.test-helpers';
 
 const DYNAMAX_PAGE = 'Dynamax (GO)';
 const AVAILABILITY_PAGE = 'List of Pokémon by availability in Pokémon GO';
@@ -65,7 +71,7 @@ describe('syncAvailability', () => {
     await expect(syncAvailability(database, fetchPage, FIRST_SYNC)).resolves.toEqual([]);
 
     expect(fetchPage).toHaveBeenCalledTimes(2);
-    for (const dataset of ['dynamax', 'gigantamax', 'species']) {
+    for (const dataset of ['dynamax', 'gigantamax', 'species', 'mega']) {
       expect(source(dataset)).toMatchObject({
         fetched_at: FIRST_SYNC.toISOString(),
         last_attempt_at: FIRST_SYNC.toISOString(),
@@ -141,6 +147,7 @@ describe('syncAvailability', () => {
       'dynamax',
       'gigantamax',
       'species',
+      'mega',
     ]);
 
     expect(source('dynamax').last_error).toBe('rate limited');
@@ -234,6 +241,36 @@ describe('loadAvailability', () => {
     expect(console.warn).not.toHaveBeenCalledWith(
       expect.stringContaining('Treating every species as released')
     );
+  });
+
+  it('returns null Mega data, without throwing, when Mega data has never been saved', async () => {
+    const fresh = new BetterSqlite3(':memory:');
+    fresh.exec(AVAILABILITY_SOURCES_SCHEMA);
+    await syncAvailability(
+      fresh,
+      pageFetcher({
+        ...goodPages,
+        [AVAILABILITY_PAGE]: availabilityPage([], 15, undefined, megaSection([], 10)),
+      }),
+      FIRST_SYNC
+    );
+
+    const availability = loadAvailability(fresh, SECOND_SYNC);
+
+    expect(availability.mega).toBeNull();
+    expect(availability.species).not.toBeNull();
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringMatching(/No saved mega availability yet .*Dating Megas by their species' debut/)
+    );
+    fresh.close();
+  });
+
+  it('throws on corrupt Mega data rather than falling back', () => {
+    database
+      .prepare("UPDATE availability_sources SET payload = '{not json' WHERE dataset = 'mega'")
+      .run();
+
+    expect(() => loadAvailability(database, SECOND_SYNC)).toThrow(SyntaxError);
   });
 
   it('throws when nothing has ever been attempted', () => {

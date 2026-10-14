@@ -80,7 +80,7 @@ Note the tracked copy in the repo and the host copy are now independent: future 
 
 ### Release data from Bulbapedia
 
-Which species, regional forms and Dynamax/Gigantamax Pokemon have been released, and when, is read from [Bulbapedia](https://bulbapedia.bulbagarden.net/) (`server/src/bulbapedia.ts`) at the start of every catalog sync, so the server needs outbound HTTPS access to `bulbapedia.bulbagarden.net` alongside pokemon-go-api and PokeAPI. Each dataset's last good parse is saved in the `availability_sources` table (`server/src/availability-store.ts`), and the catalog sync builds from that saved data:
+Which species, regional forms, Mega/Primal forms and Dynamax/Gigantamax Pokemon have been released, and when, is read from [Bulbapedia](https://bulbapedia.bulbagarden.net/) (`server/src/bulbapedia.ts`) at the start of every catalog sync, so the server needs outbound HTTPS access to `bulbapedia.bulbagarden.net` alongside pokemon-go-api and PokeAPI. Each dataset's last good parse is saved in the `availability_sources` table (`server/src/availability-store.ts`), and the catalog sync builds from that saved data:
 
 - Every catalog entry gets a `releasedOn` date (`server/src/release-dates.ts`), or none if the species isn't released. The app hides entries whose date hasn't arrived on the device, so announced releases appear on their date without a new sync, even while Bulbapedia is unreachable.
 - If Bulbapedia is unreachable or a page can't be parsed, that dataset keeps its saved data, records the error in `last_error`, and the catalog sync carries on. A warning is logged once saved data is a week old.

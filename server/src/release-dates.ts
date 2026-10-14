@@ -10,16 +10,20 @@
  *   Bulbapedia lists the form separately (Urshifu's styles), otherwise the
  *   species-level Max release. A Max entry Bulbapedia doesn't list as a Max
  *   release at all isn't released: null.
+ * - Mega / Primal entries: that Mega's release date, matched by its form
+ *   suffix (`MEGA_X`, `PRIMAL`, …), or null (not released).
  * - Regional-form entries: the earliest debut of that species' regional
  *   code (`0019A` = Alolan Rattata), falling back to the species' own date
  *   when Bulbapedia has no separate regional row.
- * - Everything else (base, gender, other forms, costumes, Mega, XXL/XXS):
- *   the species' earliest debut, under any form.
+ * - Everything else (base, gender, other forms, costumes, XXL/XXS): the
+ *   species' earliest debut, under any form.
  * - A species Bulbapedia doesn't date at all isn't released: null.
  *
  * Without any saved species data yet (see availability-store.ts's
  * loadAvailability), every species counts as released since Pokemon GO's
- * launch — the behaviour from before species dates existed.
+ * launch — the behaviour from before species dates existed. Without saved
+ * Mega data, Megas fall back to the species rule, as before Mega dates
+ * existed.
  */
 import { Region, type CatalogEntry } from '@go-gather/shared';
 import type { LoadedAvailability } from './availability-store.js';
@@ -44,6 +48,16 @@ export const REGION_CODES: Partial<Record<string, Region>> = {
 
 interface Dated {
   releasedOn: string;
+}
+
+/** A Mega entry's `form` is pokemon-go-api's `megaEvolutions` key, which
+ * is always its species id plus a suffix (`CHARIZARD_MEGA_X`,
+ * `KYOGRE_PRIMAL`) — the same split transform.ts makes. Returns the suffix
+ * Bulbapedia's codes are mapped to, or '' if the key doesn't start with the
+ * species id. */
+function megaFormSuffix(entry: UnstampedCatalogEntry): string {
+  const prefix = `${entry.speciesId}_`;
+  return entry.form?.startsWith(prefix) ? entry.form.slice(prefix.length) : '';
 }
 
 /** Keyed by `dexNr|assetForm form`, matching the catalog entry's own
@@ -72,6 +86,11 @@ export function stampReleaseDates(
   }
   const gigantamaxDates = maxReleaseDates(availability.gigantamax, GIGANTAMAX_FORM);
   const dynamaxDates = maxReleaseDates(availability.dynamax, DYNAMAX_FORM);
+  // Keyed `dexNr|suffix`.
+  const megaDates = new Map<string, Dated>();
+  for (const { dexNr, form, releasedOn } of availability.mega ?? []) {
+    keepEarliest(megaDates, `${String(dexNr)}|${form}`, { releasedOn });
+  }
 
   function releaseDateFor(entry: UnstampedCatalogEntry): string | null {
     const dexNr = String(entry.dexNr);
@@ -91,6 +110,10 @@ export function stampReleaseDates(
       );
     }
 
+    if (entry.pokedexType === 'mega' && availability.mega) {
+      return megaDates.get(`${dexNr}|${megaFormSuffix(entry)}`)?.releasedOn ?? null;
+    }
+
     const speciesDate = availability.species
       ? (speciesDates.get(dexNr)?.releasedOn ?? null)
       : GO_LAUNCH_DATE;
@@ -101,4 +124,23 @@ export function stampReleaseDates(
   }
 
   return entries.map((entry) => ({ ...entry, releasedOn: releaseDateFor(entry) }));
+}
+
+/**
+ * Non-shiny Mega entries left without a date by stampReleaseDates, for the
+ * catalog sync to log. An undated Mega is hidden as unreleased: right for
+ * one Niantic hasn't released, but also what a Bulbapedia row the parser
+ * missed looks like. Empty when no Mega data is saved, since Megas are then
+ * dated by their species and an undated one points at the species data.
+ */
+export function undatedMegaNames(
+  entries: CatalogEntry[],
+  availability: LoadedAvailability
+): string[] {
+  if (!availability.mega) {
+    return [];
+  }
+  return entries
+    .filter((entry) => entry.pokedexType === 'mega' && !entry.isShiny && entry.releasedOn === null)
+    .map((entry) => entry.name);
 }

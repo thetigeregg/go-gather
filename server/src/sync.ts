@@ -29,7 +29,7 @@ import {
   fetchPokeApiSprites,
   fetchPokeApiSpritesBySlug,
 } from './pokeapi.js';
-import { stampReleaseDates } from './release-dates.js';
+import { stampReleaseDates, undatedMegaNames } from './release-dates.js';
 import { pokedexToEntries, type RawPokemon } from './transform.js';
 
 const POKEDEX_URL = 'https://pokemon-go-api.github.io/pokemon-go-api/api/pokedex.json';
@@ -578,6 +578,12 @@ export async function main(): Promise<void> {
   console.log(`Fetched ${pokedex.length} species entries.`);
 
   const entries = stampReleaseDates(pokedexToEntries(pokedex), availability);
+  const undatedMegas = undatedMegaNames(entries, availability);
+  if (undatedMegas.length > 0) {
+    console.log(
+      `Megas with no Bulbapedia release (hidden as unreleased): ${undatedMegas.join(', ')}`
+    );
+  }
 
   const uniqueImgUrls = [...new Set(entries.map((e) => e.imgUrl))];
   console.log(`Downloading ${uniqueImgUrls.length} unique sprites...`);

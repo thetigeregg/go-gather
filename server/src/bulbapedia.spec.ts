@@ -3,11 +3,18 @@ import {
   fetchWikitext,
   parseDynamaxReleases,
   parseGigantamaxReleases,
+  parseMegaReleases,
   parseMspGoCodes,
   parseReleaseDate,
   parseSpeciesReleases,
 } from './bulbapedia';
-import { availabilityPage, dynamaxPage, row, speciesSections } from './bulbapedia.test-helpers';
+import {
+  availabilityPage,
+  dynamaxPage,
+  megaSection,
+  row,
+  speciesSections,
+} from './bulbapedia.test-helpers';
 
 beforeEach(() => {
   vi.spyOn(console, 'log').mockImplementation(() => undefined);
@@ -334,6 +341,62 @@ describe('parseSpeciesReleases', () => {
     expect(() => parse({ fillerCount: 500, unreleased: [] })).toThrow(
       /only 500 dated species parsed/
     );
+  });
+});
+
+describe('parseMegaReleases', () => {
+  function parse(rows: string[], fillerCount?: number) {
+    return parseMegaReleases(availabilityPage([], 15, undefined, megaSection(rows, fillerCount)));
+  }
+
+  it('maps Mega and Primal codes to their form suffixes', () => {
+    const releases = parse([
+      row('Aug 27, 2020', '{{MSP/GO|0006MX|Charizard}}{{MSP/GO|0006MY|Charizard}}'),
+      row('Feb 18, 2023', '{{MSP/GO|0382P|Kyogre}}'),
+      row('Sep 18, 2020', '{{MSP/GO|0018M|Pidgeot}}'),
+      row('Mar 1, 2027', '{{MSP/GO|0445MZ|Garchomp}}'),
+    ]);
+
+    expect(releases).toEqual(
+      expect.arrayContaining([
+        { dexNr: 445, form: 'MEGA_Z', releasedOn: '2027-03-01' },
+        { dexNr: 6, form: 'MEGA_X', releasedOn: '2020-08-27' },
+        { dexNr: 6, form: 'MEGA_Y', releasedOn: '2020-08-27' },
+        { dexNr: 382, form: 'PRIMAL', releasedOn: '2023-02-18' },
+        { dexNr: 18, form: 'MEGA', releasedOn: '2020-09-18' },
+      ])
+    );
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it('keeps the earliest date and announced future releases', () => {
+    const releases = parse([
+      row('Jul 18, 2026', '{{MSP/GO|0026MX|Raichu}}'),
+      row('Jan 1, 2025', '{{MSP/GO|0026MX|Raichu}}'),
+      row('Oct 31, 2026', '{{MSP/GO|0609M|Chandelure}}'),
+    ]);
+
+    expect(releases.filter((r) => r.dexNr === 26)).toEqual([
+      { dexNr: 26, form: 'MEGA_X', releasedOn: '2025-01-01' },
+    ]);
+    expect(releases).toContainEqual({ dexNr: 609, form: 'MEGA', releasedOn: '2026-10-31' });
+  });
+
+  it('ignores the MSP/HOME "yet to be released" table', () => {
+    const releases = parse([]);
+
+    expect(releases).toHaveLength(40);
+    expect(releases.some((r) => r.dexNr === 36 || r.dexNr === 359)).toBe(false);
+  });
+
+  it('throws on an unmapped code rather than dating every Mega of the species', () => {
+    expect(() => parse([row('Mar 1, 2027', '{{MSP/GO|0978DM|Tatsugiri}}')])).toThrow(
+      /no Mega mapping for "0978DM"/
+    );
+  });
+
+  it('throws when far fewer species than expected are parsed', () => {
+    expect(() => parse([], 10)).toThrow(/only 10 Mega species parsed/);
   });
 });
 

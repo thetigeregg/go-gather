@@ -40,7 +40,8 @@ interface AvailabilitySourceRow {
 }
 
 /** A dataset has never been fetched successfully, so there's nothing saved
- * to load — the one load failure loadAvailability tolerates for species. */
+ * to load — the one load failure loadAvailability tolerates for species
+ * and Mega data. */
 class NoSavedAvailabilityError extends Error {}
 
 /**
@@ -125,11 +126,35 @@ function loadDataset<K extends AvailabilityDataset>(
   return saved;
 }
 
-/** `AvailabilityData`, except species data may not exist yet — see
- * loadAvailability. */
-export type LoadedAvailability = Omit<AvailabilityData, 'species'> & {
-  species: AvailabilityData['species'] | null;
+/** Datasets that may not have been saved yet without stopping the catalog
+ * sync — see loadAvailability. */
+type OptionalDataset = 'species' | 'mega';
+
+/** `AvailabilityData`, except species and Mega data may not exist yet —
+ * see loadAvailability. */
+export type LoadedAvailability = Omit<AvailabilityData, OptionalDataset> & {
+  [K in OptionalDataset]: AvailabilityData[K] | null;
 };
+
+/** Like loadDataset, but returns null (and warns) instead of throwing when
+ * the dataset has never been saved. A corrupt payload or a database error
+ * still throws: falling back on those would silently date entries wrongly. */
+function loadOptionalDataset<K extends OptionalDataset>(
+  database: Database,
+  dataset: K,
+  now: Date,
+  fallbackNote: string
+): AvailabilityData[K] | null {
+  try {
+    return loadDataset(database, dataset, now);
+  } catch (err: unknown) {
+    if (!(err instanceof NoSavedAvailabilityError)) {
+      throw err;
+    }
+    console.warn(`${err.message} ${fallbackNote}`);
+    return null;
+  }
+}
 
 /**
  * Every saved dataset, with release dates kept — including announced
@@ -139,25 +164,26 @@ export type LoadedAvailability = Omit<AvailabilityData, 'species'> & {
  *
  * Throws if the Dynamax or Gigantamax data has never been fetched
  * successfully, since the DMax/GMax dexes can't be built without it.
- * Species data that has never been fetched comes back as null instead:
- * release-dates.ts then treats every species as released, as before
- * species dates existed, rather than holding up the whole catalog sync
- * (e.g. on the first sync after upgrading) until Bulbapedia parses.
+ * Species and Mega data that has never been fetched comes back as null
+ * instead, and release-dates.ts falls back to how those entries were dated
+ * before that dataset existed, rather than holding up the whole catalog
+ * sync (e.g. on the first sync after upgrading) until Bulbapedia parses.
  */
 export function loadAvailability(database: Database, now: Date = new Date()): LoadedAvailability {
-  const dynamax = loadDataset(database, 'dynamax', now);
-  const gigantamax = loadDataset(database, 'gigantamax', now);
-  let species: AvailabilityData['species'] | null = null;
-  try {
-    species = loadDataset(database, 'species', now);
-  } catch (err: unknown) {
-    // Only a dataset that was never saved falls back. A corrupt payload or
-    // a database error would otherwise date every species as released, so
-    // those still stop the catalog sync.
-    if (!(err instanceof NoSavedAvailabilityError)) {
-      throw err;
-    }
-    console.warn(`${err.message} Treating every species as released until it is.`);
-  }
-  return { dynamax, gigantamax, species };
+  return {
+    dynamax: loadDataset(database, 'dynamax', now),
+    gigantamax: loadDataset(database, 'gigantamax', now),
+    species: loadOptionalDataset(
+      database,
+      'species',
+      now,
+      'Treating every species as released until it is.'
+    ),
+    mega: loadOptionalDataset(
+      database,
+      'mega',
+      now,
+      "Dating Megas by their species' debut until it is."
+    ),
+  };
 }

@@ -75,19 +75,38 @@ export function speciesSections({
   ].join('\n');
 }
 
+/** The "Mega Evolution and Primal Reversion" section: 40 filler Megas (dex
+ * 700–739, code `M`) released Aug 27, 2020, plus `rows`, followed by the
+ * "yet to be released" table, written with `{{MSP/HOME|…}}` as on the real
+ * page, which must be ignored. */
+export function megaSection(rows: string[] = [], fillerCount = 40): string {
+  return [
+    '===Mega Evolution and Primal Reversion===',
+    'The following Pokémon transformations are currently available:',
+    ...table([row('Aug 27, 2020', fillerCodes(fillerCount, 700, 'M')), ...rows]),
+    'The following Mega Evolutions have yet to be released:',
+    ...table([
+      '|- style=background:#FFF',
+      '! I',
+      "| '''2'''",
+      '| {{MSP/HOME|0036M|Clefable}}{{MSP/HOME|0359MZ|Absol}}',
+    ]),
+  ].join('\n');
+}
+
 /** 15 filler Gigantamax species (dex 600–614) released Oct 26, 2024, plus
  * `rows`, between sections and an unreleased table that must be ignored.
- * Starts with the species sections (default `speciesSections()`), as the
- * real page does. */
+ * Starts with the species sections (default `speciesSections()`) and the
+ * Mega section (default `megaSection()`), as the real page does. */
 export function availabilityPage(
   rows: string[],
   fillerCount = 15,
-  species: string = speciesSections()
+  species: string = speciesSections(),
+  mega: string = megaSection()
 ): string {
   return [
     species,
-    '===Mega Evolution and Primal Reversion===',
-    ...table([row('Aug 27, 2020', '{{MSP/GO|0003M|Venusaur}}')]),
+    mega,
     '===Gigantamax===',
     'The following Gigantamax Pokémon are currently available:',
     ...table([row('Oct 26, 2024', fillerCodes(fillerCount, 600, 'GMax')), ...rows]),
