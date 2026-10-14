@@ -1,11 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-const statMock = vi.fn<() => Promise<unknown>>();
-const getUriMock = vi.fn<() => Promise<{ uri: string }>>();
-const writeFileMock = vi.fn<() => Promise<void>>();
-const deleteFileMock = vi.fn<() => Promise<void>>();
-const rmdirMock = vi.fn<() => Promise<void>>();
+const statMock = vi.fn<(...args: unknown[]) => Promise<unknown>>();
+const getUriMock = vi.fn<(...args: unknown[]) => Promise<{ uri: string }>>();
+const writeFileMock = vi.fn<(...args: unknown[]) => Promise<void>>();
+const deleteFileMock = vi.fn<(...args: unknown[]) => Promise<void>>();
+const rmdirMock = vi.fn<(...args: unknown[]) => Promise<void>>();
 const convertFileSrcMock = vi.fn<(path: string) => string>();
 
 vi.mock('@capacitor/filesystem', () => ({
