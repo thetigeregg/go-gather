@@ -123,6 +123,16 @@ describe('syncAvailability', () => {
       last_error: null,
     });
   });
+
+  it('records a non-Error rejection as its string value', async () => {
+    // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- the non-Error rejection is what's under test
+    const fetchPage = vi.fn(() => Promise.reject('rate limited'));
+
+    await syncAvailability(database, fetchPage, FIRST_SYNC);
+
+    expect(source('dynamax').last_error).toBe('rate limited');
+    expect(source('gigantamax').last_error).toBe('rate limited');
+  });
 });
 
 describe('loadMaxReleases', () => {
@@ -170,6 +180,16 @@ describe('loadMaxReleases', () => {
 
     expect(() => loadMaxReleases(fresh, SECOND_SYNC, 'UTC')).toThrow(
       /No saved gigantamax availability yet .*Bulbapedia: timeout/
+    );
+    fresh.close();
+  });
+
+  it('throws when nothing has ever been attempted', () => {
+    const fresh = new BetterSqlite3(':memory:');
+    fresh.exec(AVAILABILITY_SOURCES_SCHEMA);
+
+    expect(() => loadMaxReleases(fresh, SECOND_SYNC, 'UTC')).toThrow(
+      /No saved dynamax availability yet .*last error: none recorded/
     );
     fresh.close();
   });
