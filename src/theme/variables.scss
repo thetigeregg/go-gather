@@ -8,4 +8,22 @@
   --ion-color-primary-contrast-rgb: 0, 0, 0;
   --ion-color-primary-shade: #d48045;
   --ion-color-primary-tint: #f29c60;
+
+  --ion-color-accordion-header: #dde1e2;
+  --ion-color-accordion-header-rgb: 221, 225, 226;
+  --ion-color-accordion-header-contrast: #000000;
+  --ion-color-accordion-header-contrast-rgb: 0, 0, 0;
+  --ion-color-accordion-header-shade: #c2c6c7;
+  --ion-color-accordion-header-tint: #e0e4e5;
+}
+
+// Custom (non-palette) colors also need this class so components' `color`
+// property can resolve them — https://ionicframework.com/docs/theming/colors#adding-colors
+.ion-color-accordion-header {
+  --ion-color-base: var(--ion-color-accordion-header);
+  --ion-color-base-rgb: var(--ion-color-accordion-header-rgb);
+  --ion-color-contrast: var(--ion-color-accordion-header-contrast);
+  --ion-color-contrast-rgb: var(--ion-color-accordion-header-contrast-rgb);
+  --ion-color-shade: var(--ion-color-accordion-header-shade);
+  --ion-color-tint: var(--ion-color-accordion-header-tint);
 }
