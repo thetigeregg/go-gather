@@ -354,6 +354,14 @@ describe('stampReleaseDates for single variants of a shared form', () => {
       'GIMMIGHOUL (form CHEST)',
     ]);
   });
+
+  it('reports an unmatched plain-variant target as form none', () => {
+    UNRELEASED_FORM_IDS[CODE] = { formId: 'GIMMIGHOUL', form: null };
+
+    expect(unmatchedUnreleasedFormIds([gimmighoul('COIN_A1')], listing)).toEqual([
+      'GIMMIGHOUL (form none)',
+    ]);
+  });
 });
 
 describe('stampReleaseDates for unreleased forms', () => {

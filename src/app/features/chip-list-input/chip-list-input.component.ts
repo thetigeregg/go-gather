@@ -15,11 +15,10 @@ import { close } from 'ionicons/icons';
 
 /**
  * Free-text add/remove list — used for the settings page's excluded
- * patterns/dex numbers/tags fields, which all share the same add-on-enter-
- * or-blur shape. Current entries render as items in a pre-expanded
- * accordion, each removable via a confirmation alert. No validation here
- * (e.g. numeric-only filtering for dex number fields) — that stays at the
- * point of use, so this component works for any string list.
+ * patterns/tags fields, which all share the same add-on-enter-or-blur
+ * shape. Current entries render as items in a pre-expanded accordion, each
+ * removable via a confirmation alert. No validation here — that stays at
+ * the point of use, so this component works for any string list.
  */
 @Component({
   selector: 'app-chip-list-input',

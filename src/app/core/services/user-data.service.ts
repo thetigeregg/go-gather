@@ -26,12 +26,6 @@ export const REGION_BY_GENERATION: Record<number, UnifiedRegion> = {
   9: 'paldea',
 };
 
-/**
- * Ported from go-gather-next's `user-data.service.ts`, re-pointed at
- * `LocalUserDataRepository` instead of `HttpClient` — the backend is still
- * the source of truth (Phase 4), but writes now go through the local-first
- * outbox rather than a direct PUT.
- */
 /** A settings object as stored by an install from before these settings
  * were retired (replaced by Bulbapedia release data). */
 type SettingsWithRetired = UserSettings & {
@@ -51,6 +45,12 @@ function withoutRetiredSettings(settings: SettingsWithRetired): UserSettings {
   return current;
 }
 
+/**
+ * Ported from go-gather-next's `user-data.service.ts`, re-pointed at
+ * `LocalUserDataRepository` instead of `HttpClient` — the backend is still
+ * the source of truth (Phase 4), but writes now go through the local-first
+ * outbox rather than a direct PUT.
+ */
 @Injectable({
   providedIn: 'root',
 })

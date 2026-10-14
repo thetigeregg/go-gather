@@ -728,6 +728,23 @@ describe('parseShinyReleases', () => {
     expect(console.warn).not.toHaveBeenCalled();
   });
 
+  it('skips a note whose date is not a real month, keeping the row date', () => {
+    const releases = parseShinyReleases(
+      shinyPage([
+        shinyRow({
+          dex: 1,
+          family: 'Bulbasaur',
+          encounter: ['0001 s|Bulbasaur', '0003GMax s|Venusaur'],
+          date: 'March 25, 2018',
+          notes: [{ date: 'Smarch 26, 2024', text: 'Gigantamax Venusaur' }],
+        }),
+      ])
+    );
+
+    expect(releases.find((r) => r.formCode === 'GMax')?.releasedOn).toBe('2018-03-25');
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
   it('warns about a note naming a Pokemon not in the row, keeping the row date', () => {
     const releases = parseShinyReleases(
       shinyPage([
