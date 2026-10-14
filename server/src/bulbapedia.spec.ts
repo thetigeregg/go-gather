@@ -1,60 +1,12 @@
 import {
   extractSection,
-  fetchMaxReleases,
+  fetchWikitext,
   parseDynamaxReleases,
   parseGigantamaxReleases,
   parseMspGoCodes,
   parseReleaseDate,
 } from './bulbapedia';
-
-const AS_OF = new Date('2026-10-14T12:00:00Z');
-
-function row(date: string, pokemon: string): string {
-  return `|- style=background:#FFF\n| ${date}\n| ${pokemon}\n| Notes mentioning {{GO|Wooloo}}.`;
-}
-
-function fillerCodes(count: number, firstDexNr: number, suffix = ''): string {
-  return Array.from(
-    { length: count },
-    (_, index) => `{{MSP/GO|${String(firstDexNr + index).padStart(4, '0')}${suffix}|Filler}}`
-  ).join('');
-}
-
-function table(rows: string[]): string[] {
-  return [
-    '{| class="roundy"',
-    '|- style="background-color:#fff"',
-    '! Date',
-    '! Pokémon',
-    '! Notes',
-    ...rows,
-    '|}',
-  ];
-}
-
-function dynamaxPage(rows: string[], fillerCount = 100): string {
-  return [
-    'Intro mentioning {{MSP/GO|0150|Mewtwo}} outside any section.',
-    '==List of Pokémon capable of Dynamaxing by release date==',
-    ...table([row('Sep 4, 2024', fillerCodes(fillerCount, 600)), ...rows]),
-    '==Bugs and errors==',
-    '| {{MSP/GO|0151|Mew}}',
-  ].join('\n');
-}
-
-function availabilityPage(rows: string[], fillerCount = 15): string {
-  return [
-    '===Mega Evolution and Primal Reversion===',
-    ...table([row('Aug 27, 2020', '{{MSP/GO|0003M|Venusaur}}')]),
-    '===Gigantamax===',
-    'The following Gigantamax Pokémon are currently available:',
-    ...table([row('Oct 26, 2024', fillerCodes(fillerCount, 600, 'GMax')), ...rows]),
-    'The following Gigantamax forms have yet to be released:',
-    ...table(['|- style=background:#FFF', '! I', "| '''1'''", '| {{MSP/GO|0133GMax|Eevee}}']),
-    '===Region-exclusive Pokémon===',
-    ...table([row('Jul 6, 2016', '{{MSP/GO|0083|Farfetchd}}')]),
-  ].join('\n');
-}
+import { availabilityPage, dynamaxPage, row } from './bulbapedia.test-helpers';
 
 beforeEach(() => {
   vi.spyOn(console, 'log').mockImplementation(() => undefined);
@@ -127,16 +79,37 @@ describe('extractSection', () => {
 });
 
 describe('parseDynamaxReleases', () => {
-  it('reads species from the release table only, merging gender variants', () => {
+  it('reads dated species from the release table only, merging gender variants', () => {
     const releases = parseDynamaxReleases(
-      dynamaxPage([row('Jun 1, 2025', '{{MSP/GO|0415|Combee}}{{MSP/GO|0415 f|Combee}}')]),
-      AS_OF
+      dynamaxPage([row('Jun 1, 2025', '{{MSP/GO|0415|Combee}}{{MSP/GO|0415 f|Combee}}')])
     );
 
-    expect(releases).toContainEqual({ dexNr: 415, form: null });
+    expect(releases).toContainEqual({ dexNr: 415, form: null, releasedOn: '2025-06-01' });
     expect(releases.filter((r) => r.dexNr === 415)).toHaveLength(1);
     expect(releases.some((r) => r.dexNr === 150 || r.dexNr === 151)).toBe(false);
     expect(releases).toHaveLength(101);
+  });
+
+  it('keeps announced future releases, with their date', () => {
+    const releases = parseDynamaxReleases(
+      dynamaxPage([row('Oct 19, 2026', '{{MSP/GO|0215|Sneasel}}')])
+    );
+
+    expect(releases).toContainEqual({ dexNr: 215, form: null, releasedOn: '2026-10-19' });
+  });
+
+  it('keeps the earliest date for a Pokemon listed in more than one row', () => {
+    const releases = parseDynamaxReleases(
+      dynamaxPage([
+        row('Jul 1, 2025', '{{MSP/GO|0850|Sizzlipede}}'),
+        row('May 1, 2025', '{{MSP/GO|0850|Sizzlipede}}'),
+        row('Aug 1, 2025', '{{MSP/GO|0850|Sizzlipede}}'),
+      ])
+    );
+
+    expect(releases.filter((r) => r.dexNr === 850)).toEqual([
+      { dexNr: 850, form: null, releasedOn: '2025-05-01' },
+    ]);
   });
 
   it('maps per-form codes to pokemon-go-api form values', () => {
@@ -144,56 +117,74 @@ describe('parseDynamaxReleases', () => {
       dynamaxPage([
         row('Nov 16, 2024', '{{MSP/GO|0849A|Toxtricity}}{{MSP/GO|0849L|Toxtricity}}'),
         row('Feb 1, 2025', '{{MSP/GO|0892|Urshifu}}{{MSP/GO|0892R|Urshifu}}'),
-      ]),
-      AS_OF
+      ])
     );
 
     expect(releases).toEqual(
       expect.arrayContaining([
-        { dexNr: 849, form: 'AMPED' },
-        { dexNr: 849, form: 'LOW_KEY' },
-        { dexNr: 892, form: 'SINGLE_STRIKE' },
-        { dexNr: 892, form: 'RAPID_STRIKE' },
+        { dexNr: 849, form: 'AMPED', releasedOn: '2024-11-16' },
+        { dexNr: 849, form: 'LOW_KEY', releasedOn: '2024-11-16' },
+        { dexNr: 892, form: 'SINGLE_STRIKE', releasedOn: '2025-02-01' },
+        { dexNr: 892, form: 'RAPID_STRIKE', releasedOn: '2025-02-01' },
       ])
     );
     expect(releases.some((r) => (r.dexNr === 849 || r.dexNr === 892) && !r.form)).toBe(false);
+    expect(console.warn).not.toHaveBeenCalled();
   });
 
-  it('includes releases dated today and skips announced future ones', () => {
-    const releases = parseDynamaxReleases(
-      dynamaxPage([
-        row('Oct 14, 2026', '{{MSP/GO|0850|Sizzlipede}}'),
-        row('Oct 19, 2026', '{{MSP/GO|0215|Sneasel}}{{MSP/GO|0461|Weavile}}'),
-      ]),
-      AS_OF
-    );
+  it.each([
+    ['an unmapped form letter', '{{MSP/GO|0555G|Darmanitan}}', 555, '"0555G"'],
+    [
+      'an unlisted letter for a species with mapped forms',
+      '{{MSP/GO|0849X|Toxtricity}}',
+      849,
+      '"0849X"',
+    ],
+  ])('treats %s as the whole species and warns', (_, pokemon, dexNr, warning) => {
+    const releases = parseDynamaxReleases(dynamaxPage([row('Jun 1, 2025', pokemon)]));
 
-    expect(releases).toContainEqual({ dexNr: 850, form: null });
-    expect(releases.some((r) => r.dexNr === 215 || r.dexNr === 461)).toBe(false);
-  });
-
-  it('treats an unmapped form letter as the whole species and warns', () => {
-    const releases = parseDynamaxReleases(
-      dynamaxPage([row('Jun 1, 2025', '{{MSP/GO|0555G|Darmanitan}}')]),
-      AS_OF
-    );
-
-    expect(releases).toContainEqual({ dexNr: 555, form: null });
-    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('"0555G"'));
+    expect(releases).toContainEqual({ dexNr, form: null, releasedOn: '2025-06-01' });
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining(warning));
   });
 
   it('skips rows with an unreadable date and warns', () => {
-    const releases = parseDynamaxReleases(
-      dynamaxPage([row('TBA', '{{MSP/GO|0483|Dialga}}')]),
-      AS_OF
-    );
+    const releases = parseDynamaxReleases(dynamaxPage([row('TBA', '{{MSP/GO|0483|Dialga}}')]));
 
     expect(releases.some((r) => r.dexNr === 483)).toBe(false);
     expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('"TBA"'));
   });
 
+  it('reads inline cells and cells wrapped onto following lines', () => {
+    const releases = parseDynamaxReleases(
+      dynamaxPage([
+        '|- style=background:#FFF\n| Mar 1, 2026 || {{MSP/GO|0129|Magikarp}} || Notes.',
+        '|- style=background:#FFF\n| Apr 1, 2026\n| {{MSP/GO|0237|Hitmontop}}\n{{MSP/GO|0349|Feebas}}\n| Notes.',
+      ])
+    );
+
+    expect(releases).toEqual(
+      expect.arrayContaining([
+        { dexNr: 129, form: null, releasedOn: '2026-03-01' },
+        { dexNr: 237, form: null, releasedOn: '2026-04-01' },
+        { dexNr: 349, form: null, releasedOn: '2026-04-01' },
+      ])
+    );
+  });
+
+  it.each([
+    ['too few cells', '|- style=background:#FFF\n| {{MSP/GO|0483|Dialga}}'],
+    [
+      'a rowspan date',
+      '|- style=background:#FFF\n| rowspan=2 | Nov 6, 2026\n| {{MSP/GO|0483|Dialga}}\n| Notes.',
+    ],
+  ])('throws on a row with %s', (_, unexpectedRow) => {
+    expect(() => parseDynamaxReleases(dynamaxPage([unexpectedRow]))).toThrow(
+      /unexpected release row layout/
+    );
+  });
+
   it('throws when far fewer species than expected are parsed', () => {
-    expect(() => parseDynamaxReleases(dynamaxPage([], 20), AS_OF)).toThrow(
+    expect(() => parseDynamaxReleases(dynamaxPage([], 20))).toThrow(
       /only 20 Dynamax species parsed/
     );
   });
@@ -201,7 +192,7 @@ describe('parseDynamaxReleases', () => {
   it('throws when the section has no release table', () => {
     const page = '==List of Pokémon capable of Dynamaxing by release date==\nNo table here.';
 
-    expect(() => parseDynamaxReleases(page, AS_OF)).toThrow(/release table not found/);
+    expect(() => parseDynamaxReleases(page)).toThrow(/release table not found/);
   });
 });
 
@@ -212,99 +203,87 @@ describe('parseGigantamaxReleases', () => {
         row('Mar 28, 2026', '{{MSP/GO|0025GMax|Pikachu}}'),
         row('Jun 1, 2026', '{{MSP/GO|0892GMax|Urshifu}}{{MSP/GO|0892RGMax|Urshifu}}'),
         row('Nov 6, 2026', '{{MSP/GO|0884GMax|Duraludon}}'),
-      ]),
-      AS_OF
+      ])
     );
 
     expect(releases).toEqual(
       expect.arrayContaining([
-        { dexNr: 25, form: null },
-        { dexNr: 892, form: 'SINGLE_STRIKE' },
-        { dexNr: 892, form: 'RAPID_STRIKE' },
+        { dexNr: 25, form: null, releasedOn: '2026-03-28' },
+        { dexNr: 892, form: 'SINGLE_STRIKE', releasedOn: '2026-06-01' },
+        { dexNr: 892, form: 'RAPID_STRIKE', releasedOn: '2026-06-01' },
+        { dexNr: 884, form: null, releasedOn: '2026-11-06' },
       ])
     );
-    // Upcoming (Duraludon), unreleased-table (Eevee) and other-section
-    // (Venusaur Mega, Farfetch'd) Pokemon are all excluded.
-    expect(releases.some((r) => [884, 133, 3, 83].includes(r.dexNr))).toBe(false);
-    expect(releases).toHaveLength(18);
+    // Unreleased-table (Eevee) and other-section (Venusaur Mega, Farfetch'd)
+    // Pokemon are excluded.
+    expect(releases.some((r) => [133, 3, 83].includes(r.dexNr))).toBe(false);
+    expect(releases).toHaveLength(19);
+  });
+
+  it("reads Toxtricity's single Gigantamax code as the whole species without warning", () => {
+    const releases = parseGigantamaxReleases(
+      availabilityPage([row('Nov 16, 2024', '{{MSP/GO|0849GMax|Toxtricity}}')])
+    );
+
+    expect(releases).toContainEqual({ dexNr: 849, form: null, releasedOn: '2024-11-16' });
+    expect(console.warn).not.toHaveBeenCalled();
   });
 
   it('throws on a non-Gigantamax code in the release table', () => {
     expect(() =>
-      parseGigantamaxReleases(
-        availabilityPage([row('Mar 28, 2026', '{{MSP/GO|0025|Pikachu}}')]),
-        AS_OF
-      )
+      parseGigantamaxReleases(availabilityPage([row('Mar 28, 2026', '{{MSP/GO|0025|Pikachu}}')]))
     ).toThrow(/"0025" in the Gigantamax table isn't a GMax code/);
   });
 
   it('throws when far fewer species than expected are parsed', () => {
-    expect(() => parseGigantamaxReleases(availabilityPage([], 3), AS_OF)).toThrow(
+    expect(() => parseGigantamaxReleases(availabilityPage([], 3))).toThrow(
       /only 3 Gigantamax species parsed/
     );
   });
 });
 
-describe('fetchMaxReleases', () => {
-  function stubFetch(responses: Record<string, { ok: boolean; status: number; body: unknown }>) {
-    const fetchMock = vi.fn((input: URL, _init?: RequestInit) => {
-      const page = input.searchParams.get('page') ?? '';
-      const response = responses[page];
-      return Promise.resolve({
+describe('fetchWikitext', () => {
+  function stubFetch(response: { ok: boolean; status: number; body: unknown }) {
+    const fetchMock = vi.fn((_input: URL, _init?: RequestInit) =>
+      Promise.resolve({
         ok: response.ok,
         status: response.status,
         statusText: response.ok ? 'OK' : 'Error',
         json: () => Promise.resolve(response.body),
-      });
-    });
+      })
+    );
     vi.stubGlobal('fetch', fetchMock);
     return fetchMock;
   }
 
-  const okPages = {
-    'Dynamax (GO)': {
-      ok: true,
-      status: 200,
-      body: { parse: { wikitext: dynamaxPage([row('Jun 1, 2025', '{{MSP/GO|0415|Combee}}')]) } },
-    },
-    'List of Pokémon by availability in Pokémon GO': {
-      ok: true,
-      status: 200,
-      body: { parse: { wikitext: availabilityPage([]) } },
-    },
-  };
+  it("requests the page's wikitext from the MediaWiki API", async () => {
+    const fetchMock = stubFetch({ ok: true, status: 200, body: { parse: { wikitext: 'text' } } });
 
-  it('fetches both pages through the MediaWiki API and parses them', async () => {
-    const fetchMock = stubFetch(okPages);
+    await expect(fetchWikitext('Dynamax (GO)')).resolves.toBe('text');
 
-    const releases = await fetchMaxReleases(AS_OF);
-
-    expect(releases.dynamax).toContainEqual({ dexNr: 415, form: null });
-    expect(releases.gigantamax).toHaveLength(15);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
     const [url, init] = fetchMock.mock.calls[0];
     expect(url.origin + url.pathname).toBe('https://bulbapedia.bulbagarden.net/w/api.php');
     expect(url.searchParams.get('action')).toBe('parse');
+    expect(url.searchParams.get('page')).toBe('Dynamax (GO)');
     const headers = init?.headers as Record<string, string> | undefined;
     expect(headers?.['User-Agent']).toContain('go-gather');
   });
 
-  it('throws when a page request fails', async () => {
-    stubFetch({ ...okPages, 'Dynamax (GO)': { ok: false, status: 503, body: {} } });
+  it('throws when the request fails', async () => {
+    stubFetch({ ok: false, status: 503, body: {} });
 
-    await expect(fetchMaxReleases(AS_OF)).rejects.toThrow(/failed to fetch "Dynamax \(GO\)": 503/);
+    await expect(fetchWikitext('Dynamax (GO)')).rejects.toThrow(
+      /failed to fetch "Dynamax \(GO\)": 503/
+    );
   });
 
   it('throws when the API returns an error instead of wikitext', async () => {
     stubFetch({
-      ...okPages,
-      'Dynamax (GO)': {
-        ok: true,
-        status: 200,
-        body: { error: { info: "The page you specified doesn't exist." } },
-      },
+      ok: true,
+      status: 200,
+      body: { error: { info: "The page you specified doesn't exist." } },
     });
 
-    await expect(fetchMaxReleases(AS_OF)).rejects.toThrow(/doesn't exist/);
+    await expect(fetchWikitext('Dynamax (GO)')).rejects.toThrow(/doesn't exist/);
   });
 });

@@ -71,9 +71,11 @@ export async function fetchPokeApiSprites(
  *
  * `formSlug`, when provided, looks up a specific form's own gmax variety
  * instead — `{species}-{formSlug}-gmax` (e.g. `toxtricity-amped-gmax`) —
- * for the small set of species whose Gigantamax appearance genuinely
- * differs per pre-existing form (see formSplitGigantamaxDexNumbers in
- * sync-overrides.json).
+ * for species whose Gigantamax appearance differs per form. That covers both
+ * forms Bulbapedia lists as separate Gigantamax releases (e.g.
+ * `urshifu-rapid-strike-gmax`, see max-forms.ts's
+ * backfillReleasedGigantamaxForms) and species split by hand via
+ * formSplitGigantamaxDexNumbers in sync-overrides.json.
  */
 export async function fetchPokeApiGigantamaxSprites(
   speciesName: string,

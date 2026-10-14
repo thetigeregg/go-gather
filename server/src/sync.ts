@@ -8,7 +8,7 @@
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { fetchMaxReleases } from './bulbapedia.js';
+import { loadMaxReleases, syncAvailability } from './availability-store.js';
 import { db, initSchema } from './db.js';
 import {
   backfillReleasedDynamaxForms,
@@ -409,14 +409,16 @@ async function fetchRawPokedex(): Promise<RawPokemon[]> {
 }
 
 /**
- * Bulbapedia is fetched up front alongside pokedex.json: if it's
- * unreachable or fails its sanity checks, fetchMaxReleases throws and the
- * whole sync aborts before upsertCatalog, so the previous catalog (and its
- * DMax/GMax dexes) stays in place until the next scheduled run.
+ * Refreshes the saved Bulbapedia availability data alongside pokedex.json,
+ * then reads released DMax/GMax Pokemon from it. A Bulbapedia outage or
+ * parse failure only leaves the saved data as it was (see
+ * availability-store.ts) — the sync carries on with it. It only aborts,
+ * before upsertCatalog, if no availability data has ever been saved.
  */
 async function fetchPokedex(): Promise<RawPokemon[]> {
   const overrides = await loadSyncOverrides();
-  const [pokedex, maxReleases] = await Promise.all([fetchRawPokedex(), fetchMaxReleases()]);
+  const [pokedex] = await Promise.all([fetchRawPokedex(), syncAvailability(db)]);
+  const maxReleases = loadMaxReleases(db, new Date());
   const finalEvolutionDexNrs = finalEvolutionDexNumbers(pokedex);
   const nameFixed = patchRegionFormNames(pokedex, overrides);
   const linkPatched = patchMissingAssetLinks(nameFixed, overrides);

@@ -10,8 +10,15 @@
  * sits behind a Cloudflare challenge), where every Pokemon is written as a
  * `{{MSP/GO|<code>|<name>|...}}` template — far more stable to parse than
  * rendered HTML. Any structural surprise throws rather than returning a
- * partial list, so a broken parse aborts the catalog sync and leaves the
- * previous catalog in place instead of emptying the DMax/GMax dexes.
+ * partial list — availability-store.ts records that as a failed update and
+ * keeps the dataset's last good parse, so a layout change on Bulbapedia's
+ * side never empties the DMax/GMax dexes.
+ *
+ * Parsing keeps each row's release date rather than filtering to "released
+ * today": Bulbapedia lists announced releases ahead of time, and applying
+ * the date only when the saved data is used (availability-store.ts's
+ * loadMaxReleases) lets those releases still go live on schedule while
+ * Bulbapedia is unreachable.
  */
 
 const BULBAPEDIA_API_URL = 'https://bulbapedia.bulbagarden.net/w/api.php';
@@ -38,24 +45,34 @@ export interface MaxRelease {
   form: string | null;
 }
 
+export interface DatedMaxRelease extends MaxRelease {
+  /** `YYYY-MM-DD`, as listed on Bulbapedia — may be in the future for an
+   * announced release. */
+  releasedOn: string;
+}
+
 export interface MaxReleases {
   dynamax: MaxRelease[];
   gigantamax: MaxRelease[];
 }
+
+export type AvailabilityDataset = keyof MaxReleases;
 
 /**
  * Bulbapedia's per-species form letters (the part of an MSP/GO code between
  * the dex number and any ` s`/` f` modifier, e.g. the `R` in `0892R`) mapped
  * to pokemon-go-api's own `form` values. Only species whose Max release is
  * listed per form need an entry. The empty-string key is the code with no
- * letter at all, which for these species means one specific default form
- * rather than the whole species (Bulbapedia lists Urshifu as `0892` +
- * `0892R`). Kept in code rather than sync-overrides.json so it can't drift
+ * letter at all: for Urshifu it means one specific default form (Bulbapedia
+ * lists it as `0892` + `0892R`), while for Toxtricity it means the whole
+ * species (`null`) — Bulbapedia lists its Gigantamax as a single `0849GMax`.
+ * Any other letter for these species is unexpected and warns. Kept in code
+ * rather than sync-overrides.json so it can't drift
  * between the repo and the NAS host copy — it only changes when another
  * multi-form species gets a Max release.
  */
-const FORM_CODES: Partial<Record<number, Record<string, string>>> = {
-  849: { A: 'AMPED', L: 'LOW_KEY' },
+const FORM_CODES: Partial<Record<number, Record<string, string | null>>> = {
+  849: { '': null, A: 'AMPED', L: 'LOW_KEY' },
   892: { '': 'SINGLE_STRIKE', R: 'RAPID_STRIKE' },
 };
 
@@ -78,6 +95,11 @@ interface ReleaseRow {
   /** `YYYY-MM-DD` */
   releasedOn: string;
   pokemon: PokemonCode[];
+}
+
+interface TableRow {
+  cells: string[];
+  isHeader: boolean;
 }
 
 /** Reads every `{{MSP/GO|...}}` template in a wikitext fragment, in order. */
@@ -135,10 +157,50 @@ export function extractSection(wikitext: string, title: string): string {
 }
 
 /**
+ * Splits wikitable lines into rows of cells. Handles both one-cell-per-line
+ * (`| a` / `| b`) and inline (`| a || b`) cells, and appends a line that
+ * doesn't start a new cell to the previous cell — wikitext lets a long cell
+ * wrap onto following lines.
+ */
+function parseTableRows(tableLines: string[]): TableRow[] {
+  const rows: TableRow[] = [];
+  for (const line of tableLines) {
+    if (line.startsWith('|-')) {
+      rows.push({ cells: [], isHeader: false });
+      continue;
+    }
+    const row = rows.at(-1);
+    if (!row) {
+      continue;
+    }
+    if (line.startsWith('!')) {
+      row.isHeader = true;
+      row.cells.push(
+        ...line
+          .slice(1)
+          .split('!!')
+          .map((cell) => cell.trim())
+      );
+    } else if (line.startsWith('|')) {
+      row.cells.push(
+        ...line
+          .slice(1)
+          .split('||')
+          .map((cell) => cell.trim())
+      );
+    } else if (row.cells.length > 0) {
+      row.cells[row.cells.length - 1] += `\n${line}`;
+    }
+  }
+  return rows;
+}
+
+/**
  * Reads the first wikitable in a section as `Date | Pokemon | Notes` rows.
  * Only the first table counts: the Gigantamax section follows its release
  * table with a second "yet to be released" table that must not be read as
- * released.
+ * released. A row layout this parser doesn't understand throws rather than
+ * being skipped, since a silently dropped row is a silently missing release.
  */
 export function parseReleaseTable(section: string): ReleaseRow[] {
   const lines = section.split('\n');
@@ -148,19 +210,13 @@ export function parseReleaseTable(section: string): ReleaseRow[] {
     throw new Error('Bulbapedia: release table not found');
   }
 
-  const rows: string[][] = [];
-  for (const line of lines.slice(tableStart + 1, tableEnd)) {
-    if (line.startsWith('|-')) {
-      rows.push([]);
-    } else if (line.startsWith('|') && rows.length > 0) {
-      rows[rows.length - 1].push(line.slice(1).trim());
-    }
-  }
-
-  return rows.flatMap((cells) => {
-    // Header rows only have `!` cells, so they end up empty here.
-    if (cells.length < 2) {
+  return parseTableRows(lines.slice(tableStart + 1, tableEnd)).flatMap(({ cells, isHeader }) => {
+    if (isHeader || cells.length === 0) {
       return [];
+    }
+    const rowText = cells.join(' || ');
+    if (cells.length < 2 || /rowspan\s*=/i.test(rowText)) {
+      throw new Error(`Bulbapedia: unexpected release row layout: ${rowText.slice(0, 120)}`);
     }
     const releasedOn = parseReleaseDate(cells[0]);
     if (!releasedOn) {
@@ -176,9 +232,11 @@ function toMaxRelease(pokemon: PokemonCode, formLetter: string): MaxRelease {
   if (forms && Object.hasOwn(forms, formLetter)) {
     return { dexNr: pokemon.dexNr, form: forms[formLetter] };
   }
-  if (formLetter !== '') {
+  if (forms || formLetter !== '') {
     // Shown as the whole species rather than dropped, so a missing mapping
-    // surfaces as a visible entry instead of silently hiding a release.
+    // surfaces as a visible entry instead of silently hiding a release. For
+    // a species listed above, even a plain code with no letter is unexpected
+    // unless mapped: it means Bulbapedia changed how it writes those forms.
     console.warn(
       `Bulbapedia: no form mapping for "${pokemon.code}" — treating it as the whole species.`
     );
@@ -190,9 +248,8 @@ function releasesFromSection(
   section: string,
   label: string,
   minSpecies: number,
-  formLetterOf: (pokemon: PokemonCode) => string,
-  asOf: Date
-): MaxRelease[] {
+  formLetterOf: (pokemon: PokemonCode) => string
+): DatedMaxRelease[] {
   const rows = parseReleaseTable(section);
   const speciesCount = new Set(rows.flatMap((row) => row.pokemon.map((p) => p.dexNr))).size;
   if (speciesCount < minSpecies) {
@@ -201,36 +258,32 @@ function releasesFromSection(
     );
   }
 
-  // Bulbapedia lists announced releases ahead of time ("will appear in Max
-  // Battles"); those only count once their date arrives, which the daily
-  // scheduled sync then picks up on its own.
-  const today = asOf.toISOString().slice(0, 10);
-  const releasedRows = rows.filter((row) => row.releasedOn <= today);
-  const upcomingCount = rows.length - releasedRows.length;
-
-  const releases = new Map<string, MaxRelease>();
-  for (const pokemon of releasedRows.flatMap((row) => row.pokemon)) {
-    const release = toMaxRelease(pokemon, formLetterOf(pokemon));
-    releases.set(`${String(release.dexNr)}|${release.form ?? ''}`, release);
+  // Keyed by species + form; a Pokemon listed in more than one row (e.g. a
+  // regional debut followed by a global one) keeps its earliest date.
+  const releases = new Map<string, DatedMaxRelease>();
+  for (const row of rows) {
+    for (const pokemon of row.pokemon) {
+      const release = toMaxRelease(pokemon, formLetterOf(pokemon));
+      const key = `${String(release.dexNr)}|${release.form ?? ''}`;
+      const existing = releases.get(key);
+      if (!existing || row.releasedOn < existing.releasedOn) {
+        releases.set(key, { ...release, releasedOn: row.releasedOn });
+      }
+    }
   }
-
-  console.log(
-    `Bulbapedia ${label}: ${String(releases.size)} released entries, ${String(upcomingCount)} upcoming release rows skipped.`
-  );
   return [...releases.values()];
 }
 
-export function parseDynamaxReleases(dynamaxPage: string, asOf: Date): MaxRelease[] {
+export function parseDynamaxReleases(dynamaxPage: string): DatedMaxRelease[] {
   return releasesFromSection(
     extractSection(dynamaxPage, DYNAMAX_SECTION),
     'Dynamax',
     MIN_DYNAMAX_SPECIES,
-    (pokemon) => pokemon.formCode,
-    asOf
+    (pokemon) => pokemon.formCode
   );
 }
 
-export function parseGigantamaxReleases(availabilityPage: string, asOf: Date): MaxRelease[] {
+export function parseGigantamaxReleases(availabilityPage: string): DatedMaxRelease[] {
   return releasesFromSection(
     extractSection(availabilityPage, GIGANTAMAX_SECTION),
     'Gigantamax',
@@ -240,12 +293,26 @@ export function parseGigantamaxReleases(availabilityPage: string, asOf: Date): M
         throw new Error(`Bulbapedia: "${pokemon.code}" in the Gigantamax table isn't a GMax code`);
       }
       return pokemon.formCode.slice(0, -GIGANTAMAX_CODE_SUFFIX.length);
-    },
-    asOf
+    }
   );
 }
 
-async function fetchWikitext(page: string): Promise<string> {
+/**
+ * Every dataset availability-store.ts saves, with the page it's parsed
+ * from. Each dataset is saved (or fails) on its own, even when several are
+ * parsed from the same page, so one broken section never discards another
+ * section's good data.
+ */
+export const AVAILABILITY_DATASETS: {
+  dataset: AvailabilityDataset;
+  page: string;
+  parse: (wikitext: string) => DatedMaxRelease[];
+}[] = [
+  { dataset: 'dynamax', page: DYNAMAX_PAGE, parse: parseDynamaxReleases },
+  { dataset: 'gigantamax', page: AVAILABILITY_PAGE, parse: parseGigantamaxReleases },
+];
+
+export async function fetchWikitext(page: string): Promise<string> {
   const url = new URL(BULBAPEDIA_API_URL);
   url.search = new URLSearchParams({
     action: 'parse',
@@ -276,15 +343,4 @@ async function fetchWikitext(page: string): Promise<string> {
     );
   }
   return body.parse.wikitext;
-}
-
-export async function fetchMaxReleases(asOf: Date = new Date()): Promise<MaxReleases> {
-  const [dynamaxPage, availabilityPage] = await Promise.all([
-    fetchWikitext(DYNAMAX_PAGE),
-    fetchWikitext(AVAILABILITY_PAGE),
-  ]);
-  return {
-    dynamax: parseDynamaxReleases(dynamaxPage, asOf),
-    gigantamax: parseGigantamaxReleases(availabilityPage, asOf),
-  };
 }

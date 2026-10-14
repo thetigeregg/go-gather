@@ -36,12 +36,10 @@ export function finalEvolutionDexNumbers(pokedex: RawPokemon[]): Set<number> {
   );
 }
 
-function formsByDexNr(releases: MaxRelease[]): Map<number, string[]> {
-  const byDexNr = new Map<number, string[]>();
-  for (const { dexNr, form } of releases) {
-    if (form) {
-      byDexNr.set(dexNr, [...(byDexNr.get(dexNr) ?? []), form]);
-    }
+function groupByDexNr(releases: MaxRelease[]): Map<number, MaxRelease[]> {
+  const byDexNr = new Map<number, MaxRelease[]>();
+  for (const release of releases) {
+    byDexNr.set(release.dexNr, [...(byDexNr.get(release.dexNr) ?? []), release]);
   }
   return byDexNr;
 }
@@ -103,10 +101,7 @@ export async function backfillReleasedGigantamaxForms(
   releases: MaxRelease[],
   fetchSprites: GigantamaxSpriteFetcher
 ): Promise<RawPokemon[]> {
-  const releasesByDexNr = new Map<number, MaxRelease[]>();
-  for (const release of releases) {
-    releasesByDexNr.set(release.dexNr, [...(releasesByDexNr.get(release.dexNr) ?? []), release]);
-  }
+  const releasesByDexNr = groupByDexNr(releases);
   const patched = [...pokedex];
   let patchedCount = 0;
 
@@ -275,6 +270,11 @@ export async function splitGigantamaxForms(
  * (not the base species sprite backfillReleasedDynamaxForms uses) — no
  * PokeAPI fetch needed. Runs after backfillReleasedDynamaxForms; a no-op
  * for a species that step skipped (nothing to split).
+ *
+ * The generic entry is kept, rather than split, whenever splitting could
+ * lose a release: when Bulbapedia also lists the whole species, or when
+ * none of the listed forms exist in pokemon-go-api (a listed form that's
+ * missing is logged either way).
  */
 export function splitDynamaxForms(
   pokedex: RawPokemon[],
@@ -282,12 +282,16 @@ export function splitDynamaxForms(
   dmaxOnlyFinalEvolution: boolean,
   finalEvolutionDexNrs: Set<number>
 ): RawPokemon[] {
-  const bySpecies = formsByDexNr(releases);
+  const bySpecies = groupByDexNr(releases);
+  const formReleaseSpecies = [...bySpecies.values()].filter((species) =>
+    species.some((release) => release.form)
+  ).length;
   let patchedCount = 0;
 
   const patched = pokedex.map((pokemon) => {
-    const forms = bySpecies.get(pokemon.dexNr);
-    if (!forms) {
+    const speciesReleases = bySpecies.get(pokemon.dexNr) ?? [];
+    const forms = speciesReleases.flatMap((release) => (release.form ? [release.form] : []));
+    if (forms.length === 0 || speciesReleases.some((release) => !release.form)) {
       return pokemon;
     }
     if (dmaxOnlyFinalEvolution && !finalEvolutionDexNrs.has(pokemon.dexNr)) {
@@ -299,7 +303,12 @@ export function splitDynamaxForms(
       return pokemon;
     }
 
-    const otherAssetForms = pokemon.assetForms.filter((af) => af.form !== DYNAMAX_FORM);
+    const missingForms = forms.filter((form) => !pokemon.assetForms.some((af) => af.form === form));
+    if (missingForms.length > 0) {
+      console.warn(
+        `Dynamax form split: ${pokemon.names.English} has no ${missingForms.join('/')} form upstream.`
+      );
+    }
     const splitAssetForms = forms.flatMap((form) => {
       const formAssetForm = pokemon.assetForms.find((af) => af.form === form);
       if (!formAssetForm) {
@@ -315,13 +324,17 @@ export function splitDynamaxForms(
         },
       ];
     });
+    if (splitAssetForms.length === 0) {
+      return pokemon;
+    }
 
+    const otherAssetForms = pokemon.assetForms.filter((af) => af.form !== DYNAMAX_FORM);
     patchedCount++;
     return { ...pokemon, assetForms: [...otherAssetForms, ...splitAssetForms] };
   });
 
   console.log(
-    `Dynamax form split: ${String(patchedCount)} of ${String(bySpecies.size)} species patched.`
+    `Dynamax form split: ${String(patchedCount)} of ${String(formReleaseSpecies)} species patched.`
   );
 
   return patched;

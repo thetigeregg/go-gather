@@ -56,6 +56,7 @@ const form = (dexNr: number, value: string): MaxRelease => ({ dexNr, form: value
 
 beforeEach(() => {
   vi.spyOn(console, 'log').mockImplementation(() => undefined);
+  vi.spyOn(console, 'warn').mockImplementation(() => undefined);
 });
 
 afterEach(() => {
@@ -290,7 +291,7 @@ describe('splitDynamaxForms', () => {
     expect(patched.assetForms[3].image).toBe('RAPID_STRIKE.png');
   });
 
-  it('drops a released form pokemon-go-api has no sprite for', () => {
+  it('drops a released form pokemon-go-api has no sprite for, and warns', () => {
     const [patched] = splitDynamaxForms(
       [urshifu],
       [...releases, form(892, 'UNKNOWN_STYLE')],
@@ -299,6 +300,33 @@ describe('splitDynamaxForms', () => {
     );
 
     expect(forms(patched)).not.toContain('UNKNOWN_STYLE_DYNAMAX');
+    expect(forms(patched)).toContain('RAPID_STRIKE_DYNAMAX');
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('no UNKNOWN_STYLE form'));
+  });
+
+  it('keeps the generic DMax entry when none of the released forms exist upstream', () => {
+    const [patched] = splitDynamaxForms(
+      [urshifu],
+      [form(892, 'OTHER_STYLE'), form(892, 'UNKNOWN_STYLE')],
+      true,
+      new Set([892])
+    );
+
+    expect(patched).toBe(urshifu);
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringContaining('no OTHER_STYLE/UNKNOWN_STYLE form')
+    );
+  });
+
+  it('keeps the generic DMax entry when the whole species is also released', () => {
+    const [patched] = splitDynamaxForms(
+      [urshifu],
+      [species(892), form(892, 'RAPID_STRIKE')],
+      true,
+      new Set([892])
+    );
+
+    expect(patched).toBe(urshifu);
   });
 
   it('leaves species-level releases and skipped non-final evolutions unchanged', () => {
