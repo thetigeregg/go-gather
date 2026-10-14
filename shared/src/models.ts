@@ -15,9 +15,9 @@ export type PokemonClass =
  * Gigantamax via an `assetForms` entry with `form: "GIGANTAMAX"`, neither of
  * which has its own dexNr, so they're tagged here rather than inferable from
  * dexNr/generation alone. `dmax` (Dynamax) is synthesized the same way via
- * an assetForms entry with `form: "DYNAMAX"`, added by sync.ts for
- * hand-curated species (see sync-overrides.json) since neither
- * pokemon-go-api nor PokeAPI has any per-species Dynamax signal at all.
+ * an assetForms entry with `form: "DYNAMAX"`, added by the catalog sync for
+ * species Bulbapedia lists as released (see server/src/bulbapedia.ts) since
+ * neither pokemon-go-api nor PokeAPI has any per-species Dynamax signal.
  *
  * `costume` entries are, like Mega/GMax/DMax, real `assetForms` rows with
  * their own sprite — just keyed off a truthy `assetForm.costume` instead of
