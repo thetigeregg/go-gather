@@ -1,4 +1,6 @@
-import { Component, inject } from '@angular/core';
+import { Component, DestroyRef, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { Subscription } from 'rxjs';
 import {
   IonHeader,
   IonToolbar,
@@ -12,11 +14,13 @@ import {
   IonCardContent,
   IonAccordionGroup,
   ViewWillEnter,
+  ViewWillLeave,
 } from '@ionic/angular/standalone';
 import { ExcludedSearchTerm, PokedexType } from '@go-gather/shared';
 import { SearchStringService } from '../core/services/search-string.service';
 import { UserDataService } from '../core/services/user-data.service';
 import { SearchConfigService } from '../core/services/search-config.service';
+import { localDateChanges } from '../core/services/catalog-release.util';
 import { GeneralUtil } from '../core/utils/general.util';
 import {
   SearchStringComponent,
@@ -66,10 +70,12 @@ const SHINY_LABELS: Record<PokedexType, string> = {
     ExcludedSearchTermInputComponent,
   ],
 })
-export class SearchStringsPage implements ViewWillEnter {
+export class SearchStringsPage implements ViewWillEnter, ViewWillLeave {
   private readonly searchStringService = inject(SearchStringService);
   private readonly userDataService = inject(UserDataService);
   private readonly searchConfigService = inject(SearchConfigService);
+  private readonly destroyRef = inject(DestroyRef);
+  private dateChangeSubscription?: Subscription;
 
   defaultConfig: SearchStringConfig | null = null;
   shinyConfig: SearchStringConfig | null = null;
@@ -78,16 +84,24 @@ export class SearchStringsPage implements ViewWillEnter {
   excludedSearchTerms: ExcludedSearchTerm[] = [];
 
   ionViewWillEnter(): void {
-    this.defaultConfig = null;
-    this.shinyConfig = null;
-    this.genderConfigs = null;
-    this.altRegionConfigs = null;
+    this.regenerate();
 
-    const { pokedexType, excludedSearchTermsByPokedex } = this.userDataService.getUserSettings();
-    this.excludedSearchTerms = excludedSearchTermsByPokedex[pokedexType];
+    // Entries are left out until their `releasedOn` date (see
+    // catalog-release.util.ts), so regenerate when the device date rolls
+    // over while this page is showing — Ionic keeps the page alive in the
+    // nav stack, so the subscription is scoped to enter/leave rather than
+    // to the component's lifetime.
+    this.dateChangeSubscription?.unsubscribe();
+    this.dateChangeSubscription = localDateChanges()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.regenerate();
+      });
+  }
 
-    this.searchStringService.init();
-    this.createConfigs();
+  ionViewWillLeave(): void {
+    this.dateChangeSubscription?.unsubscribe();
+    this.dateChangeSubscription = undefined;
   }
 
   excludedSearchTermsChanged(entries: ExcludedSearchTerm[]): void {
@@ -96,6 +110,19 @@ export class SearchStringsPage implements ViewWillEnter {
     this.userDataService.updateUserSettings({
       excludedSearchTermsByPokedex: { ...excludedSearchTermsByPokedex, [pokedexType]: entries },
     });
+    this.searchStringService.init();
+    this.createConfigs();
+  }
+
+  private regenerate(): void {
+    this.defaultConfig = null;
+    this.shinyConfig = null;
+    this.genderConfigs = null;
+    this.altRegionConfigs = null;
+
+    const { pokedexType, excludedSearchTermsByPokedex } = this.userDataService.getUserSettings();
+    this.excludedSearchTerms = excludedSearchTermsByPokedex[pokedexType];
+
     this.searchStringService.init();
     this.createConfigs();
   }

@@ -71,6 +71,11 @@ export interface CatalogEntry {
   isBaseForm: boolean;
   pokedexType: PokedexType;
   order: number;
+  /** `YYYY-MM-DD` this entry debuted (or is announced to debut) in Pokemon
+   * GO, or null if it isn't released. Set by the catalog sync from
+   * Bulbapedia (see server/src/release-dates.ts); the app hides entries
+   * whose date hasn't arrived on the device yet. */
+  releasedOn: string | null;
 }
 
 export interface ProgressEntry {

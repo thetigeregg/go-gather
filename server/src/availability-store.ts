@@ -13,14 +13,12 @@ import type { Database } from 'better-sqlite3';
 import {
   AVAILABILITY_DATASETS,
   fetchWikitext,
+  type AvailabilityData,
   type AvailabilityDataset,
-  type DatedMaxRelease,
-  type MaxRelease,
-  type MaxReleases,
 } from './bulbapedia.js';
 
-/** Included in db.ts's initSchema(). `payload` (a JSON `DatedMaxRelease[]`)
- * and `fetched_at` only change on a successful parse; `last_attempt_at` and
+/** Included in db.ts's initSchema(). `payload` (that dataset's JSON array
+ * from `AvailabilityData`) and `fetched_at` only change on a successful parse; `last_attempt_at` and
  * `last_error` record every attempt, for a future sync-status view. */
 export const AVAILABILITY_SOURCES_SCHEMA = `
   CREATE TABLE IF NOT EXISTS availability_sources (
@@ -40,6 +38,10 @@ interface AvailabilitySourceRow {
   fetched_at: string | null;
   last_error: string | null;
 }
+
+/** A dataset has never been fetched successfully, so there's nothing saved
+ * to load — the one load failure loadAvailability tolerates for species. */
+class NoSavedAvailabilityError extends Error {}
 
 /**
  * Fetches each Bulbapedia page once and saves every dataset parsed from it.
@@ -92,24 +94,11 @@ export async function syncAvailability(
   return failed;
 }
 
-/** `YYYY-MM-DD` of `date` in `timeZone` — the server's own zone by default
- * (docker-compose.yml sets `TZ`), since Bulbapedia's dates are event dates,
- * not UTC dates. */
-export function localDate(date: Date, timeZone?: string): string {
-  return new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(date);
-}
-
-function loadDataset(
+function loadDataset<K extends AvailabilityDataset>(
   database: Database,
-  dataset: AvailabilityDataset,
-  asOf: Date,
-  timeZone: string | undefined
-): MaxRelease[] {
+  dataset: K,
+  now: Date
+): AvailabilityData[K] {
   const row = database
     .prepare('SELECT payload, fetched_at, last_error FROM availability_sources WHERE dataset = ?')
     .get(dataset) as AvailabilitySourceRow | undefined;
@@ -117,34 +106,58 @@ function loadDataset(
   // apart from "nothing released", so this is the one case that still has
   // to stop the catalog sync.
   if (!row?.payload || !row.fetched_at) {
-    throw new Error(
+    throw new NoSavedAvailabilityError(
       `No saved ${dataset} availability yet — Bulbapedia has never been fetched successfully (last error: ${row?.last_error ?? 'none recorded'}).`
     );
   }
 
-  const ageDays = Math.floor((asOf.getTime() - Date.parse(row.fetched_at)) / DAY_MS);
+  const ageDays = Math.floor((now.getTime() - Date.parse(row.fetched_at)) / DAY_MS);
   if (ageDays >= STALE_AFTER_DAYS) {
     console.warn(
       `Availability ${dataset}: saved data is ${String(ageDays)} days old (last error: ${row.last_error ?? 'none'}).`
     );
   }
 
-  // Announced releases count from their release date, so they still go
-  // live on schedule even while Bulbapedia can't be reached.
-  const today = localDate(asOf, timeZone);
-  const saved = JSON.parse(row.payload) as DatedMaxRelease[];
-  const released = saved.filter((release) => release.releasedOn <= today);
+  const saved = JSON.parse(row.payload) as AvailabilityData[K];
   console.log(
-    `Availability ${dataset}: ${String(released.length)} released, ${String(saved.length - released.length)} upcoming (data from ${row.fetched_at}).`
+    `Availability ${dataset}: ${String(saved.length)} entries (data from ${row.fetched_at}).`
   );
-  return released.map(({ dexNr, form }) => ({ dexNr, form }));
+  return saved;
 }
 
-/** Releases out as of `asOf`, read from the saved datasets. Throws only if a
- * dataset has never been fetched successfully. */
-export function loadMaxReleases(database: Database, asOf: Date, timeZone?: string): MaxReleases {
-  return {
-    dynamax: loadDataset(database, 'dynamax', asOf, timeZone),
-    gigantamax: loadDataset(database, 'gigantamax', asOf, timeZone),
-  };
+/** `AvailabilityData`, except species data may not exist yet — see
+ * loadAvailability. */
+export type LoadedAvailability = Omit<AvailabilityData, 'species'> & {
+  species: AvailabilityData['species'] | null;
+};
+
+/**
+ * Every saved dataset, with release dates kept — including announced
+ * releases still in the future. The catalog sync stamps those dates onto
+ * catalog entries (release-dates.ts) and the app decides what's out on the
+ * device's own date, so nothing here filters by date.
+ *
+ * Throws if the Dynamax or Gigantamax data has never been fetched
+ * successfully, since the DMax/GMax dexes can't be built without it.
+ * Species data that has never been fetched comes back as null instead:
+ * release-dates.ts then treats every species as released, as before
+ * species dates existed, rather than holding up the whole catalog sync
+ * (e.g. on the first sync after upgrading) until Bulbapedia parses.
+ */
+export function loadAvailability(database: Database, now: Date = new Date()): LoadedAvailability {
+  const dynamax = loadDataset(database, 'dynamax', now);
+  const gigantamax = loadDataset(database, 'gigantamax', now);
+  let species: AvailabilityData['species'] | null = null;
+  try {
+    species = loadDataset(database, 'species', now);
+  } catch (err: unknown) {
+    // Only a dataset that was never saved falls back. A corrupt payload or
+    // a database error would otherwise date every species as released, so
+    // those still stop the catalog sync.
+    if (!(err instanceof NoSavedAvailabilityError)) {
+      throw err;
+    }
+    console.warn(`${err.message} Treating every species as released until it is.`);
+  }
+  return { dynamax, gigantamax, species };
 }

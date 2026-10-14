@@ -1,11 +1,10 @@
 import BetterSqlite3 from 'better-sqlite3';
 import {
   AVAILABILITY_SOURCES_SCHEMA,
-  loadMaxReleases,
-  localDate,
+  loadAvailability,
   syncAvailability,
 } from './availability-store';
-import { availabilityPage, dynamaxPage, row } from './bulbapedia.test-helpers';
+import { availabilityPage, dynamaxPage, row, speciesSections } from './bulbapedia.test-helpers';
 
 const DYNAMAX_PAGE = 'Dynamax (GO)';
 const AVAILABILITY_PAGE = 'List of Pokémon by availability in Pokémon GO';
@@ -40,7 +39,11 @@ const goodPages = {
     row('Jun 1, 2025', '{{MSP/GO|0415|Combee}}'),
     row('Nov 6, 2026', '{{MSP/GO|0483|Dialga}}'),
   ]),
-  [AVAILABILITY_PAGE]: availabilityPage([row('Nov 6, 2026', '{{MSP/GO|0884GMax|Duraludon}}')]),
+  [AVAILABILITY_PAGE]: availabilityPage(
+    [row('Nov 6, 2026', '{{MSP/GO|0884GMax|Duraludon}}')],
+    15,
+    speciesSections({ rows: [row('Nov 14, 2026', '{{MSP/GO|0902|Basculegion}}')] })
+  ),
 };
 
 beforeEach(() => {
@@ -62,7 +65,7 @@ describe('syncAvailability', () => {
     await expect(syncAvailability(database, fetchPage, FIRST_SYNC)).resolves.toEqual([]);
 
     expect(fetchPage).toHaveBeenCalledTimes(2);
-    for (const dataset of ['dynamax', 'gigantamax']) {
+    for (const dataset of ['dynamax', 'gigantamax', 'species']) {
       expect(source(dataset)).toMatchObject({
         fetched_at: FIRST_SYNC.toISOString(),
         last_attempt_at: FIRST_SYNC.toISOString(),
@@ -91,6 +94,11 @@ describe('syncAvailability', () => {
 
     expect(failed).toEqual(['gigantamax']);
     expect(source('dynamax').fetched_at).toBe(SECOND_SYNC.toISOString());
+    // Species is parsed from the same page as Gigantamax and still updates.
+    expect(source('species')).toMatchObject({
+      fetched_at: SECOND_SYNC.toISOString(),
+      last_error: null,
+    });
     expect(source('dynamax').payload).toContain('"dexNr":416');
     expect(source('gigantamax')).toMatchObject({
       payload: goodGigantamax,
@@ -132,6 +140,7 @@ describe('syncAvailability', () => {
     await expect(syncAvailability(database, fetchPage, FIRST_SYNC)).resolves.toEqual([
       'dynamax',
       'gigantamax',
+      'species',
     ]);
 
     expect(source('dynamax').last_error).toBe('rate limited');
@@ -139,37 +148,37 @@ describe('syncAvailability', () => {
   });
 });
 
-describe('loadMaxReleases', () => {
+describe('loadAvailability', () => {
   beforeEach(async () => {
     await syncAvailability(database, pageFetcher(goodPages), FIRST_SYNC);
   });
 
-  it('returns releases out as of the given date, without their dates', () => {
-    const releases = loadMaxReleases(database, new Date('2026-10-14T12:00:00Z'), 'UTC');
+  it('returns every saved dataset with dates, including announced releases', () => {
+    const availability = loadAvailability(database, SECOND_SYNC);
 
-    expect(releases.dynamax).toContainEqual({ dexNr: 415, form: null });
-    expect(releases.dynamax.some((r) => r.dexNr === 483)).toBe(false);
-    expect(releases.gigantamax.some((r) => r.dexNr === 884)).toBe(false);
-    expect(releases.gigantamax).toHaveLength(15);
-  });
-
-  it('applies release dates in the given time zone, not UTC', () => {
-    // 23:30 UTC on Nov 5 is already 00:30 on Nov 6 in Zurich.
-    const asOf = new Date('2026-11-05T23:30:00Z');
-
-    const zurich = loadMaxReleases(database, asOf, 'Europe/Zurich');
-    const utc = loadMaxReleases(database, asOf, 'UTC');
-
-    expect(zurich.dynamax).toContainEqual({ dexNr: 483, form: null });
-    expect(zurich.gigantamax).toContainEqual({ dexNr: 884, form: null });
-    expect(utc.dynamax.some((r) => r.dexNr === 483)).toBe(false);
+    expect(availability.dynamax).toContainEqual({
+      dexNr: 483,
+      form: null,
+      releasedOn: '2026-11-06',
+    });
+    expect(availability.gigantamax).toContainEqual({
+      dexNr: 884,
+      form: null,
+      releasedOn: '2026-11-06',
+    });
+    expect(availability.gigantamax).toHaveLength(16);
+    expect(availability.species).toContainEqual({
+      dexNr: 902,
+      formCode: '',
+      releasedOn: '2026-11-14',
+    });
   });
 
   it('warns when the saved data is a week or more old', () => {
-    loadMaxReleases(database, new Date('2026-10-07T12:00:00Z'), 'UTC');
+    loadAvailability(database, new Date('2026-10-07T12:00:00Z'));
     expect(console.warn).not.toHaveBeenCalled();
 
-    loadMaxReleases(database, new Date('2026-10-08T08:00:00Z'), 'UTC');
+    loadAvailability(database, new Date('2026-10-08T08:00:00Z'));
     expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('saved data is 7 days old'));
   });
 
@@ -182,29 +191,58 @@ describe('loadMaxReleases', () => {
       FIRST_SYNC
     );
 
-    expect(() => loadMaxReleases(fresh, SECOND_SYNC, 'UTC')).toThrow(
+    expect(() => loadAvailability(fresh, SECOND_SYNC)).toThrow(
       /No saved gigantamax availability yet .*Bulbapedia: timeout/
     );
     fresh.close();
+  });
+
+  it('returns null species data, without throwing, when species has never been saved', async () => {
+    const fresh = new BetterSqlite3(':memory:');
+    fresh.exec(AVAILABILITY_SOURCES_SCHEMA);
+    await syncAvailability(
+      fresh,
+      pageFetcher({
+        ...goodPages,
+        [AVAILABILITY_PAGE]: availabilityPage(
+          [],
+          15,
+          speciesSections({ fillerCount: 500, unreleased: [] })
+        ),
+      }),
+      FIRST_SYNC
+    );
+
+    const availability = loadAvailability(fresh, SECOND_SYNC);
+
+    expect(availability.species).toBeNull();
+    expect(availability.gigantamax).toHaveLength(15);
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /No saved species availability yet .*Treating every species as released/
+      )
+    );
+    fresh.close();
+  });
+
+  it('throws, rather than treating every species as released, on corrupt species data', () => {
+    database
+      .prepare("UPDATE availability_sources SET payload = '{not json' WHERE dataset = 'species'")
+      .run();
+
+    expect(() => loadAvailability(database, SECOND_SYNC)).toThrow(SyntaxError);
+    expect(console.warn).not.toHaveBeenCalledWith(
+      expect.stringContaining('Treating every species as released')
+    );
   });
 
   it('throws when nothing has ever been attempted', () => {
     const fresh = new BetterSqlite3(':memory:');
     fresh.exec(AVAILABILITY_SOURCES_SCHEMA);
 
-    expect(() => loadMaxReleases(fresh, SECOND_SYNC, 'UTC')).toThrow(
+    expect(() => loadAvailability(fresh, SECOND_SYNC)).toThrow(
       /No saved dynamax availability yet .*last error: none recorded/
     );
     fresh.close();
-  });
-});
-
-describe('localDate', () => {
-  it('formats the calendar date in the given time zone', () => {
-    const date = new Date('2026-11-05T23:30:00Z');
-
-    expect(localDate(date, 'UTC')).toBe('2026-11-05');
-    expect(localDate(date, 'Europe/Zurich')).toBe('2026-11-06');
-    expect(localDate(date, 'America/Los_Angeles')).toBe('2026-11-05');
   });
 });

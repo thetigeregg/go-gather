@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { CatalogEntry, UserSettings } from '@go-gather/shared';
+import { isReleased, localDateString } from './catalog-release.util';
 import { PokeDataService } from './poke-data.service';
 import { SearchConfigService } from './search-config.service';
 import { REGION_BY_GENERATION, UserDataService } from './user-data.service';
@@ -32,10 +33,12 @@ export class FilterService {
 
     const excludedDexNumbers = new Set(userSettings.excludedDexNumbers);
     const excludedShinyDexNumbers = new Set(userSettings.excludedShinyDexNumbers);
+    const today = localDateString();
 
     const inPokedex = this.pokeDataService.catalog.filter(
       (entry) =>
         entry.pokedexType === userSettings.pokedexType &&
+        isReleased(entry, today) &&
         !excludedDexNumbers.has(entry.dexNr) &&
         !(entry.isShiny && excludedShinyDexNumbers.has(entry.dexNr)) &&
         !(entry.isShiny && this.isExcludedByName(entry, excludedShinyPatterns)) &&

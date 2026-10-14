@@ -24,6 +24,7 @@ function makeEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
     secondaryType: 'poison',
     pokemonClass: null,
     isBaseForm: true,
+    releasedOn: '2016-07-06',
     pokedexType: 'regular',
     order: 1,
     ...overrides,
@@ -94,6 +95,23 @@ describe('FilterService', () => {
       g.speciesList.flatMap((s) => s.entries.map((e) => e.id))
     );
     expect(ids).toEqual(['other']);
+  });
+
+  it('drops entries that are not released, or not out yet on the device date', () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date(2026, 9, 14, 12) });
+    catalog = [
+      makeEntry({ id: 'released', releasedOn: '2026-10-14' }),
+      makeEntry({ id: 'announced', releasedOn: '2026-10-15' }),
+      makeEntry({ id: 'unreleased', releasedOn: null }),
+    ];
+
+    const generations = service.groupPokemonByGeneration(makeSettings());
+    vi.useRealTimers();
+
+    const ids = generations.flatMap((g) =>
+      g.speciesList.flatMap((s) => s.entries.map((e) => e.id))
+    );
+    expect(ids).toEqual(['released']);
   });
 
   it('only excludes the shiny entry for excludedShinyDexNumbers, not the non-shiny one', () => {

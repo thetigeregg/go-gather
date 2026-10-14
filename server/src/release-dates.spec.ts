@@ -1,0 +1,139 @@
+import { Region, type PokedexType } from '@go-gather/shared';
+import type { AvailabilityData } from './bulbapedia';
+import { GO_LAUNCH_DATE, stampReleaseDates } from './release-dates';
+import type { UnstampedCatalogEntry } from './transform';
+
+function entry(
+  dexNr: number,
+  overrides: Partial<UnstampedCatalogEntry> & { pokedexType?: PokedexType } = {}
+): UnstampedCatalogEntry {
+  return {
+    id: `${String(dexNr)}-${overrides.form ?? 'base'}`,
+    dexNr,
+    generation: 1,
+    speciesId: `SPECIES_${String(dexNr)}`,
+    formId: `SPECIES_${String(dexNr)}`,
+    name: `Species ${String(dexNr)}`,
+    speciesName: `Species ${String(dexNr)}`,
+    imgUrl: `${String(dexNr)}.png`,
+    isShiny: false,
+    isFemale: false,
+    form: null,
+    costume: null,
+    region: null,
+    primaryType: 'POKEMON_TYPE_NORMAL',
+    secondaryType: null,
+    pokemonClass: null,
+    isBaseForm: true,
+    pokedexType: 'regular',
+    order: 0,
+    ...overrides,
+  };
+}
+
+const availability: AvailabilityData = {
+  species: [
+    { dexNr: 19, formCode: '', releasedOn: '2016-07-06' },
+    { dexNr: 19, formCode: 'A', releasedOn: '2019-06-28' },
+    { dexNr: 19, formCode: 'A', releasedOn: '2018-06-01' },
+    { dexNr: 128, formCode: '', releasedOn: '2016-07-06' },
+    { dexNr: 386, formCode: 'A', releasedOn: '2019-02-01' },
+    { dexNr: 386, formCode: '', releasedOn: '2018-11-01' },
+    { dexNr: 849, formCode: '', releasedOn: '2024-11-16' },
+    { dexNr: 892, formCode: '', releasedOn: '2025-02-01' },
+    { dexNr: 902, formCode: '', releasedOn: '2026-11-14' },
+  ],
+  gigantamax: [
+    { dexNr: 849, form: null, releasedOn: '2024-11-16' },
+    { dexNr: 892, form: 'RAPID_STRIKE', releasedOn: '2026-06-01' },
+  ],
+  dynamax: [
+    { dexNr: 849, form: 'AMPED', releasedOn: '2024-11-17' },
+    { dexNr: 892, form: null, releasedOn: '2025-03-01' },
+  ],
+};
+
+function releasedOn(unstamped: UnstampedCatalogEntry): string | null {
+  return stampReleaseDates([unstamped], availability)[0].releasedOn;
+}
+
+describe('stampReleaseDates', () => {
+  it("gives regular, costume, Mega and size-tier entries the species' earliest debut", () => {
+    expect(releasedOn(entry(386))).toBe('2018-11-01');
+    expect(releasedOn(entry(386, { costume: 'HOLIDAY', pokedexType: 'costume' }))).toBe(
+      '2018-11-01'
+    );
+    expect(releasedOn(entry(386, { form: 'DEOXYS_MEGA', pokedexType: 'mega' }))).toBe('2018-11-01');
+    expect(releasedOn(entry(386, { pokedexType: 'xxl' }))).toBe('2018-11-01');
+  });
+
+  it("gives a regional form its regional code's earliest debut", () => {
+    expect(releasedOn(entry(19, { region: Region.Alola }))).toBe('2018-06-01');
+  });
+
+  it("falls back to the species' debut for a regional form with no regional row", () => {
+    expect(releasedOn(entry(128, { region: Region.Paldea }))).toBe('2016-07-06');
+  });
+
+  it('dates a Gigantamax entry by its own form, then by the species-level release', () => {
+    expect(releasedOn(entry(892, { form: 'RAPID_STRIKE_GIGANTAMAX', pokedexType: 'max' }))).toBe(
+      '2026-06-01'
+    );
+    // Toxtricity is split by form here but dated as a whole species upstream.
+    expect(releasedOn(entry(849, { form: 'AMPED_GIGANTAMAX', pokedexType: 'max' }))).toBe(
+      '2024-11-16'
+    );
+    // A Max entry without a form goes straight to the species-level release.
+    expect(releasedOn(entry(849, { pokedexType: 'max' }))).toBe('2024-11-16');
+  });
+
+  it('dates a Dynamax entry the same way', () => {
+    expect(releasedOn(entry(849, { form: 'AMPED_DYNAMAX', pokedexType: 'dmax' }))).toBe(
+      '2024-11-17'
+    );
+    expect(releasedOn(entry(892, { form: 'DYNAMAX', pokedexType: 'dmax' }))).toBe('2025-03-01');
+  });
+
+  it('marks a Max entry with no Max release as not released', () => {
+    expect(releasedOn(entry(19, { form: 'DYNAMAX', pokedexType: 'dmax' }))).toBeNull();
+    expect(releasedOn(entry(19, { form: 'GIGANTAMAX', pokedexType: 'max' }))).toBeNull();
+  });
+
+  it('treats every species as released when no species data is saved yet', () => {
+    const [regular, regional, unknown, gmax] = stampReleaseDates(
+      [
+        entry(386),
+        entry(19, { region: Region.Alola }),
+        entry(1001),
+        entry(892, { form: 'RAPID_STRIKE_GIGANTAMAX', pokedexType: 'max' }),
+      ],
+      { ...availability, species: null }
+    );
+
+    expect(regular.releasedOn).toBe(GO_LAUNCH_DATE);
+    expect(regional.releasedOn).toBe(GO_LAUNCH_DATE);
+    expect(unknown.releasedOn).toBe(GO_LAUNCH_DATE);
+    // Max entries still use their own release dates.
+    expect(gmax.releasedOn).toBe('2026-06-01');
+  });
+
+  it('keeps announced future debuts as they are', () => {
+    expect(releasedOn(entry(902))).toBe('2026-11-14');
+  });
+
+  it("marks a species Bulbapedia doesn't date as not released", () => {
+    expect(releasedOn(entry(1001))).toBeNull();
+    expect(releasedOn(entry(1001, { region: Region.Paldea }))).toBeNull();
+  });
+
+  it('keeps every other field and the entry order', () => {
+    const entries = [entry(19), entry(386)];
+
+    const stamped = stampReleaseDates(entries, availability);
+
+    expect(stamped).toEqual([
+      { ...entries[0], releasedOn: '2016-07-06' },
+      { ...entries[1], releasedOn: '2018-11-01' },
+    ]);
+  });
+});
