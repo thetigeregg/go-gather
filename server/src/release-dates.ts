@@ -142,15 +142,19 @@ class FormTargetMap<T> {
     return (matches.find(({ target }) => target.form !== undefined) ?? matches.at(0))?.value;
   }
 
-  targets(): FormTarget[] {
-    return [...this.byFormId.values()].flat().map(({ target }) => target);
+  entries(): { target: FormTarget; value: T }[] {
+    return [...this.byFormId.values()].flat();
   }
 }
 
-/** The species data's dates for UNRELEASED_FORM_IDS's codes, by the catalog
- * entries they map to — so a form released since it was listed is dated by
- * its own row, not its species' or region's earlier debut. */
-function mappedFormDates(availability: LoadedAvailability): FormTargetMap<Dated> {
+/** What UNRELEASED_FORM_IDS's codes say about the catalog entries they map
+ * to: the species data's earliest date for a code it dates — so a form
+ * released since it was listed is dated by its own row, not its species' or
+ * region's earlier debut — or null to hide one only the unreleased-forms
+ * table lists. A date wins over null for the same target; across targets,
+ * the variant one wins either way, so a dated variant is never hidden by a
+ * broad listing and a listed variant never dated by a broad row. */
+function mappedFormReleases(availability: LoadedAvailability): FormTargetMap<Dated | null> {
   const earliest = new Map<string, { target: FormTarget; releasedOn: string }>();
   for (const { dexNr, formCode, releasedOn } of availability.species ?? []) {
     const target = formTargetFor(dexNr, formCode);
@@ -158,31 +162,20 @@ function mappedFormDates(availability: LoadedAvailability): FormTargetMap<Dated>
       keepEarliest(earliest, formTargetKey(target), { target, releasedOn });
     }
   }
-  const dates = new FormTargetMap<Dated>();
+  const releases = new FormTargetMap<Dated | null>();
   for (const { target, releasedOn } of earliest.values()) {
-    dates.add(target, { releasedOn });
+    releases.add(target, { releasedOn });
   }
-  return dates;
-}
-
-/** The catalog entries to hide: mapped codes from the unreleased-forms
- * table, except any the species data dates. */
-function hiddenUnreleasedForms(
-  availability: LoadedAvailability,
-  formDates: FormTargetMap<Dated> = mappedFormDates(availability)
-): FormTargetMap<true> {
-  const dated = new Set(formDates.targets().map(formTargetKey));
-  const hidden = new FormTargetMap<true>();
-  const seen = new Set<string>();
+  const seen = new Set(earliest.keys());
   for (const { dexNr, formCode } of availability.unreleasedForms ?? []) {
     const target = formTargetFor(dexNr, formCode);
     const key = target ? formTargetKey(target) : '';
-    if (target && !dated.has(key) && !seen.has(key)) {
+    if (target && !seen.has(key)) {
       seen.add(key);
-      hidden.add(target, true);
+      releases.add(target, null);
     }
   }
-  return hidden;
+  return releases;
 }
 
 const REGIONAL_CODE = /^[AGHP][A-Z]*$/;
@@ -334,11 +327,11 @@ function releaseDating(availability: LoadedAvailability): ReleaseDating {
   for (const { dexNr, form, releasedOn } of availability.mega ?? []) {
     keepEarliest(megaDates, `${String(dexNr)}|${form}`, { releasedOn });
   }
-  const formDates = mappedFormDates(availability);
-  const unreleasedForms = hiddenUnreleasedForms(availability, formDates);
+  const formReleases = mappedFormReleases(availability);
 
   function releaseDateFor(entry: UnstampedCatalogEntry): string | null {
-    if (unreleasedForms.get(entry)) {
+    const formRelease = formReleases.get(entry);
+    if (formRelease === null) {
       return null;
     }
     const dexNr = String(entry.dexNr);
@@ -362,9 +355,8 @@ function releaseDating(availability: LoadedAvailability): ReleaseDating {
       return megaDates.get(`${dexNr}|${megaFormSuffix(entry)}`)?.releasedOn ?? null;
     }
 
-    const formDate = formDates.get(entry);
-    if (formDate) {
-      return formDate.releasedOn;
+    if (formRelease) {
+      return formRelease.releasedOn;
     }
 
     const speciesDate = availability.species
@@ -456,8 +448,10 @@ export function unmatchedUnreleasedFormIds(
   entries: UnstampedCatalogEntry[],
   availability: LoadedAvailability
 ): string[] {
-  return hiddenUnreleasedForms(availability)
-    .targets()
+  return mappedFormReleases(availability)
+    .entries()
+    .filter(({ value }) => value === null)
+    .map(({ target }) => target)
     .filter((target) => !entries.some((entry) => matchesFormTarget(entry, target)))
     .map((target) =>
       target.form === undefined ? target.formId : `${target.formId} (form ${target.form ?? 'none'})`
