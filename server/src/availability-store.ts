@@ -63,13 +63,15 @@ export async function syncAvailability(
   // an unhandled rejection, which crashes the server. The loop still awaits
   // each one and records its failure.
   const pages = new Map<string, Promise<string>>();
-  for (const { page } of AVAILABILITY_DATASETS) {
-    if (!pages.has(page)) {
-      const wikitext = fetchPage(page);
+  const sources = AVAILABILITY_DATASETS.map((source) => {
+    let wikitext = pages.get(source.page);
+    if (!wikitext) {
+      wikitext = fetchPage(source.page);
       wikitext.catch(() => undefined);
-      pages.set(page, wikitext);
+      pages.set(source.page, wikitext);
     }
-  }
+    return { ...source, wikitext };
+  });
   const saveSuccess = database.prepare(`
     INSERT INTO availability_sources (dataset, payload, fetched_at, last_attempt_at, last_error)
     VALUES (@dataset, @payload, @attemptedAt, @attemptedAt, NULL)
@@ -87,9 +89,9 @@ export async function syncAvailability(
       last_error = excluded.last_error
   `);
 
-  for (const { dataset, page, parse } of AVAILABILITY_DATASETS) {
+  for (const { dataset, parse, wikitext } of sources) {
     try {
-      const releases = parse(await (pages.get(page) ?? fetchPage(page)));
+      const releases = parse(await wikitext);
       saveSuccess.run({ dataset, payload: JSON.stringify(releases), attemptedAt });
       console.log(`Availability ${dataset}: ${String(releases.length)} entries saved.`);
     } catch (err: unknown) {
