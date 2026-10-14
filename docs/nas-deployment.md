@@ -78,6 +78,14 @@ Set `BACKUP_AFTER_N_MODIFICATIONS` to also trigger a backup after that many catc
 
 Note the tracked copy in the repo and the host copy are now independent: future edits committed to `server/src/sync-overrides.json` won't reach a NAS that already has its own seeded host file unless you manually port them over.
 
+### Released Dynamax/Gigantamax data
+
+Which Pokemon have been released as Dynamax or Gigantamax is read from [Bulbapedia](https://bulbapedia.bulbagarden.net/) (`server/src/bulbapedia.ts`) on every catalog sync, so the server needs outbound HTTPS access to `bulbapedia.bulbagarden.net` alongside pokemon-go-api and PokeAPI. Announced releases appear automatically once their date passes. If Bulbapedia is unreachable or its pages can't be parsed, the catalog sync fails and the existing catalog stays in place until the next scheduled run.
+
+Host copies of `sync-overrides.json` seeded before this change still contain `releasedDynamaxDexNumbers`, `releasedGigantamaxDexNumbers` and `formSplitDynamaxDexNumbers`. They're ignored (the sync logs a warning) and can be deleted from the host file.
+
+Bulbapedia content is licensed [CC BY-NC-SA 2.5](https://creativecommons.org/licenses/by-nc-sa/2.5/).
+
 ### Push notifications
 
 Calendar-event push notifications (FCM) require a Firebase service-account JSON file at `${SECRETS_HOST_DIR:-./nas-secrets}/firebase_service_account_json` — without it, `server/src/fcm.ts` logs a one-time `[fcm] not_configured` warning and skips sending (the rest of the server functions normally). To enable:

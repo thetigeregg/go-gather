@@ -1,15 +1,23 @@
 /* eslint-disable @typescript-eslint/restrict-template-expressions,
-   @typescript-eslint/no-unnecessary-condition, @typescript-eslint/require-await,
-   @typescript-eslint/no-non-null-assertion,
+   @typescript-eslint/no-unnecessary-condition, @typescript-eslint/no-non-null-assertion,
    @typescript-eslint/use-unknown-in-catch-callback-variable --
    ported near-verbatim from go-gather-next (see
    docs/progress/phase-4-catalog-pipeline.md); go-gather-next's own ESLint
    config doesn't enforce these strictTypeChecked rules. Only markCatalogSynced()
-   and its one call site are new. */
+   and its one call site are new, plus the Bulbapedia wiring in fetchPokedex(). */
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { fetchMaxReleases } from './bulbapedia.js';
 import { db, initSchema } from './db.js';
+import {
+  backfillReleasedDynamaxForms,
+  backfillReleasedGigantamaxForms,
+  dropUnreleasedGigantamaxForms,
+  finalEvolutionDexNumbers,
+  splitDynamaxForms,
+  splitGigantamaxForms,
+} from './max-forms.js';
 import {
   fetchPokeApiGigantamaxSprites,
   fetchPokeApiMegaSprites,
@@ -36,11 +44,8 @@ const IMAGE_CONCURRENCY = 16;
  */
 interface SyncOverrides {
   missingAssetLinkDexNumbers: { dexNr: number }[];
-  releasedGigantamaxDexNumbers: { dexNr: number }[];
   dmaxOnlyFinalEvolution: boolean;
-  releasedDynamaxDexNumbers: { dexNr: number }[];
   formSplitGigantamaxDexNumbers: { dexNr: number; forms: string[] }[];
-  formSplitDynamaxDexNumbers: { dexNr: number; forms: string[] }[];
   regionFormAssetBackfill: {
     dexNr: number;
     forms: { regionForm: string; slug: string }[];
@@ -51,6 +56,14 @@ interface SyncOverrides {
 
 const SYNC_OVERRIDES_PATH = join(__dirname, 'sync-overrides.json');
 
+/** Keys that used to drive Max availability by hand, now read from
+ * Bulbapedia (see bulbapedia.ts) and ignored if still present. */
+const RETIRED_OVERRIDE_KEYS = [
+  'releasedDynamaxDexNumbers',
+  'releasedGigantamaxDexNumbers',
+  'formSplitDynamaxDexNumbers',
+];
+
 async function loadSyncOverrides(): Promise<SyncOverrides> {
   const raw = await readFile(SYNC_OVERRIDES_PATH, 'utf-8');
   const overrides = JSON.parse(raw) as SyncOverrides;
@@ -58,6 +71,12 @@ async function loadSyncOverrides(): Promise<SyncOverrides> {
   // docs/nas-deployment.md), so an existing deployment can still supply the
   // pre-baseFormAssetBackfill file after upgrading the image.
   overrides.baseFormAssetBackfill ??= [];
+  const retiredKeys = RETIRED_OVERRIDE_KEYS.filter((key) => key in overrides);
+  if (retiredKeys.length > 0) {
+    console.warn(
+      `sync-overrides.json: ${retiredKeys.join(', ')} no longer used — released Dynamax/Gigantamax Pokemon now come from Bulbapedia. Safe to delete.`
+    );
+  }
   return overrides;
 }
 
@@ -111,266 +130,6 @@ function patchMissingAssetLinks(pokedex: RawPokemon[], overrides: SyncOverrides)
     }
     return { ...pokemon, assets: assetUrlsForDexNumber(pokemon.dexNr) };
   });
-}
-
-const GIGANTAMAX_FORM = 'GIGANTAMAX';
-
-/**
- * Builds a synthetic assetForms entry from PokeAPI's `{species}-gmax`
- * variety sprite, shaped exactly like pokemon-go-api's own GIGANTAMAX
- * assetForms entries (see e.g. Venusaur's real one) so it flows through the
- * rest of the pipeline — including transform.ts's `pokedexType: 'max'`
- * derivation — with no special-casing needed downstream.
- */
-async function backfillReleasedGigantamaxForms(
-  pokedex: RawPokemon[],
-  overrides: SyncOverrides
-): Promise<RawPokemon[]> {
-  const releasedGigantamaxDexNumbers = new Set(
-    overrides.releasedGigantamaxDexNumbers.map((e) => e.dexNr)
-  );
-  const patched = [...pokedex];
-  let patchedCount = 0;
-
-  for (let index = 0; index < patched.length; index++) {
-    const pokemon = patched[index];
-    if (!releasedGigantamaxDexNumbers.has(pokemon.dexNr)) {
-      continue;
-    }
-    const alreadyHasGmax = pokemon.assetForms.some((af) => af.form === GIGANTAMAX_FORM);
-    if (alreadyHasGmax) {
-      continue;
-    }
-
-    const sprites = await fetchPokeApiGigantamaxSprites(pokemon.names.English);
-    if (!sprites) {
-      continue;
-    }
-
-    patched[index] = {
-      ...pokemon,
-      assetForms: [
-        ...pokemon.assetForms,
-        {
-          form: GIGANTAMAX_FORM,
-          costume: null,
-          isFemale: false,
-          image: sprites.image,
-          shinyImage: sprites.shinyImage,
-        },
-      ],
-    };
-    patchedCount++;
-  }
-
-  console.log(
-    `PokeAPI Gigantamax backfill: ${patchedCount} of ${releasedGigantamaxDexNumbers.size} species patched.`
-  );
-
-  return patched;
-}
-
-const DYNAMAX_FORM = 'DYNAMAX';
-
-/**
- * A species with `evolutions: []` in pokemon-go-api's raw data is either a
- * single-stage species or already the final stage of its family — used to
- * filter the DMax pokedex down to "only the final evolved form" when
- * `dmaxOnlyFinalEvolution` is set (see sync-overrides.json's `_readme`).
- * Computed once from the raw, pre-backfill pokedex: nothing in this sync
- * pipeline ever mutates `evolutions`, so it stays valid through every
- * subsequent patch/backfill step.
- */
-function finalEvolutionDexNumbers(pokedex: RawPokemon[]): Set<number> {
-  return new Set(
-    pokedex.filter((pokemon) => pokemon.evolutions.length === 0).map((pokemon) => pokemon.dexNr)
-  );
-}
-
-/**
- * Unlike Gigantamax, Dynamax has no distinct sprite anywhere — it's a
- * universal mainline-game mechanic (any Pokemon can Dynamax) with no unique
- * art, and neither pokemon-go-api nor PokeAPI has any per-species Dynamax
- * signal to key off (confirmed: no field resembling hasGigantamaxEvolution
- * exists for it in either schema). So this just duplicates the species' own
- * base sprite into a synthetic DYNAMAX assetForms entry for whichever
- * hand-curated species are in `releasedDynamaxDexNumbers` — no PokeAPI
- * fetch needed, since there's nothing distinct to fetch.
- */
-async function backfillReleasedDynamaxForms(
-  pokedex: RawPokemon[],
-  overrides: SyncOverrides,
-  finalEvolutionDexNrs: Set<number>
-): Promise<RawPokemon[]> {
-  const releasedDynamaxDexNumbers = new Set(
-    overrides.releasedDynamaxDexNumbers.map((e) => e.dexNr)
-  );
-  const patched = [...pokedex];
-  let patchedCount = 0;
-
-  for (let index = 0; index < patched.length; index++) {
-    const pokemon = patched[index];
-    if (!releasedDynamaxDexNumbers.has(pokemon.dexNr) || !pokemon.assets) {
-      continue;
-    }
-    if (overrides.dmaxOnlyFinalEvolution && !finalEvolutionDexNrs.has(pokemon.dexNr)) {
-      continue;
-    }
-    const alreadyHasDmax = pokemon.assetForms.some((af) => af.form === DYNAMAX_FORM);
-    if (alreadyHasDmax) {
-      continue;
-    }
-
-    patched[index] = {
-      ...pokemon,
-      assetForms: [
-        ...pokemon.assetForms,
-        {
-          form: DYNAMAX_FORM,
-          costume: null,
-          isFemale: false,
-          image: pokemon.assets.image,
-          shinyImage: pokemon.assets.shinyImage,
-        },
-      ],
-    };
-    patchedCount++;
-  }
-
-  console.log(
-    `Dynamax backfill: ${patchedCount} of ${releasedDynamaxDexNumbers.size} species patched.`
-  );
-
-  return patched;
-}
-
-function gigantamaxFormSlug(form: string): string {
-  return form.toLowerCase().replace(/_/g, '-');
-}
-
-/**
- * A handful of species have multiple real alternate forms whose Gigantamax
- * appearance genuinely differs per form (Toxtricity's Amped/Low Key,
- * confirmed via PokeAPI's separate toxtricity-amped-gmax/
- * toxtricity-low-key-gmax varieties — visually distinct art). pokemon-go-api
- * only ever lists one generic GIGANTAMAX assetForm regardless, so for each
- * species in `formSplitGigantamaxDexNumbers` this removes that single
- * generic entry and replaces it with one `{FORM}_GIGANTAMAX` entry per
- * listed form, using PokeAPI's per-form gmax variety when available. Runs
- * after backfillReleasedGigantamaxForms so it can assume a generic
- * GIGANTAMAX assetForm already exists (either native to pokemon-go-api, or
- * just backfilled) to split.
- */
-async function splitGigantamaxFormsFromPokeApi(
-  pokedex: RawPokemon[],
-  overrides: SyncOverrides
-): Promise<RawPokemon[]> {
-  const patched = [...pokedex];
-  const bySpecies = new Map(overrides.formSplitGigantamaxDexNumbers.map((e) => [e.dexNr, e.forms]));
-  let patchedCount = 0;
-
-  for (let index = 0; index < patched.length; index++) {
-    const pokemon = patched[index];
-    const forms = bySpecies.get(pokemon.dexNr);
-    if (!forms) {
-      continue;
-    }
-
-    const genericGmax = pokemon.assetForms.find((af) => af.form === GIGANTAMAX_FORM);
-    if (!genericGmax) {
-      continue;
-    }
-
-    const otherAssetForms = pokemon.assetForms.filter((af) => af.form !== GIGANTAMAX_FORM);
-    const splitAssetForms = await Promise.all(
-      forms.map(async (form) => {
-        const sprites = await fetchPokeApiGigantamaxSprites(
-          pokemon.names.English,
-          gigantamaxFormSlug(form)
-        );
-        return {
-          form: `${form}_${GIGANTAMAX_FORM}`,
-          costume: null,
-          isFemale: false,
-          // Falls back to the original generic sprite (never drops a listed
-          // form) if PokeAPI doesn't have this specific form's own variety.
-          image: sprites?.image ?? genericGmax.image,
-          shinyImage: sprites?.shinyImage ?? genericGmax.shinyImage,
-        };
-      })
-    );
-
-    patched[index] = {
-      ...pokemon,
-      assetForms: [...otherAssetForms, ...splitAssetForms],
-    };
-    patchedCount++;
-  }
-
-  console.log(
-    `Gigantamax form split: ${patchedCount} of ${overrides.formSplitGigantamaxDexNumbers.length} species patched.`
-  );
-
-  return patched;
-}
-
-/**
- * Dynamax equivalent of splitGigantamaxFormsFromPokeApi — but since Dynamax
- * has no distinct art anywhere (confirmed: no per-species/per-form Dynamax
- * signal exists in pokemon-go-api or PokeAPI at all), each split entry just
- * reuses that specific form's OWN existing sprite (not the base species
- * sprite backfillReleasedDynamaxForms uses) — no PokeAPI fetch needed. Runs
- * after backfillReleasedDynamaxForms; a no-op for a species not also on
- * `releasedDynamaxDexNumbers` yet (nothing to split).
- */
-function splitDynamaxFormsFromPokeApi(
-  pokedex: RawPokemon[],
-  overrides: SyncOverrides,
-  finalEvolutionDexNrs: Set<number>
-): RawPokemon[] {
-  const bySpecies = new Map(overrides.formSplitDynamaxDexNumbers.map((e) => [e.dexNr, e.forms]));
-  let patchedCount = 0;
-
-  const patched = pokedex.map((pokemon) => {
-    const forms = bySpecies.get(pokemon.dexNr);
-    if (!forms) {
-      return pokemon;
-    }
-    if (overrides.dmaxOnlyFinalEvolution && !finalEvolutionDexNrs.has(pokemon.dexNr)) {
-      return pokemon;
-    }
-
-    const genericDmax = pokemon.assetForms.find((af) => af.form === DYNAMAX_FORM);
-    if (!genericDmax) {
-      return pokemon;
-    }
-
-    const otherAssetForms = pokemon.assetForms.filter((af) => af.form !== DYNAMAX_FORM);
-    const splitAssetForms = forms.flatMap((form) => {
-      const formAssetForm = pokemon.assetForms.find((af) => af.form === form);
-      if (!formAssetForm) {
-        return [];
-      }
-      return [
-        {
-          form: `${form}_${DYNAMAX_FORM}`,
-          costume: null,
-          isFemale: false,
-          image: formAssetForm.image,
-          shinyImage: formAssetForm.shinyImage,
-        },
-      ];
-    });
-
-    patchedCount++;
-    return { ...pokemon, assetForms: [...otherAssetForms, ...splitAssetForms] };
-  });
-
-  console.log(
-    `Dynamax form split: ${patchedCount} of ${overrides.formSplitDynamaxDexNumbers.length} species patched.`
-  );
-
-  return patched;
 }
 
 const POKEAPI_BACKFILL_CONCURRENCY = 8;
@@ -641,13 +400,23 @@ async function backfillRegionFormAssetsFromPokeApi(
   return patched;
 }
 
-async function fetchPokedex(): Promise<RawPokemon[]> {
-  const overrides = await loadSyncOverrides();
+async function fetchRawPokedex(): Promise<RawPokemon[]> {
   const response = await fetch(POKEDEX_URL);
   if (!response.ok) {
     throw new Error(`Failed to fetch pokedex.json: ${response.status} ${response.statusText}`);
   }
-  const pokedex = (await response.json()) as RawPokemon[];
+  return (await response.json()) as RawPokemon[];
+}
+
+/**
+ * Bulbapedia is fetched up front alongside pokedex.json: if it's
+ * unreachable or fails its sanity checks, fetchMaxReleases throws and the
+ * whole sync aborts before upsertCatalog, so the previous catalog (and its
+ * DMax/GMax dexes) stays in place until the next scheduled run.
+ */
+async function fetchPokedex(): Promise<RawPokemon[]> {
+  const overrides = await loadSyncOverrides();
+  const [pokedex, maxReleases] = await Promise.all([fetchRawPokedex(), fetchMaxReleases()]);
   const finalEvolutionDexNrs = finalEvolutionDexNumbers(pokedex);
   const nameFixed = patchRegionFormNames(pokedex, overrides);
   const linkPatched = patchMissingAssetLinks(nameFixed, overrides);
@@ -658,14 +427,29 @@ async function fetchPokedex(): Promise<RawPokemon[]> {
     overrides
   );
   const megasBackfilled = await backfillCollidingMegaSpritesFromPokeApi(regionFormsBackfilled);
-  const gmaxBackfilled = await backfillReleasedGigantamaxForms(megasBackfilled, overrides);
-  const dmaxBackfilled = await backfillReleasedDynamaxForms(
+  const gmaxFiltered = dropUnreleasedGigantamaxForms(megasBackfilled, maxReleases.gigantamax);
+  const gmaxBackfilled = await backfillReleasedGigantamaxForms(
+    gmaxFiltered,
+    maxReleases.gigantamax,
+    fetchPokeApiGigantamaxSprites
+  );
+  const dmaxBackfilled = backfillReleasedDynamaxForms(
     gmaxBackfilled,
-    overrides,
+    maxReleases.dynamax,
+    overrides.dmaxOnlyFinalEvolution,
     finalEvolutionDexNrs
   );
-  const gmaxSplit = await splitGigantamaxFormsFromPokeApi(dmaxBackfilled, overrides);
-  return splitDynamaxFormsFromPokeApi(gmaxSplit, overrides, finalEvolutionDexNrs);
+  const gmaxSplit = await splitGigantamaxForms(
+    dmaxBackfilled,
+    overrides.formSplitGigantamaxDexNumbers,
+    fetchPokeApiGigantamaxSprites
+  );
+  return splitDynamaxForms(
+    gmaxSplit,
+    maxReleases.dynamax,
+    overrides.dmaxOnlyFinalEvolution,
+    finalEvolutionDexNrs
+  );
 }
 
 /**

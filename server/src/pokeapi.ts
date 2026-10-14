@@ -63,10 +63,11 @@ export async function fetchPokeApiSprites(
 /**
  * Gigantamax forms follow the same PokeAPI "variety" slug pattern as Mega
  * Evolutions (`{species}-gmax`) — used only for species confirmed released
- * in Pokemon GO but still missing a GIGANTAMAX assetForms entry upstream
- * (see RELEASED_GIGANTAMAX_DEX_NUMBERS in sync.ts). Not every species with
- * a PokeAPI gmax variety belongs there: most Sword/Shield Gigantamax forms
- * were never added to Pokemon GO at all.
+ * in Pokemon GO (per Bulbapedia, see bulbapedia.ts) but still missing a
+ * GIGANTAMAX assetForms entry upstream (see max-forms.ts's
+ * backfillReleasedGigantamaxForms). Not every species with a PokeAPI gmax
+ * variety belongs there: most Sword/Shield Gigantamax forms were never
+ * added to Pokemon GO at all.
  *
  * `formSlug`, when provided, looks up a specific form's own gmax variety
  * instead — `{species}-{formSlug}-gmax` (e.g. `toxtricity-amped-gmax`) —

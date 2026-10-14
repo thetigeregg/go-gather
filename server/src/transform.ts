@@ -37,7 +37,7 @@ export interface RawMegaEvolution {
   assets: RawAssets;
 }
 
-/** Only `id` is used (by sync.ts's final-evolution filtering for DMax) —
+/** Only `id` is used (by max-forms.ts's final-evolution filtering for DMax) —
  * pokemon-go-api's own evolution entries also carry `candies`/`item`/
  * `quests`, none of which this app needs. */
 export interface RawEvolution {
@@ -59,7 +59,7 @@ export interface RawPokemon {
   megaEvolutions: Record<string, RawMegaEvolution>;
   /** Empty array means this species has no further evolution — either a
    * single-stage species or already the final stage of its family. Used by
-   * sync.ts to filter the DMax pokedex down to final forms only when
+   * max-forms.ts to filter the DMax pokedex down to final forms only when
    * `dmaxOnlyFinalEvolution` is set in sync-overrides.json. */
   evolutions: RawEvolution[];
 }
@@ -380,7 +380,7 @@ interface BaseFormDuplicate {
  *    (Cherrim's "Overcast Form", Giratina's "Altered Forme", ...) and
  *    folds its name into the base row. Dynamax entries are deliberately
  *    synthesized with a sprite identical to the base (see
- *    backfillReleasedDynamaxForms in sync.ts — Dynamax has no distinct art
+ *    backfillReleasedDynamaxForms in max-forms.ts — Dynamax has no distinct art
  *    anywhere), which otherwise trips this same "is secretly the base
  *    form" heuristic and hijacks the base row's name/pokedexType instead
  *    of producing its own separate DMax entry. Confirmed the hard way:
