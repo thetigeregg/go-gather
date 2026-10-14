@@ -105,6 +105,8 @@ function hiddenUnreleasedFormIds(availability: LoadedAvailability): Set<string> 
   );
 }
 
+const REGIONAL_CODE = /^[AGHP][A-Z]*$/;
+
 /** Bulbapedia's regional-form letters. */
 export const REGION_CODES: Partial<Record<string, Region>> = {
   A: Region.Alola,
@@ -114,15 +116,18 @@ export const REGION_CODES: Partial<Record<string, Region>> = {
 };
 
 /**
- * The region a Bulbapedia form code belongs to, by its first letter — a
- * prefix rather than an exact letter, since some regional forms have longer
- * codes (Paldean Tauros breeds are `PC`/`PB`/`PA`, Galarian Zen Darmanitan
- * `GZ`). A species-specific code that happens to start with one of these
- * letters (Deoxys `A` is Attack Forme, Vivillon `Pa` Poké Ball Pattern)
- * only ever meets an entry with a region, so the overlap is harmless.
+ * The region a Bulbapedia form code belongs to: a region letter followed
+ * by capital letters only. That covers the plain letters and the longer
+ * regional codes (Paldean Tauros breeds are `PC`/`PB`/`PA`, Galarian Zen
+ * Darmanitan `GZ`), while species-specific codes that merely start with a
+ * region letter (Vivillon `Pol`, Furfrou `He`, Oricorio `Pa`) are written
+ * with lowercase letters and stay non-regional. The plain letters still
+ * collide with a few species-specific codes (Deoxys `A` is Attack Forme,
+ * Primal `P`), but those species have no regional form in the catalog,
+ * so the extra regional date is never looked up.
  */
 function regionForCode(formCode: string): Region | undefined {
-  return REGION_CODES[formCode.charAt(0)];
+  return REGIONAL_CODE.test(formCode) ? REGION_CODES[formCode.charAt(0)] : undefined;
 }
 
 interface Dated {

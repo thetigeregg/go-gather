@@ -112,8 +112,20 @@ describe('stampReleaseDates', () => {
     expect(releasedOn(entry(52, { region: Region.Alola }))).toBe('2016-07-06');
   });
 
-  it('matches regional codes by their first letter, like Paldean Tauros breeds', () => {
+  it('matches longer all-capital regional codes, like Paldean Tauros breeds', () => {
     expect(releasedOn(entry(128, { region: Region.Paldea }))).toBe('2023-11-01');
+  });
+
+  it("doesn't read a lowercase species-specific code as regional", () => {
+    const [vivillon] = stampReleaseDates([entry(666, { region: Region.Paldea })], {
+      ...availability,
+      species: [
+        { dexNr: 666, formCode: '', releasedOn: '2019-06-14' },
+        { dexNr: 666, formCode: 'Pol', releasedOn: '2023-01-01' },
+      ],
+    });
+
+    expect(vivillon.releasedOn).toBe('2019-06-14');
   });
 
   it('dates a Gigantamax entry by its own form, then by the species-level release', () => {
@@ -227,7 +239,17 @@ describe('stampReleaseDates for shiny entries', () => {
     expect(releasedOn(shiny(1001))).toBeNull();
   });
 
-  it('matches regional shinies by the code prefix, never by a GMax code', () => {
+  it('files a lowercase species-specific shiny code as the base listing', () => {
+    const [vivillon] = stampReleaseDates([shiny(666)], {
+      ...availability,
+      species: [...availability.species, { dexNr: 666, formCode: '', releasedOn: '2019-06-14' }],
+      shiny: [{ dexNr: 666, formCode: 'Pol', dynamax: false, releasedOn: '2022-03-01' }],
+    });
+
+    expect(vivillon.releasedOn).toBe('2022-03-01');
+  });
+
+  it('matches regional shinies by all-capital regional codes, never by a GMax code', () => {
     expect(releasedOn(shiny(19, { region: Region.Alola }))).toBe('2019-01-01');
     expect(releasedOn(shiny(128, { region: Region.Paldea }))).toBe('2024-01-01');
     expect(releasedOn(shiny(52, { region: Region.Galar }))).toBeNull();
