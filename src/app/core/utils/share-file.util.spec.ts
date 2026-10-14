@@ -1,9 +1,9 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi, type Mock, type MockInstance } from 'vitest';
 
 const isNativePlatformMock = vi.fn<() => boolean>();
-const writeFileMock = vi.fn<() => Promise<{ uri: string }>>();
-const deleteFileMock = vi.fn<() => Promise<void>>();
-const shareMock = vi.fn<() => Promise<void>>();
+const writeFileMock = vi.fn<(...args: unknown[]) => Promise<{ uri: string }>>();
+const deleteFileMock = vi.fn<(...args: unknown[]) => Promise<void>>();
+const shareMock = vi.fn<(...args: unknown[]) => Promise<void>>();
 
 vi.mock('./native-platform.util', () => ({
   isNativePlatform: () => isNativePlatformMock(),
@@ -51,17 +51,17 @@ describe('presentShareFile', () => {
     shareMock.mockReset();
   });
 
-  function mockAnchorDownload(): { click: ReturnType<typeof vi.fn> } {
+  function mockAnchorDownload(): { download: string; click: Mock<() => void> } {
     const anchor = {
       href: '',
       download: '',
-      click: vi.fn(),
+      click: vi.fn<() => void>(),
     };
     vi.spyOn(document, 'createElement').mockReturnValue(anchor as unknown as HTMLAnchorElement);
     return anchor;
   }
 
-  function mockBlobUrls(): ReturnType<typeof vi.spyOn<typeof URL, 'revokeObjectURL'>> {
+  function mockBlobUrls(): MockInstance<(url: string) => void> {
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock-url');
     return vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
   }

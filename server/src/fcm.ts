@@ -7,7 +7,8 @@ import { getMessaging, type BatchResponse, type Messaging } from 'firebase-admin
 // even local dev points FIREBASE_SERVICE_ACCOUNT_JSON_FILE at a real file.
 function readFirebaseServiceAccountJsonFile(): string {
   const filePath =
-    process.env.FIREBASE_SERVICE_ACCOUNT_JSON_FILE ?? '/run/secrets/firebase_service_account_json';
+    process.env['FIREBASE_SERVICE_ACCOUNT_JSON_FILE'] ??
+    '/run/secrets/firebase_service_account_json';
 
   if (!existsSync(filePath)) {
     return '';

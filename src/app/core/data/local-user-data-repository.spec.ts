@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto';
 import { TestBed } from '@angular/core/testing';
-import { vi } from 'vitest';
+import { vi, type Mock } from 'vitest';
 import { DEFAULT_SETTINGS } from '@go-gather/shared';
 import { AppDb } from './app-db';
 import { DexieStorageEngine } from './dexie-storage-engine';
@@ -13,10 +13,10 @@ vi.mock('./storage-transaction-context', () => import('./storage-transaction-con
 describe('LocalUserDataRepository', () => {
   let db: AppDb;
   let repository: LocalUserDataRepository;
-  let syncNow: ReturnType<typeof vi.fn>;
+  let syncNow: Mock<() => Promise<void>>;
 
   beforeEach(async () => {
-    syncNow = vi.fn().mockResolvedValue(undefined);
+    syncNow = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
     const outboxWriter: SyncOutboxWriter = {
       enqueueOperation: vi.fn().mockResolvedValue(undefined),
       syncNow,

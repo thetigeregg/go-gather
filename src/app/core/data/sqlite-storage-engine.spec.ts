@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module';
 import { readFileSync } from 'node:fs';
-import initSqlJs, { Database, SqlJsStatic } from 'sql.js';
+import initSqlJs, { Database, SqlJsStatic, type SqlValue } from 'sql.js';
 import { vi } from 'vitest';
 import { SQLITE_UPGRADE_STATEMENTS } from './sqlite-connection';
 import type { SqliteConnection, SqliteRunResult, SqliteStatement } from './sqlite-connection';
@@ -14,7 +14,11 @@ let sqlJsPromise: Promise<SqlJsStatic> | undefined;
 
 async function loadSqlJs(): Promise<SqlJsStatic> {
   if (!sqlJsPromise) {
-    const wasmBinary = readFileSync(require.resolve('sql.js/dist/sql-wasm.wasm'));
+    const wasmFile = readFileSync(require.resolve('sql.js/dist/sql-wasm.wasm'));
+    const wasmBinary = wasmFile.buffer.slice(
+      wasmFile.byteOffset,
+      wasmFile.byteOffset + wasmFile.byteLength
+    );
     sqlJsPromise = initSqlJs({ wasmBinary });
   }
 
@@ -110,12 +114,12 @@ class InProcessSqliteConnection implements SqliteConnection {
   }
 }
 
-function normalizeValue(value: unknown): unknown {
+function normalizeValue(value: unknown): SqlValue {
   if (typeof value === 'boolean') {
     return value ? 1 : 0;
   }
 
-  return value;
+  return value as SqlValue;
 }
 
 function toError(error: unknown): Error {
