@@ -39,6 +39,10 @@ interface AvailabilitySourceRow {
   last_error: string | null;
 }
 
+/** A dataset has never been fetched successfully, so there's nothing saved
+ * to load — the one load failure loadAvailability tolerates for species. */
+class NoSavedAvailabilityError extends Error {}
+
 /**
  * Fetches each Bulbapedia page once and saves every dataset parsed from it.
  * A fetch or parse failure is recorded against that dataset (keeping its
@@ -102,7 +106,7 @@ function loadDataset<K extends AvailabilityDataset>(
   // apart from "nothing released", so this is the one case that still has
   // to stop the catalog sync.
   if (!row?.payload || !row.fetched_at) {
-    throw new Error(
+    throw new NoSavedAvailabilityError(
       `No saved ${dataset} availability yet — Bulbapedia has never been fetched successfully (last error: ${row?.last_error ?? 'none recorded'}).`
     );
   }
@@ -147,9 +151,13 @@ export function loadAvailability(database: Database, now: Date = new Date()): Lo
   try {
     species = loadDataset(database, 'species', now);
   } catch (err: unknown) {
-    console.warn(
-      `${err instanceof Error ? err.message : String(err)} Treating every species as released until it is.`
-    );
+    // Only a dataset that was never saved falls back. A corrupt payload or
+    // a database error would otherwise date every species as released, so
+    // those still stop the catalog sync.
+    if (!(err instanceof NoSavedAvailabilityError)) {
+      throw err;
+    }
+    console.warn(`${err.message} Treating every species as released until it is.`);
   }
   return { dynamax, gigantamax, species };
 }

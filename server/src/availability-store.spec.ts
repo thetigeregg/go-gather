@@ -225,6 +225,17 @@ describe('loadAvailability', () => {
     fresh.close();
   });
 
+  it('throws, rather than treating every species as released, on corrupt species data', () => {
+    database
+      .prepare("UPDATE availability_sources SET payload = '{not json' WHERE dataset = 'species'")
+      .run();
+
+    expect(() => loadAvailability(database, SECOND_SYNC)).toThrow(SyntaxError);
+    expect(console.warn).not.toHaveBeenCalledWith(
+      expect.stringContaining('Treating every species as released')
+    );
+  });
+
   it('throws when nothing has ever been attempted', () => {
     const fresh = new BetterSqlite3(':memory:');
     fresh.exec(AVAILABILITY_SOURCES_SCHEMA);
