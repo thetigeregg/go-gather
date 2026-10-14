@@ -327,3 +327,7 @@
 ## v0.19.0 - 2026-10-14
 
 - 5e05b77 feat(sync): date Mega and Primal entries from Bulbapedia (#85)
+
+## v0.20.0 - 2026-10-14
+
+- 08ccdfa feat(sync): hide unreleased shinies using Bulbapedia's shiny list (#87)
