@@ -315,3 +315,7 @@
 ## v0.18.0 - 2026-10-14
 
 - 0fdccb6 feat(sync): date catalog entries from Bulbapedia releases (#83)
+
+## v0.18.1 - 2026-10-14
+
+- 0692979 build(deps): bump Angular, Capacitor, Fastify, and tooling (#84)
