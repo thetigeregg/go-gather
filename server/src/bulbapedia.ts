@@ -153,7 +153,8 @@ const ANY_MSP_DEX_NR = /\{\{MSP(?:\/GO)?\|(?:size=\d+\|)?(\d{4})/g;
 // matter for Max availability.
 const MSP_GO_CODE = /^(\d{4})(\S*)(?:\s+\S+)*$/;
 const HEADING = /^(={2,6})\s*(.+?)\s*\1\s*$/;
-const HTML_COMMENT = /<!--[\s\S]*?-->/g;
+// An unclosed `<!--` runs to the end of the page, as MediaWiki renders it.
+const HTML_COMMENT = /<!--[\s\S]*?(?:-->|$)/g;
 const NAMED_ARGUMENT = /^\s*[A-Za-z0-9_]+\s*=/;
 const SHINY_DYNAMAX_FLAG = /\bdynamax\s*=\s*yes\b/;
 
@@ -215,38 +216,43 @@ export function templateCalls(wikitext: string, name: string): string[][] {
   let start = wikitext.indexOf(opener);
   while (start !== -1) {
     const args: string[] = [];
-    let current = '';
+    let argStart = start + opener.length;
+    let index = argStart;
     let depth = 0;
-    let index = start + opener.length;
-    let closed = false;
+    let end = -1;
     while (index < wikitext.length) {
-      const pair = wikitext.slice(index, index + 2);
+      const pair = wikitext.substring(index, index + 2);
       if (pair === '{{' || pair === '[[') {
         depth++;
-        current += pair;
         index += 2;
       } else if (pair === '}}' && depth === 0) {
-        closed = true;
+        end = index;
         break;
       } else if ((pair === '}}' || pair === ']]') && depth > 0) {
         depth--;
-        current += pair;
         index += 2;
       } else if (wikitext[index] === '|' && depth === 0) {
-        args.push(current);
-        current = '';
+        args.push(wikitext.slice(argStart, index));
         index++;
+        argStart = index;
       } else {
-        current += wikitext[index];
         index++;
       }
     }
-    if (!closed) {
+    if (end === -1) {
       throw new Error(`Bulbapedia: unclosed {{${name}}} template`);
     }
-    args.push(current);
+    args.push(wikitext.slice(argStart, end));
+    // An unbalanced `[[` or `{{` keeps the call open past its own `}}`, so it
+    // runs on into the next call instead of failing — catch that here rather
+    // than date the next rows' Pokemon with this row's date.
+    if (args.some((arg) => arg.includes(opener))) {
+      throw new Error(
+        `Bulbapedia: unbalanced brackets in {{${name}|${args.slice(0, 2).join('|')}…}} ran into the next call`
+      );
+    }
     calls.push(args);
-    start = wikitext.indexOf(opener, index + 2);
+    start = wikitext.indexOf(opener, end + 2);
   }
   return calls;
 }
@@ -507,12 +513,24 @@ function parseUnreleasedSpecies(availabilityPage: string): Set<number> {
  * Every species and form debut in the "List of Pokémon by date" table,
  * keeping each (species, form letters) pair's earliest date. Cross-checked
  * against the "Unreleased Pokémon" list: every dex number up to the highest
- * one seen must be dated, listed with a TBA/TBD date, or listed as
- * unreleased. Between them those cover the whole National Dex, so a gap
- * means a row was silently lost.
+ * one seen must be dated, listed with a TBA/TBD date, in a commented-out
+ * row, or listed as unreleased. Between them those cover the whole
+ * National Dex, so a gap means a row was silently lost.
  */
 export function parseSpeciesReleases(availabilityPage: string): DatedSpeciesRelease[] {
   const page = stripComments(availabilityPage);
+  // Species in a row Bulbapedia's editors have commented out (e.g. an
+  // announced debut not yet live) aren't dated, but they're listed — so the
+  // gap check below mustn't count them as silently lost.
+  const commentedOut = new Set(
+    [
+      ...firstTableLines(extractSection(availabilityPage, SPECIES_SECTION))
+        .join('\n')
+        .matchAll(HTML_COMMENT),
+    ]
+      .flatMap((comment) => [...comment[0].matchAll(ANY_MSP_DEX_NR)])
+      .map((match) => Number(match[1]))
+  );
   const rows = parseReleaseTable(extractSection(page, SPECIES_SECTION));
   const releases = new Map<string, DatedSpeciesRelease>();
   for (const row of rows.filter(isDated)) {
@@ -538,7 +556,11 @@ export function parseSpeciesReleases(availabilityPage: string): DatedSpeciesRele
   const unreleased = parseUnreleasedSpecies(page);
   const highestDexNr = Math.max(...dated, ...unscheduled, ...unreleased);
   const missing = Array.from({ length: highestDexNr }, (_, index) => index + 1).filter(
-    (dexNr) => !dated.has(dexNr) && !unscheduled.has(dexNr) && !unreleased.has(dexNr)
+    (dexNr) =>
+      !dated.has(dexNr) &&
+      !unscheduled.has(dexNr) &&
+      !unreleased.has(dexNr) &&
+      !commentedOut.has(dexNr)
   );
   if (missing.length > 0) {
     throw new Error(

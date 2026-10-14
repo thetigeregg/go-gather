@@ -44,6 +44,7 @@ const availability: AvailabilityData = {
     { dexNr: 52, formCode: '', releasedOn: '2016-07-06' },
     { dexNr: 52, formCode: 'G', releasedOn: '2019-10-01' },
     { dexNr: 128, formCode: '', releasedOn: '2016-07-06' },
+    { dexNr: 128, formCode: 'PC', releasedOn: '2023-11-01' },
     { dexNr: 386, formCode: 'A', releasedOn: '2019-02-01' },
     { dexNr: 386, formCode: '', releasedOn: '2018-11-01' },
     { dexNr: 849, formCode: '', releasedOn: '2024-11-16' },
@@ -100,7 +101,11 @@ describe('stampReleaseDates', () => {
   });
 
   it("falls back to the species' debut for a regional form with no regional row", () => {
-    expect(releasedOn(entry(128, { region: Region.Paldea }))).toBe('2016-07-06');
+    expect(releasedOn(entry(52, { region: Region.Alola }))).toBe('2016-07-06');
+  });
+
+  it('matches regional codes by their first letter, like Paldean Tauros breeds', () => {
+    expect(releasedOn(entry(128, { region: Region.Paldea }))).toBe('2023-11-01');
   });
 
   it('dates a Gigantamax entry by its own form, then by the species-level release', () => {
@@ -254,20 +259,21 @@ describe('stampReleaseDates for shiny entries', () => {
 });
 
 describe('unlistedShinyCount', () => {
-  const stamped = (id: string, isShiny: boolean, releasedOn: string | null) => ({
-    ...entry(128, { id, isShiny }),
-    releasedOn,
-  });
+  const shiny = (dexNr: number, overrides: Partial<UnstampedCatalogEntry> = {}) =>
+    entry(dexNr, { isShiny: true, ...overrides });
   const entries = [
-    stamped('128-normal', false, '2016-07-06'),
-    stamped('128-shiny', true, null),
-    stamped('128-normal-xxl', false, '2016-07-06'),
-    stamped('128-shiny-xxl', true, null),
-    stamped('1001-normal', false, null),
-    stamped('1001-shiny', true, null),
+    // Pokemon dated, shiny not listed: counted, size copies included.
+    shiny(128),
+    shiny(128, { pokedexType: 'xxl' }),
+    // Shiny listed: not counted.
+    shiny(19),
+    // Pokemon itself not released: not counted.
+    shiny(1001),
+    // Not a shiny: not counted.
+    entry(128),
   ];
 
-  it("counts shinies hidden only because their shiny isn't listed, size copies included", () => {
+  it("counts shinies hidden only because their shiny isn't listed", () => {
     expect(unlistedShinyCount(entries, availability)).toBe(2);
   });
 

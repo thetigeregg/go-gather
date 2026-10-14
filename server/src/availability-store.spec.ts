@@ -146,6 +146,34 @@ describe('syncAvailability', () => {
     });
   });
 
+  it('requests every page before any of them has loaded', () => {
+    const fetchPage = vi.fn(() => new Promise<string>(() => undefined));
+
+    void syncAvailability(database, fetchPage, FIRST_SYNC);
+
+    expect(fetchPage.mock.calls).toEqual([[DYNAMAX_PAGE], [AVAILABILITY_PAGE], [SHINY_PAGE]]);
+  });
+
+  it('records a page that fails before its datasets are reached, without crashing', async () => {
+    let releaseDynamax: (wikitext: string) => void = () => undefined;
+    const fetchPage = vi.fn((page: string) =>
+      page === DYNAMAX_PAGE
+        ? new Promise<string>((resolve) => {
+            releaseDynamax = resolve;
+          })
+        : Promise.reject(new Error(`Bulbapedia: ${page} unavailable`))
+    );
+
+    const syncing = syncAvailability(database, fetchPage, FIRST_SYNC);
+    // Let the other pages reject while the first dataset is still waiting.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    releaseDynamax(goodPages[DYNAMAX_PAGE]);
+
+    await expect(syncing).resolves.toEqual(['gigantamax', 'species', 'mega', 'shiny']);
+    expect(source('dynamax').last_error).toBeNull();
+    expect(source('shiny').last_error).toBe(`Bulbapedia: ${SHINY_PAGE} unavailable`);
+  });
+
   it('records a non-Error rejection as its string value', async () => {
     // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- the non-Error rejection is what's under test
     const fetchPage = vi.fn(() => Promise.reject('rate limited'));

@@ -293,6 +293,18 @@ describe('parseSpeciesReleases', () => {
     expect(releases.some((r) => r.dexNr === 999)).toBe(false);
   });
 
+  it('counts species in a commented-out row as listed for the gap check', () => {
+    const releases = parse({
+      rows: [
+        `<!--${row('Nov 14, 2026', '{{MSP/GO|0902|Basculegion}}')}-->`,
+        row('Jan 1, 2020', '{{MSP/GO|0903|Sneasler}}'),
+      ],
+    });
+
+    expect(releases.some((r) => r.dexNr === 902)).toBe(false);
+    expect(releases).toContainEqual({ dexNr: 903, formCode: '', releasedOn: '2020-01-01' });
+  });
+
   it('ignores a commented-out row', () => {
     const releases = parse({
       rows: [`<!--${row('Jan 1, 2020', '{{MSP/GO|0901|Ursaluna}}')}-->`],
@@ -417,6 +429,10 @@ describe('stripComments', () => {
   it('removes single- and multi-line HTML comments', () => {
     expect(stripComments('a<!-- one -->b<!--\ntwo\n-->c')).toBe('abc');
   });
+
+  it('treats an unclosed comment as running to the end, as MediaWiki does', () => {
+    expect(stripComments('a<!-- one -->b<!-- never closed\n{{row|1}}')).toBe('ab');
+  });
 });
 
 describe('templateCalls', () => {
@@ -428,6 +444,12 @@ describe('templateCalls', () => {
 
   it('ignores templates with other names', () => {
     expect(templateCalls('{{other|1}}{{rows|2}}', 'row')).toEqual([]);
+  });
+
+  it('throws when unbalanced brackets run one call into the next', () => {
+    expect(() => templateCalls('{{row|1|[[Link|text}}\n{{row|2|x}}}}', 'row')).toThrow(
+      /unbalanced brackets in \{\{row\|1/
+    );
   });
 
   it('throws on an unclosed template', () => {

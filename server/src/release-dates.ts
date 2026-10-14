@@ -52,16 +52,25 @@ import type { UnstampedCatalogEntry } from './transform.js';
  * released without a more specific date (see db.ts's migration too). */
 export const GO_LAUNCH_DATE = '2016-07-06';
 
-/** Bulbapedia's regional-form letters. Other letters are species-specific
- * forms (Deoxys `A` is Attack Forme, not Alolan), but a species-specific
- * letter only ever reaches a lookup for an entry that has a region, so the
- * overlap is harmless. */
+/** Bulbapedia's regional-form letters. */
 export const REGION_CODES: Partial<Record<string, Region>> = {
   A: Region.Alola,
   G: Region.Galar,
   H: Region.Hisui,
   P: Region.Paldea,
 };
+
+/**
+ * The region a Bulbapedia form code belongs to, by its first letter — a
+ * prefix rather than an exact letter, since some regional forms have longer
+ * codes (Paldean Tauros breeds are `PC`/`PB`/`PA`, Galarian Zen Darmanitan
+ * `GZ`). A species-specific code that happens to start with one of these
+ * letters (Deoxys `A` is Attack Forme, Vivillon `Pa` Poké Ball Pattern)
+ * only ever meets an entry with a region, so the overlap is harmless.
+ */
+function regionForCode(formCode: string): Region | undefined {
+  return REGION_CODES[formCode.charAt(0)];
+}
 
 interface Dated {
   releasedOn: string;
@@ -126,12 +135,9 @@ function shinyListings(releases: DatedShinyRelease[]): ShinyListings {
     if (megaSuffix) {
       keepEarliest(listings.mega, `${dex}|${megaSuffix}`, dated);
     }
-    // A prefix, not an exact letter: Paldean Tauros breeds are `PC`/`PB`/
-    // `PA`, Galarian Zen Darmanitan `GZ`. A species-specific code that
-    // happens to start with a region letter (Deoxys `A`) only ever meets an
-    // entry with a region, so it's harmless; `P` is both Primal and Paldea
-    // for the same reason.
-    const region = REGION_CODES[formCode.charAt(0)];
+    // `P` is both Primal and Paldea; harmless for the same reason as in
+    // regionForCode.
+    const region = regionForCode(formCode);
     if (region) {
       keepEarliest(listings.region, `${dex}|${region}`, dated);
     }
@@ -164,15 +170,19 @@ function laterOf(first: string | null, second: string | null): string | null {
   return first > second ? first : second;
 }
 
-export function stampReleaseDates(
-  entries: UnstampedCatalogEntry[],
-  availability: LoadedAvailability
-): CatalogEntry[] {
+interface ReleaseDating {
+  /** An entry's date by the rules above, ignoring whether it's shiny. */
+  pokemonDate: (entry: UnstampedCatalogEntry) => string | null;
+  /** The shiny listings, or null when no shiny data is saved. */
+  shiny: ShinyListings | null;
+}
+
+function releaseDating(availability: LoadedAvailability): ReleaseDating {
   const speciesDates = new Map<string, Dated>();
   const regionDates = new Map<string, Dated>();
   for (const { dexNr, formCode, releasedOn } of availability.species ?? []) {
     keepEarliest(speciesDates, String(dexNr), { releasedOn });
-    const region = REGION_CODES[formCode];
+    const region = regionForCode(formCode);
     if (region) {
       keepEarliest(regionDates, `${String(dexNr)}|${region}`, { releasedOn });
     }
@@ -216,10 +226,19 @@ export function stampReleaseDates(
     return speciesDate;
   }
 
-  const shiny = availability.shiny ? shinyListings(availability.shiny) : null;
+  return {
+    pokemonDate: releaseDateFor,
+    shiny: availability.shiny ? shinyListings(availability.shiny) : null,
+  };
+}
 
+export function stampReleaseDates(
+  entries: UnstampedCatalogEntry[],
+  availability: LoadedAvailability
+): CatalogEntry[] {
+  const { pokemonDate, shiny } = releaseDating(availability);
   return entries.map((entry) => {
-    const releasedOn = releaseDateFor(entry);
+    const releasedOn = pokemonDate(entry);
     return {
       ...entry,
       releasedOn:
@@ -248,27 +267,21 @@ export function undatedMegaNames(
 }
 
 /**
- * How many shiny entries stampReleaseDates hid because Bulbapedia doesn't
- * list their shiny, while their non-shiny twin is dated — for the catalog
- * sync to log. Shiny and non-shiny twins share an id apart from its
- * `-shiny` / `-normal` segment (see transform.ts's buildCatalogId), which
- * XXL/XXS copies follow with `-xxl` / `-xxs`.
- * Zero when no shiny data is saved, since shinies then follow their twin.
+ * How many shiny entries stampReleaseDates hides only because Bulbapedia
+ * doesn't list their shiny — the Pokemon itself is dated — for the catalog
+ * sync to log. Uses the same rules as stampReleaseDates. Zero when no shiny
+ * data is saved, since shinies then follow their Pokemon.
  */
 export function unlistedShinyCount(
-  entries: CatalogEntry[],
+  entries: UnstampedCatalogEntry[],
   availability: LoadedAvailability
 ): number {
-  if (!availability.shiny) {
+  const { pokemonDate, shiny } = releaseDating(availability);
+  if (!shiny) {
     return 0;
   }
-  const nonShinyDates = new Map(
-    entries.filter((entry) => !entry.isShiny).map((entry) => [entry.id, entry.releasedOn])
-  );
   return entries.filter(
     (entry) =>
-      entry.isShiny &&
-      entry.releasedOn === null &&
-      (nonShinyDates.get(entry.id.replace(/-shiny(?=-|$)/, '-normal')) ?? null) !== null
+      entry.isShiny && pokemonDate(entry) !== null && shinyListingDate(entry, shiny) === null
   ).length;
 }

@@ -57,7 +57,19 @@ export async function syncAvailability(
 ): Promise<AvailabilityDataset[]> {
   const attemptedAt = now.toISOString();
   const failed: AvailabilityDataset[] = [];
+  // Every distinct page is fetched at once, before any dataset is parsed,
+  // so the requests run in parallel. Each fetch gets a no-op handler right
+  // away: a page that fails before the loop reaches it would otherwise be
+  // an unhandled rejection, which crashes the server. The loop still awaits
+  // each one and records its failure.
   const pages = new Map<string, Promise<string>>();
+  for (const { page } of AVAILABILITY_DATASETS) {
+    if (!pages.has(page)) {
+      const wikitext = fetchPage(page);
+      wikitext.catch(() => undefined);
+      pages.set(page, wikitext);
+    }
+  }
   const saveSuccess = database.prepare(`
     INSERT INTO availability_sources (dataset, payload, fetched_at, last_attempt_at, last_error)
     VALUES (@dataset, @payload, @attemptedAt, @attemptedAt, NULL)
@@ -77,12 +89,7 @@ export async function syncAvailability(
 
   for (const { dataset, page, parse } of AVAILABILITY_DATASETS) {
     try {
-      let wikitext = pages.get(page);
-      if (!wikitext) {
-        wikitext = fetchPage(page);
-        pages.set(page, wikitext);
-      }
-      const releases = parse(await wikitext);
+      const releases = parse(await (pages.get(page) ?? fetchPage(page)));
       saveSuccess.run({ dataset, payload: JSON.stringify(releases), attemptedAt });
       console.log(`Availability ${dataset}: ${String(releases.length)} entries saved.`);
     } catch (err: unknown) {
