@@ -339,3 +339,7 @@
 ## v0.22.0 - 2026-10-14
 
 - 62a63cb feat(settings): show Bulbapedia data status and attribution (#89)
+
+## v0.22.1 - 2026-10-14
+
+- 8d7d0de fix(sync): date shiny Max/Mega forms by notes, retire dex exclusions (#90)
