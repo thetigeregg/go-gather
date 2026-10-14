@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { CatalogEntry, PogoEvent, Season, UserSettings } from '@go-gather/shared';
 import { Region } from '@go-gather/shared';
+import { availabilityStatus } from './availability-store.js';
 import { maybeBackupAfterModifications } from './backup.js';
 import { db } from './db.js';
 import { registerNotificationRoutes } from './notifications.js';
@@ -310,6 +311,10 @@ export function buildApp() {
   // sync.ts's own "re-read fresh every time" behavior) rather than caching
   // — so editing the file and refreshing the app picks up a change
   // immediately, no npm run sync or server restart needed.
+  // Health of each saved Bulbapedia dataset for the Settings status card —
+  // read live per request, like search-config, not cached or synced.
+  app.get('/api/availability-status', () => availabilityStatus(db));
+
   app.get('/api/search-config', async () => {
     const raw = await readFile(SYNC_OVERRIDES_PATH, 'utf-8');
     const overrides = JSON.parse(raw) as { costumeGenderEnabled: boolean };

@@ -78,6 +78,25 @@ export interface CatalogEntry {
   releasedOn: string | null;
 }
 
+/**
+ * The health of one saved Bulbapedia dataset, as served by
+ * `GET /api/availability-status` (see server/src/availability-store.ts) for
+ * the Settings page. `dataset` is a plain string rather than the server's
+ * dataset union, so an app older than a newly added dataset still shows it.
+ */
+export interface AvailabilityStatus {
+  dataset: string;
+  /** ISO timestamp of the last successful fetch and parse, or null if there
+   * has never been one. */
+  fetchedAt: string | null;
+  /** ISO timestamp of the last attempt, successful or not. */
+  lastAttemptAt: string | null;
+  /** The last attempt's error, or null if it succeeded. */
+  lastError: string | null;
+  /** Never fetched, or the saved data is a week or more old. */
+  stale: boolean;
+}
+
 export interface ProgressEntry {
   catalogEntryId: string;
   caught: boolean;

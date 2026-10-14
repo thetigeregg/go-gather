@@ -9,6 +9,7 @@
  * (which opens the real SQLite file on import), so tests can run against an
  * in-memory database. sync.ts and sync-availability.ts pass db.ts's handle.
  */
+import type { AvailabilityStatus } from '@go-gather/shared';
 import type { Database } from 'better-sqlite3';
 import {
   AVAILABILITY_DATASETS,
@@ -19,7 +20,8 @@ import {
 
 /** Included in db.ts's initSchema(). `payload` (that dataset's JSON array
  * from `AvailabilityData`) and `fetched_at` only change on a successful parse; `last_attempt_at` and
- * `last_error` record every attempt, for a future sync-status view. */
+ * `last_error` record every attempt, for the Settings status card (see
+ * availabilityStatus). */
 export const AVAILABILITY_SOURCES_SCHEMA = `
   CREATE TABLE IF NOT EXISTS availability_sources (
     dataset TEXT PRIMARY KEY,
@@ -32,6 +34,12 @@ export const AVAILABILITY_SOURCES_SCHEMA = `
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const STALE_AFTER_DAYS = 7;
+
+/** Whole days since `fetchedAt` — shared by the catalog sync's stale
+ * warning and the status card, so the two can't disagree. */
+function ageInDays(fetchedAt: string, now: Date): number {
+  return Math.floor((now.getTime() - Date.parse(fetchedAt)) / DAY_MS);
+}
 
 interface AvailabilitySourceRow {
   payload: string | null;
@@ -124,7 +132,7 @@ function loadDataset<K extends AvailabilityDataset>(
     );
   }
 
-  const ageDays = Math.floor((now.getTime() - Date.parse(row.fetched_at)) / DAY_MS);
+  const ageDays = ageInDays(row.fetched_at, now);
   if (ageDays >= STALE_AFTER_DAYS) {
     console.warn(
       `Availability ${dataset}: saved data is ${String(ageDays)} days old (last error: ${row.last_error ?? 'none'}).`
@@ -210,4 +218,41 @@ export function loadAvailability(database: Database, now: Date = new Date()): Lo
       'Not hiding any unreleased forms until it is.'
     ),
   };
+}
+
+function isStale(fetchedAt: string | null, now: Date): boolean {
+  return fetchedAt === null || ageInDays(fetchedAt, now) >= STALE_AFTER_DAYS;
+}
+
+/**
+ * Every dataset's last fetch, last attempt and last error, for the Settings
+ * page's status card (served by `GET /api/availability-status`). In
+ * AVAILABILITY_DATASETS order, including datasets never attempted, so the
+ * card always lists them all. Uses the same week-old threshold as the
+ * catalog sync's stale warning.
+ */
+export function availabilityStatus(
+  database: Database,
+  now: Date = new Date()
+): AvailabilityStatus[] {
+  const rows = database
+    .prepare('SELECT dataset, fetched_at, last_attempt_at, last_error FROM availability_sources')
+    .all() as {
+    dataset: string;
+    fetched_at: string | null;
+    last_attempt_at: string;
+    last_error: string | null;
+  }[];
+  const byDataset = new Map(rows.map((row) => [row.dataset, row]));
+  return AVAILABILITY_DATASETS.map(({ dataset }) => {
+    const row = byDataset.get(dataset);
+    const fetchedAt = row?.fetched_at ?? null;
+    return {
+      dataset,
+      fetchedAt,
+      lastAttemptAt: row?.last_attempt_at ?? null,
+      lastError: row?.last_error ?? null,
+      stale: isStale(fetchedAt, now),
+    };
+  });
 }

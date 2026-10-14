@@ -86,6 +86,8 @@ Which species, regional and alternate forms, Mega/Primal forms, Dynamax/Gigantam
 - If Bulbapedia is unreachable or a page can't be parsed, that dataset keeps its saved data, records the error in `last_error`, and the catalog sync carries on. A warning is logged once saved data is a week old.
 - The catalog sync only fails on Bulbapedia's account when the Dynamax or Gigantamax data has never been fetched successfully (e.g. on a fresh database). Species data that has never been fetched (e.g. the species table failing to parse on the first sync after upgrading) doesn't stop the sync: a warning is logged and every species is dated to Pokemon GO's launch, as if released, until a parse succeeds. Likewise, shiny data that has never been fetched doesn't stop the sync: a warning is logged and each shiny is released along with its Pokemon until a parse succeeds. Unreleased-form data that has never been fetched doesn't stop it either: nothing extra is hidden until a parse succeeds. An alternate form on Bulbapedia's "forms yet to be made available" table is hidden unless the species table already dates it, so a stale forms list never keeps a released form hidden.
 
+The app's Settings page has a **Bulbapedia data** card showing each dataset's last successful update, any error from the latest attempt, and a warning once data is a week old (served by `GET /api/availability-status`).
+
 `npm run sync:availability` (in `server/`) refreshes the saved data on its own, without a full catalog sync.
 
 Host copies of `sync-overrides.json` seeded before this change still contain `releasedDynamaxDexNumbers`, `releasedGigantamaxDexNumbers` and `formSplitDynamaxDexNumbers`. They're ignored (the sync logs a warning) and can be deleted from the host file.

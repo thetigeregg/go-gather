@@ -185,4 +185,51 @@
       </div>
     </ion-card-content>
   </ion-card>
+
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Bulbapedia data</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p class="settings-hint">
+        Which Pokémon, forms and shinies are out in Pokémon GO comes from Bulbapedia, refreshed by
+        the server with each catalog sync.
+      </p>
+      @if (availabilityStatusUnavailable) {
+        <p class="settings-hint">Status unavailable — the server couldn't be reached.</p>
+      }
+      @if (availabilityStatus) {
+        @for (status of availabilityStatus; track status.dataset) {
+          <ion-item lines="none" class="availability-status">
+            <ion-label>
+              <h3>{{ datasetLabel(status.dataset) }}</h3>
+              <p>
+                @if (status.fetchedAt) {
+                  Updated {{ status.fetchedAt | date: 'd MMM y, HH:mm' }}
+                } @else {
+                  Never fetched
+                }
+              </p>
+              @if (status.lastError) {
+                <ion-note color="danger" class="availability-error">
+                  Last update failed: {{ status.lastError }}
+                </ion-note>
+              } @else if (status.stale && status.fetchedAt) {
+                <ion-note color="warning">Not updated for over a week</ion-note>
+              }
+            </ion-label>
+          </ion-item>
+        }
+      }
+      <p class="settings-hint availability-attribution">
+        Release data from
+        <a href="https://bulbapedia.bulbagarden.net/" target="_blank" rel="noopener">Bulbapedia</a>
+        , available under
+        <a href="https://creativecommons.org/licenses/by-nc-sa/2.5/" target="_blank" rel="noopener">
+          CC BY-NC-SA 2.5
+        </a>
+        .
+      </p>
+    </ion-card-content>
+  </ion-card>
 </ion-content>

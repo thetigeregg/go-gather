@@ -15,3 +15,18 @@
     margin: 0;
   }
 }
+
+.availability-status {
+  --padding-start: 0;
+  --inner-padding-end: 0;
+}
+
+.availability-error {
+  display: block;
+  white-space: normal;
+}
+
+.availability-attribution {
+  margin-top: 8px;
+  margin-bottom: 0;
+}
