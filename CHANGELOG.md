@@ -311,3 +311,7 @@
 ## v0.17.0 - 2026-10-14
 
 - 5878561 feat(sync): source released Dynamax/Gigantamax from Bulbapedia (#82)
+
+## v0.18.0 - 2026-10-14
+
+- 0fdccb6 feat(sync): date catalog entries from Bulbapedia releases (#83)
