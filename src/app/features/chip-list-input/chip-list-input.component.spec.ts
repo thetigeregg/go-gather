@@ -92,6 +92,41 @@ describe('ChipListInputComponent', () => {
       expect(emitted).toEqual([['a', 'c']]);
     });
 
+    function confirmRemoval(): void {
+      lastAlertOptions?.buttons.find((button) => button.role === 'destructive')?.handler?.();
+    }
+
+    it('removes the originally selected entry even if the list shifts before confirming', async () => {
+      component.values = ['25', '150', '493'];
+
+      await component.confirmRemove(1);
+      // e.g. the alert blurred the input and a lower dex number was added
+      component.values = ['7', '25', '150', '493'];
+      confirmRemoval();
+
+      expect(emitted).toEqual([['7', '25', '493']]);
+    });
+
+    it('removes the same duplicate occurrence that was selected', async () => {
+      component.values = ['x', 'a', 'x'];
+
+      await component.confirmRemove(2);
+      component.values = ['b', 'x', 'a', 'x'];
+      confirmRemoval();
+
+      expect(emitted).toEqual([['b', 'x', 'a']]);
+    });
+
+    it('does nothing if the selected entry is gone by the time it is confirmed', async () => {
+      component.values = ['a', 'b'];
+
+      await component.confirmRemove(1);
+      component.values = ['a'];
+      confirmRemoval();
+
+      expect(emitted).toEqual([]);
+    });
+
     it('offers a cancel button with no handler', async () => {
       component.values = ['a'];
 

@@ -65,16 +65,25 @@ export class ChipListInputComponent {
   }
 
   async confirmRemove(index: number): Promise<void> {
+    // Capture the entry itself (and which duplicate it is), not just the
+    // index: presenting the alert can blur the input, and addFromDraft() may
+    // emit a reordered list before the user confirms, shifting the rows.
+    const value = this.values[index];
+    const occurrence = this.values.slice(0, index).filter((v) => v === value).length;
+
     const alert = await this.alertController.create({
       header: 'Remove entry',
-      message: `Remove "${this.labelFn(this.values[index])}"?`,
+      message: `Remove "${this.labelFn(value)}"?`,
       buttons: [
         { text: 'Cancel', role: 'cancel' },
         {
           text: 'Remove',
           role: 'destructive',
           handler: () => {
-            this.removeAt(index);
+            const currentIndex = this.findOccurrenceIndex(value, occurrence);
+            if (currentIndex !== -1) {
+              this.removeAt(currentIndex);
+            }
           },
         },
       ],
@@ -84,5 +93,10 @@ export class ChipListInputComponent {
 
   removeAt(index: number): void {
     this.valuesChange.emit(this.values.filter((_, i) => i !== index));
+  }
+
+  private findOccurrenceIndex(value: string, occurrence: number): number {
+    let seen = 0;
+    return this.values.findIndex((v) => v === value && seen++ === occurrence);
   }
 }
