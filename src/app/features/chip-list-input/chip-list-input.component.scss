@@ -7,14 +7,6 @@ ion-input {
   --padding-start: 0;
 }
 
-.chip-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding-top: 12px;
-}
-
-ion-chip ion-icon {
-  cursor: pointer;
-  margin-left: 4px;
+ion-accordion-group {
+  margin-top: 12px;
 }

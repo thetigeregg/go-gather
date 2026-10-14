@@ -1,13 +1,30 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { vi } from 'vitest';
+import { AlertController } from '@ionic/angular/standalone';
 import { ChipListInputComponent } from './chip-list-input.component';
 
 describe('ChipListInputComponent', () => {
   let fixture: ComponentFixture<ChipListInputComponent>;
   let component: ChipListInputComponent;
   let emitted: string[][];
+  let alertCreateSpy: ReturnType<typeof vi.fn>;
+  let alertPresentSpy: ReturnType<typeof vi.fn>;
+  let lastAlertOptions: {
+    message: string;
+    buttons: { text: string; role?: string; handler?: () => void }[];
+  } | null;
 
   beforeEach(async () => {
-    TestBed.configureTestingModule({});
+    alertPresentSpy = vi.fn().mockResolvedValue(undefined);
+    lastAlertOptions = null;
+    alertCreateSpy = vi.fn().mockImplementation((options: NonNullable<typeof lastAlertOptions>) => {
+      lastAlertOptions = options;
+      return Promise.resolve({ present: alertPresentSpy });
+    });
+
+    TestBed.configureTestingModule({
+      providers: [{ provide: AlertController, useValue: { create: alertCreateSpy } }],
+    });
     TestBed.overrideComponent(ChipListInputComponent, {
       set: { template: '<div></div>', styleUrl: undefined },
     });
@@ -44,5 +61,45 @@ describe('ChipListInputComponent', () => {
     component.removeAt(1);
 
     expect(emitted).toEqual([['a', 'c']]);
+  });
+
+  it('displays values as-is by default', () => {
+    expect(component.labelFn('raw value')).toBe('raw value');
+  });
+
+  describe('confirmRemove', () => {
+    it('presents a confirmation alert showing the formatted label, without emitting yet', async () => {
+      component.values = ['a', '25', 'c'];
+      component.labelFn = (value) => `#${value}`;
+
+      await component.confirmRemove(1);
+
+      expect(alertCreateSpy).toHaveBeenCalledOnce();
+      expect(lastAlertOptions?.message).toBe('Remove "#25"?');
+      expect(alertPresentSpy).toHaveBeenCalledOnce();
+      expect(emitted).toEqual([]);
+    });
+
+    it('removes the entry when the destructive button is confirmed', async () => {
+      component.values = ['a', 'b', 'c'];
+
+      await component.confirmRemove(1);
+      const removeButton = lastAlertOptions?.buttons.find(
+        (button) => button.role === 'destructive'
+      );
+      removeButton?.handler?.();
+
+      expect(emitted).toEqual([['a', 'c']]);
+    });
+
+    it('offers a cancel button with no handler', async () => {
+      component.values = ['a'];
+
+      await component.confirmRemove(0);
+      const cancelButton = lastAlertOptions?.buttons.find((button) => button.role === 'cancel');
+
+      expect(cancelButton?.handler).toBeUndefined();
+      expect(emitted).toEqual([]);
+    });
   });
 });

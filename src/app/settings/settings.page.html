@@ -73,6 +73,7 @@
         [values]="patterns"
         (valuesChange)="patternsChanged($event)"
         placeholder="Add a pattern..."
+        listLabel="Current exclusions"
       ></app-chip-list-input>
     </ion-card-content>
   </ion-card>
@@ -84,14 +85,18 @@
     <ion-card-content>
       <p class="settings-hint">
         National dex numbers to hide entirely — useful for species pokemon-go-api lists that Niantic
-        hasn't actually released in-game yet, e.g.
+        hasn't actually released in-game yet. Enter a number or a Pokemon name, e.g.
         <code>493</code>
+        or
+        <code>Arceus</code>
         for Arceus.
       </p>
       <app-chip-list-input
         [values]="dexNumbers"
         (valuesChange)="dexNumbersChanged($event)"
-        placeholder="Add a dex number..."
+        placeholder="Add a dex number or name..."
+        listLabel="Current exclusions"
+        [labelFn]="dexNumberLabel"
       ></app-chip-list-input>
     </ion-card-content>
   </ion-card>
@@ -105,14 +110,18 @@
         National dex numbers whose
         <strong>shiny</strong>
         entries are hidden — useful for species that are released but whose shiny form isn't out
-        yet, e.g.
+        yet. Enter a number or a Pokemon name, e.g.
         <code>25</code>
+        or
+        <code>Pikachu</code>
         for Pikachu.
       </p>
       <app-chip-list-input
         [values]="shinyDexNumbers"
         (valuesChange)="shinyDexNumbersChanged($event)"
-        placeholder="Add a dex number..."
+        placeholder="Add a dex number or name..."
+        listLabel="Current exclusions"
+        [labelFn]="dexNumberLabel"
       ></app-chip-list-input>
     </ion-card-content>
   </ion-card>
@@ -133,6 +142,7 @@
         [values]="shinyPatterns"
         (valuesChange)="shinyPatternsChanged($event)"
         placeholder="Add a pattern..."
+        listLabel="Current exclusions"
       ></app-chip-list-input>
     </ion-card-content>
   </ion-card>
@@ -150,6 +160,7 @@
         [values]="userTags"
         (valuesChange)="userTagsChanged($event)"
         placeholder="Add a tag..."
+        listLabel="Current tags"
       ></app-chip-list-input>
     </ion-card-content>
   </ion-card>

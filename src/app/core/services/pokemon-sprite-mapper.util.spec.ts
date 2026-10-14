@@ -2,6 +2,7 @@ import {
   getFamilyMemberNames,
   getGigantamaxSpriteUrl,
   getPokemonId,
+  getPokemonName,
   getPokemonSpriteUrl,
   getSpriteFallbackUrl,
   getSprite256FallbackUrl,
@@ -42,6 +43,17 @@ describe('getPokemonId', () => {
 
   it('returns null for an unknown name', () => {
     expect(getPokemonId('Not A Real Pokemon')).toBeNull();
+  });
+});
+
+describe('getPokemonName', () => {
+  it('resolves a known ID to its display name', () => {
+    expect(getPokemonName(25)).toBe('Pikachu');
+    expect(getPokemonName(29)).toBe('Nidoran♀');
+  });
+
+  it('returns null for an unknown ID', () => {
+    expect(getPokemonName(99999)).toBeNull();
   });
 });
 

@@ -139,6 +139,28 @@ describe('SettingsPage', () => {
     expect(updateUserSettingsCalls).toEqual([{ excludedShinyDexNumbers: [25] }]);
   });
 
+  it('dexNumbersChanged resolves Pokemon names to dex numbers and dedupes', () => {
+    component.dexNumbersChanged(['493', ' pikachu ', 'Not A Pokemon', '25']);
+
+    expect(component.dexNumbers).toEqual(['493', '25']);
+    expect(updateUserSettingsCalls).toEqual([{ excludedDexNumbers: [493, 25] }]);
+  });
+
+  it('shinyDexNumbersChanged resolves Pokemon names to dex numbers and dedupes', () => {
+    component.shinyDexNumbersChanged(['25', 'Pikachu', 'Nidoran♀']);
+
+    expect(component.shinyDexNumbers).toEqual(['25', '29']);
+    expect(updateUserSettingsCalls).toEqual([{ excludedShinyDexNumbers: [25, 29] }]);
+  });
+
+  it('dexNumberLabel shows the Pokemon name alongside a known dex number', () => {
+    expect(component.dexNumberLabel('25')).toBe('#25 · Pikachu');
+  });
+
+  it('dexNumberLabel falls back to the bare number for an unknown dex number', () => {
+    expect(component.dexNumberLabel('99999')).toBe('#99999');
+  });
+
   describe('notifications', () => {
     it('hydrates notification fields from UserDataService on ionViewWillEnter', () => {
       userSettings = {

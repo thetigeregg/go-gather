@@ -27,6 +27,7 @@ import { download, share } from 'ionicons/icons';
 import { DEFAULT_SETTINGS, ExportBundle } from '@go-gather/shared';
 import { NotificationService } from '../core/services/notification.service';
 import { UserDataService } from '../core/services/user-data.service';
+import { getPokemonId, getPokemonName } from '../core/services/pokemon-sprite-mapper.util';
 import { ChipListInputComponent } from '../features/chip-list-input/chip-list-input.component';
 import { presentShareFile } from '../core/utils/share-file.util';
 import { pickJsonTextFile } from '../core/utils/pick-file.util';
@@ -141,18 +142,23 @@ export class SettingsPage implements ViewWillEnter {
   }
 
   dexNumbersChanged(dexNumbers: string[]): void {
-    // Non-numeric entries (e.g. a stray typo) are dropped rather than
-    // stored, so the exclusion filter never has to guard against them.
-    this.dexNumbers = dexNumbers.filter((value) => /^\d+$/.test(value.trim()));
+    this.dexNumbers = this.resolveDexNumbers(dexNumbers);
     const excludedDexNumbers = this.dexNumbers.map(Number);
     this.userDataService.updateUserSettings({ excludedDexNumbers });
   }
 
   shinyDexNumbersChanged(shinyDexNumbers: string[]): void {
-    this.shinyDexNumbers = shinyDexNumbers.filter((value) => /^\d+$/.test(value.trim()));
+    this.shinyDexNumbers = this.resolveDexNumbers(shinyDexNumbers);
     const excludedShinyDexNumbers = this.shinyDexNumbers.map(Number);
     this.userDataService.updateUserSettings({ excludedShinyDexNumbers });
   }
+
+  /** Display formatter for the dex number lists — an arrow property so it
+   * can be handed to `app-chip-list-input`'s `labelFn` without rebinding. */
+  readonly dexNumberLabel = (value: string): string => {
+    const name = getPokemonName(Number(value));
+    return name ? `#${value} · ${name}` : `#${value}`;
+  };
 
   shinyPatternsChanged(shinyPatterns: string[]): void {
     this.shinyPatterns = shinyPatterns;
@@ -256,6 +262,23 @@ export class SettingsPage implements ViewWillEnter {
     }
 
     throw new Error('Unrecognized backup file format');
+  }
+
+  /** Accepts each entry as either a dex number or a Pokemon name (resolved
+   * via the bundled name map, e.g. "pikachu" → "25"). Entries that are
+   * neither (e.g. a stray typo) are dropped rather than stored, so the
+   * exclusion filter never has to guard against them, and a name that
+   * resolves to an already-listed number doesn't add a duplicate. */
+  private resolveDexNumbers(values: string[]): string[] {
+    const resolved = values.map((value) => {
+      const trimmed = value.trim();
+      if (/^\d+$/.test(trimmed)) {
+        return trimmed;
+      }
+      const id = getPokemonId(trimmed);
+      return id === null ? null : String(id);
+    });
+    return [...new Set(resolved.filter((value): value is string => value !== null))];
   }
 
   private async showToast(message: string): Promise<void> {

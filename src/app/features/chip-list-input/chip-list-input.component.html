@@ -7,11 +7,28 @@
   ></ion-input>
 </ion-item>
 
-<div class="chip-list">
-  @for (value of values; track $index; let i = $index) {
-    <ion-chip>
-      {{ value }}
-      <ion-icon name="close-circle" (click)="removeAt(i)"></ion-icon>
-    </ion-chip>
-  }
-</div>
+@if (values.length > 0) {
+  <ion-accordion-group value="current">
+    <ion-accordion value="current">
+      <ion-item slot="header">
+        <ion-label>{{ listLabel }} ({{ values.length }})</ion-label>
+      </ion-item>
+      <div slot="content">
+        @for (value of values; track $index; let i = $index) {
+          <ion-item>
+            <ion-label class="ion-text-wrap">{{ labelFn(value) }}</ion-label>
+            <ion-button
+              slot="end"
+              fill="clear"
+              color="danger"
+              [attr.aria-label]="'Remove ' + labelFn(value)"
+              (click)="confirmRemove(i)"
+            >
+              <ion-icon slot="icon-only" name="close-circle"></ion-icon>
+            </ion-button>
+          </ion-item>
+        }
+      </div>
+    </ion-accordion>
+  </ion-accordion-group>
+}
