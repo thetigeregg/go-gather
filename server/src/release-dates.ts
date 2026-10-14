@@ -63,8 +63,9 @@ export const GO_LAUNCH_DATE = '2016-07-06';
  * hide. `null` means a known form with no separate catalog entry, so there's
  * nothing to hide. Every code must be listed: an unknown one is logged by the
  * catalog sync rather than guessed, since a wrong guess could hide a released
- * form. When Niantic releases a form, Bulbapedia moves it to the date table
- * and its entry here simply stops matching.
+ * form. When Niantic releases a form, Bulbapedia moves it to the date table,
+ * and a code the species data dates is never hidden — even if a stale
+ * forms list (one that failed to update) still has it.
  */
 export const UNRELEASED_FORM_IDS: Partial<Record<string, string | null>> = {
   '0555Z': 'DARMANITAN_ZEN',
@@ -79,13 +80,29 @@ export const UNRELEASED_FORM_IDS: Partial<Record<string, string | null>> = {
   '0800U': null,
   '0893D': null,
   '0901B': null,
-  // Gimmighoul's Chest Form. The catalog's only Gimmighoul is the Roaming
-  // Form released in GO, and the same plain code is dated as released.
+  // Gimmighoul's Chest Form. Both catalog Gimmighoul entries (plain and
+  // `COIN_A1`) are the Roaming Form released in GO, and the same plain code
+  // is dated as released.
   '0999': null,
 };
 
 function unreleasedFormCode(dexNr: number, formCode: string): string {
   return `${String(dexNr).padStart(4, '0')}${formCode}`;
+}
+
+/** The catalog formIds to hide: mapped codes from the unreleased-forms
+ * table, except any the species data dates under the same code. */
+function hiddenUnreleasedFormIds(availability: LoadedAvailability): Set<string> {
+  const datedCodes = new Set(
+    (availability.species ?? []).map(({ dexNr, formCode }) => unreleasedFormCode(dexNr, formCode))
+  );
+  return new Set(
+    (availability.unreleasedForms ?? []).flatMap(({ dexNr, formCode }) => {
+      const code = unreleasedFormCode(dexNr, formCode);
+      const formId = UNRELEASED_FORM_IDS[code];
+      return formId && !datedCodes.has(code) ? [formId] : [];
+    })
+  );
 }
 
 /** Bulbapedia's regional-form letters. */
@@ -230,12 +247,7 @@ function releaseDating(availability: LoadedAvailability): ReleaseDating {
   for (const { dexNr, form, releasedOn } of availability.mega ?? []) {
     keepEarliest(megaDates, `${String(dexNr)}|${form}`, { releasedOn });
   }
-  const unreleasedFormIds = new Set(
-    (availability.unreleasedForms ?? []).flatMap(({ dexNr, formCode }) => {
-      const formId = UNRELEASED_FORM_IDS[unreleasedFormCode(dexNr, formCode)];
-      return formId ? [formId] : [];
-    })
-  );
+  const unreleasedFormIds = hiddenUnreleasedFormIds(availability);
 
   function releaseDateFor(entry: UnstampedCatalogEntry): string | null {
     if (unreleasedFormIds.has(entry.formId)) {
@@ -340,4 +352,17 @@ export function unmappedUnreleasedForms(availability: LoadedAvailability): strin
   return (availability.unreleasedForms ?? [])
     .map(({ dexNr, formCode }) => unreleasedFormCode(dexNr, formCode))
     .filter((code) => !Object.hasOwn(UNRELEASED_FORM_IDS, code));
+}
+
+/**
+ * Forms the unreleased-forms table should hide that match no catalog entry
+ * — most likely pokemon-go-api renamed the `formId` — for the catalog sync
+ * to log, since the form is then shown instead of hidden.
+ */
+export function unmatchedUnreleasedFormIds(
+  entries: UnstampedCatalogEntry[],
+  availability: LoadedAvailability
+): string[] {
+  const catalogFormIds = new Set(entries.map((entry) => entry.formId));
+  return [...hiddenUnreleasedFormIds(availability)].filter((formId) => !catalogFormIds.has(formId));
 }

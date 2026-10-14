@@ -34,6 +34,7 @@ import {
   undatedMegaNames,
   unlistedShinyCount,
   unmappedUnreleasedForms,
+  unmatchedUnreleasedFormIds,
 } from './release-dates.js';
 import { pokedexToEntries, type RawPokemon } from './transform.js';
 
@@ -593,6 +594,12 @@ export async function main(): Promise<void> {
   if (unlistedShinies > 0) {
     console.log(
       `Shinies not in Bulbapedia's shiny list (hidden as unreleased): ${String(unlistedShinies)} entries.`
+    );
+  }
+  const unmatchedForms = unmatchedUnreleasedFormIds(entries, availability);
+  if (unmatchedForms.length > 0) {
+    console.warn(
+      `Unreleased forms that match no catalog entry (still shown — renamed upstream?): ${unmatchedForms.join(', ')}`
     );
   }
   const unmappedForms = unmappedUnreleasedForms(availability);

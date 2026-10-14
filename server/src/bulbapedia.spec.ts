@@ -52,7 +52,7 @@ describe('parseMspGoCodes', () => {
   });
 
   it('throws on a template without a dex-number code', () => {
-    expect(() => parseMspGoCodes('{{MSP/GO|West Sea}}')).toThrow(/unrecognized MSP\/GO code/);
+    expect(() => parseMspGoCodes('{{MSP/GO|West Sea}}')).toThrow(/unrecognized Pokemon code/);
   });
 });
 

@@ -1,4 +1,5 @@
 import { Region, type PokedexType } from '@go-gather/shared';
+import type { LoadedAvailability } from './availability-store';
 import type { AvailabilityData } from './bulbapedia';
 import {
   GO_LAUNCH_DATE,
@@ -6,6 +7,7 @@ import {
   undatedMegaNames,
   unlistedShinyCount,
   unmappedUnreleasedForms,
+  unmatchedUnreleasedFormIds,
 } from './release-dates';
 import type { UnstampedCatalogEntry } from './transform';
 
@@ -298,6 +300,15 @@ describe('stampReleaseDates for unreleased forms', () => {
     expect(dated(entry(999, { formId: 'GIMMIGHOUL' }))).toBe('2023-11-01');
   });
 
+  it('never hides a form the species data dates, even from a stale forms list', () => {
+    const [stamped] = stampReleaseDates([form('DARMANITAN_GALARIAN_ZEN')], {
+      ...speciesFor555,
+      species: [...speciesFor555.species, { dexNr: 555, formCode: 'GZ', releasedOn: '2027-01-01' }],
+    });
+
+    expect(stamped.releasedOn).toBe('2020-06-03');
+  });
+
   it('hides nothing when no unreleased-form data is saved', () => {
     const [stamped] = stampReleaseDates([form('DARMANITAN_GALARIAN_ZEN')], {
       ...speciesFor555,
@@ -305,6 +316,25 @@ describe('stampReleaseDates for unreleased forms', () => {
     });
 
     expect(stamped.releasedOn).toBe('2020-06-03');
+  });
+});
+
+describe('unmatchedUnreleasedFormIds', () => {
+  it('lists forms to hide that no catalog entry has', () => {
+    const entries = [entry(555, { formId: 'DARMANITAN_GALARIAN_ZEN' })];
+    const listing: LoadedAvailability = {
+      ...availability,
+      unreleasedForms: [
+        { dexNr: 555, formCode: 'GZ' },
+        { dexNr: 666, formCode: 'Pok' },
+      ],
+    };
+
+    expect(unmatchedUnreleasedFormIds(entries, listing)).toEqual(['VIVILLON_POKEBALL']);
+  });
+
+  it('lists nothing when no unreleased-form data is saved', () => {
+    expect(unmatchedUnreleasedFormIds([], { ...availability, unreleasedForms: null })).toEqual([]);
   });
 });
 

@@ -160,8 +160,8 @@ const MSP_GO_TEMPLATE = /\{\{MSP\/GO\|([^}]*)\}\}/g;
 // with no GO sprite yet — only read in the unreleased lists.
 const MSP_ANY_TEMPLATE = /\{\{MSP(?:\/GO)?\|([^}]*)\}\}/g;
 const UNRELEASED_FORMS_INTRO = 'yet to be made available';
-// The Unreleased list also uses the plain `{{MSP|0833|Chewtle}}` template
-// (no GO sprite exists yet), so it's read by dex number alone.
+// Dex numbers alone, from either sprite template — for scanning commented-out
+// rows, whose content needn't be well-formed enough for parseMspGoCodes.
 const ANY_MSP_DEX_NR = /\{\{MSP(?:\/GO)?\|(?:size=\d+\|)?(\d{4})/g;
 // `0892R`, `0003GMax s`, `0521 f`: a 4-digit dex number, optional form
 // letters, then optional space-separated modifiers (shiny/female) that don't
@@ -279,14 +279,16 @@ export function templateCalls(wikitext: string, name: string): string[][] {
   return calls;
 }
 
-/** Reads every `{{MSP/GO|...}}` template in a wikitext fragment, in order. */
+/** Reads every sprite template in a wikitext fragment, in order — just
+ * `{{MSP/GO|...}}` by default, or both `{{MSP/GO|...}}` and plain
+ * `{{MSP|...}}` with `MSP_ANY_TEMPLATE`. */
 export function parseMspGoCodes(wikitext: string, template = MSP_GO_TEMPLATE): PokemonCode[] {
   return [...wikitext.matchAll(template)].map((match) => {
     const params = match[1].split('|').map((param) => param.trim());
     const code = params.filter((param) => !param.includes('=')).at(0) ?? '';
     const codeMatch = MSP_GO_CODE.exec(code);
     if (!codeMatch) {
-      throw new Error(`Bulbapedia: unrecognized MSP/GO code in ${match[0]}`);
+      throw new Error(`Bulbapedia: unrecognized Pokemon code in ${match[0]}`);
     }
     // Some entries give the form as a named parameter instead of in the
     // code: `{{MSP/GO|0222|form=G|Corsola}}` is Galarian Corsola.
@@ -528,7 +530,7 @@ export function parseMegaReleases(availabilityPage: string): DatedMegaRelease[] 
  * (the second table there lists unreleased alternate forms, not species). */
 function parseUnreleasedSpecies(availabilityPage: string): Set<number> {
   const table = firstTableLines(extractSection(availabilityPage, UNRELEASED_SECTION)).join('\n');
-  return new Set([...table.matchAll(ANY_MSP_DEX_NR)].map((match) => Number(match[1])));
+  return new Set(parseMspGoCodes(table, MSP_ANY_TEMPLATE).map((pokemon) => pokemon.dexNr));
 }
 
 /**
