@@ -323,3 +323,7 @@
 ## v0.18.2 - 2026-10-14
 
 - 2876d40 build(deps): add missing TS7 platform binaries to lockfile (#86)
+
+## v0.19.0 - 2026-10-14
+
+- 5e05b77 feat(sync): date Mega and Primal entries from Bulbapedia (#85)
