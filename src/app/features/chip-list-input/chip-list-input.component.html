@@ -22,6 +22,7 @@
               fill="clear"
               color="danger"
               [attr.aria-label]="'Remove ' + labelFn(value)"
+              (mousedown)="keepInputFocus($event)"
               (click)="confirmRemove(i)"
             >
               <ion-icon slot="icon-only" name="close"></ion-icon>

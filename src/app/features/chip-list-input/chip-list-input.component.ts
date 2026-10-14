@@ -66,8 +66,9 @@ export class ChipListInputComponent {
 
   async confirmRemove(index: number): Promise<void> {
     // Capture the entry itself (and which duplicate it is), not just the
-    // index: presenting the alert can blur the input, and addFromDraft() may
-    // emit a reordered list before the user confirms, shifting the rows.
+    // index: presenting the alert moves focus off the input, and the blur's
+    // addFromDraft() may emit a reordered list (e.g. sorted dex numbers)
+    // before the user confirms, shifting the rows.
     const value = this.values[index];
     const occurrence = this.values.slice(0, index).filter((v) => v === value).length;
 
@@ -89,6 +90,15 @@ export class ChipListInputComponent {
       ],
     });
     await alert.present();
+  }
+
+  /** Bound to the remove buttons' mousedown so pressing one doesn't take
+   * focus from the input. Otherwise the input blurs before the click lands,
+   * addFromDraft() can reorder the list and re-render the rows, and the
+   * click then resolves its index against the new list, picking a
+   * different entry than the one the user pressed. */
+  keepInputFocus(event: Event): void {
+    event.preventDefault();
   }
 
   removeAt(index: number): void {

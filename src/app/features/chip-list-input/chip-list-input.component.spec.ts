@@ -63,6 +63,14 @@ describe('ChipListInputComponent', () => {
     expect(emitted).toEqual([['a', 'c']]);
   });
 
+  it('keeps focus on the input when a remove button is pressed', () => {
+    const event = new MouseEvent('mousedown', { cancelable: true });
+
+    component.keepInputFocus(event);
+
+    expect(event.defaultPrevented).toBe(true);
+  });
+
   it('displays values as-is by default', () => {
     expect(component.labelFn('raw value')).toBe('raw value');
   });
