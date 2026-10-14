@@ -208,7 +208,8 @@ export function stripComments(wikitext: string): string {
 /**
  * Every `{{name|…}}` call in `wikitext`, as its arguments after the name.
  * Arguments are split on `|` only outside nested `{{…}}` and `[[…]]`, since
- * cells hold templates and links with their own `|`s.
+ * cells hold templates and links with their own `|`s. Each closer must match
+ * its opener — `[[` with `]]`, `{{` with `}}` — or the call is rejected.
  */
 export function templateCalls(wikitext: string, name: string): string[][] {
   const opener = `{{${name}|`;
@@ -218,20 +219,25 @@ export function templateCalls(wikitext: string, name: string): string[][] {
     const args: string[] = [];
     let argStart = start + opener.length;
     let index = argStart;
-    let depth = 0;
+    // The closer each open `{{` or `[[` is waiting for, innermost last.
+    const closers: string[] = [];
     let end = -1;
     while (index < wikitext.length) {
       const pair = wikitext.substring(index, index + 2);
       if (pair === '{{' || pair === '[[') {
-        depth++;
+        closers.push(pair === '{{' ? '}}' : ']]');
         index += 2;
-      } else if (pair === '}}' && depth === 0) {
+      } else if (pair === '}}' && closers.length === 0) {
         end = index;
         break;
-      } else if ((pair === '}}' || pair === ']]') && depth > 0) {
-        depth--;
+      } else if (pair === '}}' || pair === ']]') {
+        if (closers.pop() !== pair) {
+          throw new Error(
+            `Bulbapedia: unbalanced brackets in {{${name}|${args.slice(0, 2).join('|')}…}}: unexpected ${pair}`
+          );
+        }
         index += 2;
-      } else if (wikitext[index] === '|' && depth === 0) {
+      } else if (wikitext[index] === '|' && closers.length === 0) {
         args.push(wikitext.slice(argStart, index));
         index++;
         argStart = index;
@@ -243,9 +249,10 @@ export function templateCalls(wikitext: string, name: string): string[][] {
       throw new Error(`Bulbapedia: unclosed {{${name}}} template`);
     }
     args.push(wikitext.slice(argStart, end));
-    // An unbalanced `[[` or `{{` keeps the call open past its own `}}`, so it
-    // runs on into the next call instead of failing — catch that here rather
-    // than date the next rows' Pokemon with this row's date.
+    // An unclosed `[[` that a later `]]` happens to close keeps the call open
+    // past its own `}}`, so it runs on into the next call instead of failing
+    // — catch that here rather than date the next rows' Pokemon with this
+    // row's date.
     if (args.some((arg) => arg.includes(opener))) {
       throw new Error(
         `Bulbapedia: unbalanced brackets in {{${name}|${args.slice(0, 2).join('|')}…}} ran into the next call`

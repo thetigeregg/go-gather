@@ -447,9 +447,20 @@ describe('templateCalls', () => {
   });
 
   it('throws when unbalanced brackets run one call into the next', () => {
-    expect(() => templateCalls('{{row|1|[[Link|text}}\n{{row|2|x}}}}', 'row')).toThrow(
-      /unbalanced brackets in \{\{row\|1/
+    expect(() => templateCalls('{{row|1|[[Link|text\n{{row|2|x}}]]}}', 'row')).toThrow(
+      /unbalanced brackets in \{\{row\|1[\s\S]*ran into the next call/
     );
+  });
+
+  it('throws on a closer that does not match its opener', () => {
+    expect(() => templateCalls('{{row|1|[[Link}}|x}}', 'row')).toThrow(
+      /unbalanced brackets in \{\{row\|1…\}\}: unexpected \}\}/
+    );
+    expect(() => templateCalls('{{row|1|{{tt|x]]|y}}', 'row')).toThrow(/unexpected \]\]/);
+  });
+
+  it('throws on an orphan ]]', () => {
+    expect(() => templateCalls('{{row|1|x]]|y}}', 'row')).toThrow(/unexpected \]\]/);
   });
 
   it('throws on an unclosed template', () => {

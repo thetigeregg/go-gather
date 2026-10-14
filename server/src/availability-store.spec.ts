@@ -174,6 +174,19 @@ describe('syncAvailability', () => {
     expect(source('shiny').last_error).toBe(`Bulbapedia: ${SHINY_PAGE} unavailable`);
   });
 
+  it('records a fetcher that throws synchronously, without throwing', async () => {
+    const fetchPage = vi.fn((page: string) => {
+      if (page === SHINY_PAGE) {
+        throw new Error('Bulbapedia: bad URL');
+      }
+      return Promise.resolve(goodPages[page as keyof typeof goodPages]);
+    });
+
+    await expect(syncAvailability(database, fetchPage, FIRST_SYNC)).resolves.toEqual(['shiny']);
+    expect(source('shiny').last_error).toBe('Bulbapedia: bad URL');
+    expect(source('dynamax').last_error).toBeNull();
+  });
+
   it('records a non-Error rejection as its string value', async () => {
     // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- the non-Error rejection is what's under test
     const fetchPage = vi.fn(() => Promise.reject('rate limited'));

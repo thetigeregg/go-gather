@@ -61,12 +61,15 @@ export async function syncAvailability(
   // so the requests run in parallel. Each fetch gets a no-op handler right
   // away: a page that fails before the loop reaches it would otherwise be
   // an unhandled rejection, which crashes the server. The loop still awaits
-  // each one and records its failure.
+  // each one and records its failure. A fetcher that throws instead of
+  // rejecting is turned into a rejection the same way.
   const pages = new Map<string, Promise<string>>();
   const sources = AVAILABILITY_DATASETS.map((source) => {
     let wikitext = pages.get(source.page);
     if (!wikitext) {
-      wikitext = fetchPage(source.page);
+      wikitext = new Promise<string>((resolve) => {
+        resolve(fetchPage(source.page));
+      });
       wikitext.catch(() => undefined);
       pages.set(source.page, wikitext);
     }
