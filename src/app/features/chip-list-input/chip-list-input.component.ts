@@ -11,7 +11,7 @@ import {
   IonLabel,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
-import { closeCircle } from 'ionicons/icons';
+import { close } from 'ionicons/icons';
 
 /**
  * Free-text add/remove list — used for the settings page's excluded
@@ -50,7 +50,7 @@ export class ChipListInputComponent {
   draft = '';
 
   constructor() {
-    addIcons({ closeCircle });
+    addIcons({ close });
   }
 
   addFromDraft(): void {

@@ -9,4 +9,8 @@ ion-input {
 
 ion-accordion-group {
   margin-top: 12px;
+
+  [slot='content'] ion-item {
+    --inner-padding-end: 0;
+  }
 }
