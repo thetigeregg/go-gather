@@ -93,7 +93,8 @@ export interface AvailabilityStatus {
   lastAttemptAt: string | null;
   /** The last attempt's error, or null if it succeeded. */
   lastError: string | null;
-  /** Never fetched, or the saved data is a week or more old. */
+  /** The saved data is a week or more old. False when never fetched,
+   * since there's no saved data yet. */
   stale: boolean;
 }
 

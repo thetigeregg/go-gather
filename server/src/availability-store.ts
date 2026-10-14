@@ -41,9 +41,12 @@ function ageInDays(fetchedAt: string, now: Date): number {
   return Math.floor((now.getTime() - Date.parse(fetchedAt)) / DAY_MS);
 }
 
+/** One `availability_sources` row, as stored. */
 interface AvailabilitySourceRow {
+  dataset: string;
   payload: string | null;
   fetched_at: string | null;
+  last_attempt_at: string;
   last_error: string | null;
 }
 
@@ -122,7 +125,8 @@ function loadDataset<K extends AvailabilityDataset>(
 ): AvailabilityData[K] {
   const row = database
     .prepare('SELECT payload, fetched_at, last_error FROM availability_sources WHERE dataset = ?')
-    .get(dataset) as AvailabilitySourceRow | undefined;
+    .get(dataset) as
+    Pick<AvailabilitySourceRow, 'payload' | 'fetched_at' | 'last_error'> | undefined;
   // With nothing saved yet there's no way to tell "Bulbapedia unreachable"
   // apart from "nothing released", so this is the one case that still has
   // to stop the catalog sync.
@@ -220,8 +224,10 @@ export function loadAvailability(database: Database, now: Date = new Date()): Lo
   };
 }
 
+/** Saved data a week or more old. A dataset never fetched has no saved
+ * data to be stale — the status card says "Never fetched" for that. */
 function isStale(fetchedAt: string | null, now: Date): boolean {
-  return fetchedAt === null || ageInDays(fetchedAt, now) >= STALE_AFTER_DAYS;
+  return fetchedAt !== null && ageInDays(fetchedAt, now) >= STALE_AFTER_DAYS;
 }
 
 /**
@@ -237,12 +243,7 @@ export function availabilityStatus(
 ): AvailabilityStatus[] {
   const rows = database
     .prepare('SELECT dataset, fetched_at, last_attempt_at, last_error FROM availability_sources')
-    .all() as {
-    dataset: string;
-    fetched_at: string | null;
-    last_attempt_at: string;
-    last_error: string | null;
-  }[];
+    .all() as Omit<AvailabilitySourceRow, 'payload'>[];
   const byDataset = new Map(rows.map((row) => [row.dataset, row]));
   return AVAILABILITY_DATASETS.map(({ dataset }) => {
     const row = byDataset.get(dataset);

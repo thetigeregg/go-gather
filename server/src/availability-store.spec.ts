@@ -403,14 +403,14 @@ describe('loadAvailability', () => {
 describe('availabilityStatus', () => {
   const datasets = ['dynamax', 'gigantamax', 'species', 'mega', 'shiny', 'unreleasedForms'];
 
-  it('lists every dataset, as never fetched and stale, before any sync', () => {
+  it('lists every dataset as never fetched, and not stale, before any sync', () => {
     expect(availabilityStatus(database, FIRST_SYNC)).toEqual(
       datasets.map((dataset) => ({
         dataset,
         fetchedAt: null,
         lastAttemptAt: null,
         lastError: null,
-        stale: true,
+        stale: false,
       }))
     );
   });

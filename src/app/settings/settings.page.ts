@@ -1,5 +1,6 @@
 import { DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
+import { Subscription } from 'rxjs';
 import {
   IonHeader,
   IonToolbar,
@@ -47,7 +48,7 @@ const DATASET_LABELS: Partial<Record<string, string>> = {
   dynamax: 'Dynamax',
   gigantamax: 'Gigantamax',
   species: 'Released Pokémon',
-  mega: 'Mega Evolutions',
+  mega: 'Mega & Primal forms',
   shiny: 'Shinies',
   unreleasedForms: 'Unreleased forms',
 };
@@ -100,7 +101,12 @@ export class SettingsPage implements ViewWillEnter {
   userTags: string[] = [];
 
   availabilityStatus: AvailabilityStatus[] | null = null;
+  readonly bulbapediaUrl = 'https://bulbapedia.bulbagarden.net/';
+  readonly licenseUrl = 'https://creativecommons.org/licenses/by-nc-sa/2.5/';
+
+  /** The latest request failed; any status shown is from an earlier visit. */
   availabilityStatusUnavailable = false;
+  private availabilityStatusRequest?: Subscription;
 
   notificationsSupported = false;
   notificationsEnabled = false;
@@ -122,16 +128,18 @@ export class SettingsPage implements ViewWillEnter {
     return DATASET_LABELS[dataset] ?? dataset;
   }
 
-  /** Re-read on every visit, since it reflects the server's latest syncs. A
-   * failed request (offline, server down) only affects this card. */
+  /** Re-read on every visit, since it reflects the server's latest syncs.
+   * A newer visit cancels an older request still in flight, so a slow
+   * response can't overwrite a newer one. A failed request (offline, server
+   * down) keeps the status from an earlier visit and only affects this card. */
   private loadAvailabilityStatus(): void {
-    this.availabilityStatusService.loadStatus().subscribe({
+    this.availabilityStatusRequest?.unsubscribe();
+    this.availabilityStatusRequest = this.availabilityStatusService.loadStatus().subscribe({
       next: (status) => {
         this.availabilityStatus = status;
         this.availabilityStatusUnavailable = false;
       },
       error: () => {
-        this.availabilityStatus = null;
         this.availabilityStatusUnavailable = true;
       },
     });

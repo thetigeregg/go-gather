@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import {
   AvailabilityStatus,
   DEFAULT_SETTINGS,
@@ -124,7 +124,7 @@ describe('SettingsPage', () => {
     expect(component.availabilityStatusUnavailable).toBe(false);
   });
 
-  it('marks the status unavailable when the request fails, and recovers on the next visit', () => {
+  it('marks the status unavailable when the first request fails, and recovers on the next visit', () => {
     loadStatusMock.mockReturnValueOnce(throwError(() => new Error('offline')));
 
     component.ionViewWillEnter();
@@ -136,8 +136,30 @@ describe('SettingsPage', () => {
     expect(component.availabilityStatusUnavailable).toBe(false);
   });
 
+  it('keeps the status from an earlier visit when a refresh fails', () => {
+    component.ionViewWillEnter();
+    loadStatusMock.mockReturnValueOnce(throwError(() => new Error('offline')));
+
+    component.ionViewWillEnter();
+
+    expect(component.availabilityStatus).toEqual(availabilityStatus);
+    expect(component.availabilityStatusUnavailable).toBe(true);
+  });
+
+  it("doesn't let a slow earlier request overwrite a newer one", () => {
+    const slowRequest = new Subject<AvailabilityStatus[]>();
+    loadStatusMock.mockReturnValueOnce(slowRequest);
+
+    component.ionViewWillEnter();
+    component.ionViewWillEnter();
+    slowRequest.next([]);
+
+    expect(component.availabilityStatus).toEqual(availabilityStatus);
+  });
+
   it('labels known datasets and falls back to the raw name for others', () => {
     expect(component.datasetLabel('species')).toBe('Released Pokémon');
+    expect(component.datasetLabel('mega')).toBe('Mega & Primal forms');
     expect(component.datasetLabel('unreleasedForms')).toBe('Unreleased forms');
     expect(component.datasetLabel('somethingNew')).toBe('somethingNew');
   });

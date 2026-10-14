@@ -311,15 +311,15 @@ export function buildApp() {
   // sync.ts's own "re-read fresh every time" behavior) rather than caching
   // — so editing the file and refreshing the app picks up a change
   // immediately, no npm run sync or server restart needed.
-  // Health of each saved Bulbapedia dataset for the Settings status card —
-  // read live per request, like search-config, not cached or synced.
-  app.get('/api/availability-status', () => availabilityStatus(db));
-
   app.get('/api/search-config', async () => {
     const raw = await readFile(SYNC_OVERRIDES_PATH, 'utf-8');
     const overrides = JSON.parse(raw) as { costumeGenderEnabled: boolean };
     return { costumeGenderEnabled: overrides.costumeGenderEnabled };
   });
+
+  // Health of each saved Bulbapedia dataset for the Settings status card —
+  // read live per request, like search-config, not cached or synced.
+  app.get('/api/availability-status', () => availabilityStatus(db));
 
   // Local-first sync: the client is the one deciding what to write (via its
   // own outbox); this route's job is just idempotent apply + append to the
