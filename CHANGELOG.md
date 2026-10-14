@@ -307,3 +307,7 @@
 ## v0.16.0 - 2026-10-14
 
 - 439687e feat(settings): list exclusions in accordion and resolve dex names (#79)
+
+## v0.17.0 - 2026-10-14
+
+- 5878561 feat(sync): source released Dynamax/Gigantamax from Bulbapedia (#82)
