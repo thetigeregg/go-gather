@@ -83,6 +83,8 @@ describe('stampReleaseDates', () => {
     expect(releasedOn(entry(849, { form: 'AMPED_GIGANTAMAX', pokedexType: 'max' }))).toBe(
       '2024-11-16'
     );
+    // A Max entry without a form goes straight to the species-level release.
+    expect(releasedOn(entry(849, { pokedexType: 'max' }))).toBe('2024-11-16');
   });
 
   it('dates a Dynamax entry the same way', () => {
