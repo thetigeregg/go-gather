@@ -115,6 +115,24 @@ describe('GatherPage', () => {
     component = fixture.componentInstance;
   });
 
+  it('re-groups the grid when the device date rolls over', () => {
+    vi.useFakeTimers({
+      toFake: ['Date', 'setInterval', 'clearInterval'],
+      now: new Date(2026, 9, 14, 23, 59, 30),
+    });
+    try {
+      fixture.detectChanges();
+      const callsBeforeMidnight = groupPokemonByGenerationCalls.length;
+
+      vi.advanceTimersByTime(60_000);
+
+      expect(groupPokemonByGenerationCalls).toHaveLength(callsBeforeMidnight + 1);
+      fixture.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('hydrates the catalog grid and header count on init', () => {
     fixture.detectChanges();
 

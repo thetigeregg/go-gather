@@ -197,6 +197,34 @@ describe('loadAvailability', () => {
     fresh.close();
   });
 
+  it('returns null species data, without throwing, when species has never been saved', async () => {
+    const fresh = new BetterSqlite3(':memory:');
+    fresh.exec(AVAILABILITY_SOURCES_SCHEMA);
+    await syncAvailability(
+      fresh,
+      pageFetcher({
+        ...goodPages,
+        [AVAILABILITY_PAGE]: availabilityPage(
+          [],
+          15,
+          speciesSections({ fillerCount: 500, unreleased: [] })
+        ),
+      }),
+      FIRST_SYNC
+    );
+
+    const availability = loadAvailability(fresh, SECOND_SYNC);
+
+    expect(availability.species).toBeNull();
+    expect(availability.gigantamax).toHaveLength(15);
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /No saved species availability yet .*Treating every species as released/
+      )
+    );
+    fresh.close();
+  });
+
   it('throws when nothing has ever been attempted', () => {
     const fresh = new BetterSqlite3(':memory:');
     fresh.exec(AVAILABILITY_SOURCES_SCHEMA);

@@ -1,4 +1,7 @@
 import { CatalogEntry } from '@go-gather/shared';
+import { Observable, defer, filter, interval, map } from 'rxjs';
+
+const DATE_CHECK_INTERVAL_MS = 60_000;
 
 /** The device-local calendar date as `YYYY-MM-DD`, the same format as
  * `CatalogEntry.releasedOn`, so the two compare as plain strings. */
@@ -23,4 +26,25 @@ export function isReleased(entry: CatalogEntry, today: string): boolean {
     return true;
   }
   return releasedOn !== null && releasedOn <= today;
+}
+
+/**
+ * Emits the new device-local date each time it changes, so a screen left
+ * open across midnight can re-filter and show that day's releases. Checked
+ * once a minute rather than with a timer aimed at midnight: timers don't
+ * run while the app is in the background, and a periodic check also
+ * catches up within a minute of the app returning to the foreground.
+ */
+export function localDateChanges(checkEveryMs = DATE_CHECK_INTERVAL_MS): Observable<string> {
+  return defer(() => {
+    let current = localDateString();
+    return interval(checkEveryMs).pipe(
+      map(() => localDateString()),
+      filter((date) => {
+        const changed = date !== current;
+        current = date;
+        return changed;
+      })
+    );
+  });
 }

@@ -8,18 +8,28 @@
  * Rules, most specific first:
  * - Gigantamax / Dynamax entries: that Max release's date — by form when
  *   Bulbapedia lists the form separately (Urshifu's styles), otherwise the
- *   species-level Max release.
+ *   species-level Max release. A Max entry Bulbapedia doesn't list as a Max
+ *   release at all isn't released: null.
  * - Regional-form entries: the earliest debut of that species' regional
  *   code (`0019A` = Alolan Rattata), falling back to the species' own date
  *   when Bulbapedia has no separate regional row.
  * - Everything else (base, gender, other forms, costumes, Mega, XXL/XXS):
  *   the species' earliest debut, under any form.
  * - A species Bulbapedia doesn't date at all isn't released: null.
+ *
+ * Without any saved species data yet (see availability-store.ts's
+ * loadAvailability), every species counts as released since Pokemon GO's
+ * launch — the behaviour from before species dates existed.
  */
 import { Region, type CatalogEntry } from '@go-gather/shared';
-import type { AvailabilityData, DatedMaxRelease } from './bulbapedia.js';
+import type { LoadedAvailability } from './availability-store.js';
+import { keepEarliest, type DatedMaxRelease } from './bulbapedia.js';
 import { DYNAMAX_FORM, GIGANTAMAX_FORM } from './max-forms.js';
 import type { UnstampedCatalogEntry } from './transform.js';
+
+/** Pokemon GO's launch day — the release date for anything known to be
+ * released without a more specific date (see db.ts's migration too). */
+export const GO_LAUNCH_DATE = '2016-07-06';
 
 /** Bulbapedia's regional-form letters. Other letters are species-specific
  * forms (Deoxys `A` is Attack Forme, not Alolan), but a species-specific
@@ -32,35 +42,32 @@ export const REGION_CODES: Partial<Record<string, Region>> = {
   P: Region.Paldea,
 };
 
-function keepEarliest(dates: Map<string, string>, key: string, date: string): void {
-  const existing = dates.get(key);
-  if (existing === undefined || date < existing) {
-    dates.set(key, date);
-  }
+interface Dated {
+  releasedOn: string;
 }
 
 /** Keyed by `dexNr|assetForm form`, matching the catalog entry's own
  * `form`: `${FORM}_${suffix}` for a form-level release, the bare suffix for
  * a species-level one. */
-function maxReleaseDates(releases: DatedMaxRelease[], suffix: string): Map<string, string> {
-  const dates = new Map<string, string>();
+function maxReleaseDates(releases: DatedMaxRelease[], suffix: string): Map<string, Dated> {
+  const dates = new Map<string, Dated>();
   for (const { dexNr, form, releasedOn } of releases) {
-    keepEarliest(dates, `${String(dexNr)}|${form ? `${form}_${suffix}` : suffix}`, releasedOn);
+    keepEarliest(dates, `${String(dexNr)}|${form ? `${form}_${suffix}` : suffix}`, { releasedOn });
   }
   return dates;
 }
 
 export function stampReleaseDates(
   entries: UnstampedCatalogEntry[],
-  availability: AvailabilityData
+  availability: LoadedAvailability
 ): CatalogEntry[] {
-  const speciesDates = new Map<string, string>();
-  const regionDates = new Map<string, string>();
-  for (const { dexNr, formCode, releasedOn } of availability.species) {
-    keepEarliest(speciesDates, String(dexNr), releasedOn);
+  const speciesDates = new Map<string, Dated>();
+  const regionDates = new Map<string, Dated>();
+  for (const { dexNr, formCode, releasedOn } of availability.species ?? []) {
+    keepEarliest(speciesDates, String(dexNr), { releasedOn });
     const region = REGION_CODES[formCode];
     if (region) {
-      keepEarliest(regionDates, `${String(dexNr)}|${region}`, releasedOn);
+      keepEarliest(regionDates, `${String(dexNr)}|${region}`, { releasedOn });
     }
   }
   const gigantamaxDates = maxReleaseDates(availability.gigantamax, GIGANTAMAX_FORM);
@@ -68,7 +75,6 @@ export function stampReleaseDates(
 
   function releaseDateFor(entry: UnstampedCatalogEntry): string | null {
     const dexNr = String(entry.dexNr);
-    const speciesDate = speciesDates.get(dexNr) ?? null;
     const max =
       entry.pokedexType === 'max'
         ? { dates: gigantamaxDates, suffix: GIGANTAMAX_FORM }
@@ -78,15 +84,18 @@ export function stampReleaseDates(
     if (max) {
       // An entry split by form while Bulbapedia dates the whole species
       // (Toxtricity's `AMPED_GIGANTAMAX`) falls back to the species-level
-      // Max release, not the species' own debut.
+      // Max release.
       return (
-        max.dates.get(`${dexNr}|${entry.form ?? ''}`) ??
-        max.dates.get(`${dexNr}|${max.suffix}`) ??
-        speciesDate
+        (max.dates.get(`${dexNr}|${entry.form ?? ''}`) ?? max.dates.get(`${dexNr}|${max.suffix}`))
+          ?.releasedOn ?? null
       );
     }
+
+    const speciesDate = availability.species
+      ? (speciesDates.get(dexNr)?.releasedOn ?? null)
+      : GO_LAUNCH_DATE;
     if (entry.region) {
-      return regionDates.get(`${dexNr}|${entry.region}`) ?? speciesDate;
+      return regionDates.get(`${dexNr}|${entry.region}`)?.releasedOn ?? speciesDate;
     }
     return speciesDate;
   }

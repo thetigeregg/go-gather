@@ -121,17 +121,35 @@ function loadDataset<K extends AvailabilityDataset>(
   return saved;
 }
 
+/** `AvailabilityData`, except species data may not exist yet — see
+ * loadAvailability. */
+export type LoadedAvailability = Omit<AvailabilityData, 'species'> & {
+  species: AvailabilityData['species'] | null;
+};
+
 /**
  * Every saved dataset, with release dates kept — including announced
  * releases still in the future. The catalog sync stamps those dates onto
  * catalog entries (release-dates.ts) and the app decides what's out on the
- * device's own date, so nothing here filters by date. Throws only if a
- * dataset has never been fetched successfully.
+ * device's own date, so nothing here filters by date.
+ *
+ * Throws if the Dynamax or Gigantamax data has never been fetched
+ * successfully, since the DMax/GMax dexes can't be built without it.
+ * Species data that has never been fetched comes back as null instead:
+ * release-dates.ts then treats every species as released, as before
+ * species dates existed, rather than holding up the whole catalog sync
+ * (e.g. on the first sync after upgrading) until Bulbapedia parses.
  */
-export function loadAvailability(database: Database, now: Date = new Date()): AvailabilityData {
-  return {
-    dynamax: loadDataset(database, 'dynamax', now),
-    gigantamax: loadDataset(database, 'gigantamax', now),
-    species: loadDataset(database, 'species', now),
-  };
+export function loadAvailability(database: Database, now: Date = new Date()): LoadedAvailability {
+  const dynamax = loadDataset(database, 'dynamax', now);
+  const gigantamax = loadDataset(database, 'gigantamax', now);
+  let species: AvailabilityData['species'] | null = null;
+  try {
+    species = loadDataset(database, 'species', now);
+  } catch (err: unknown) {
+    console.warn(
+      `${err instanceof Error ? err.message : String(err)} Treating every species as released until it is.`
+    );
+  }
+  return { dynamax, gigantamax, species };
 }

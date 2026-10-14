@@ -1,5 +1,5 @@
 import { CatalogEntry } from '@go-gather/shared';
-import { isReleased, localDateString } from './catalog-release.util';
+import { isReleased, localDateChanges, localDateString } from './catalog-release.util';
 
 function entryReleasedOn(releasedOn: string | null): CatalogEntry {
   return { releasedOn } as CatalogEntry;
@@ -40,5 +40,34 @@ describe('isReleased', () => {
 
   it('treats an entry cached before release dates existed as released', () => {
     expect(isReleased({} as CatalogEntry, today)).toBe(true);
+  });
+});
+
+describe('localDateChanges', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('emits the new local date once when the date rolls over', () => {
+    vi.useFakeTimers({ now: new Date(2026, 9, 14, 23, 59, 30) });
+    const dates: string[] = [];
+    const subscription = localDateChanges(60_000).subscribe((date) => dates.push(date));
+
+    vi.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(60_000);
+    subscription.unsubscribe();
+
+    expect(dates).toEqual(['2026-10-15']);
+  });
+
+  it('emits nothing while the date stays the same', () => {
+    vi.useFakeTimers({ now: new Date(2026, 9, 14, 12) });
+    const dates: string[] = [];
+    const subscription = localDateChanges(60_000).subscribe((date) => dates.push(date));
+
+    vi.advanceTimersByTime(10 * 60_000);
+    subscription.unsubscribe();
+
+    expect(dates).toEqual([]);
   });
 });

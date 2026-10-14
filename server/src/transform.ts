@@ -4,17 +4,12 @@
    go-gather-next (see docs/progress/phase-4-catalog-pipeline.md);
    go-gather-next's own ESLint config doesn't enforce these strictTypeChecked
    rules. Do not reinterpret this file's flattening logic. */
-import type {
-  CatalogEntry as StampedCatalogEntry,
-  PokedexType,
-  PokemonClass,
-} from '@go-gather/shared';
+import type { CatalogEntry, PokedexType, PokemonClass } from '@go-gather/shared';
 import { Region } from '@go-gather/shared';
 
 /** A catalog entry as built here — before the catalog sync stamps its
  * `releasedOn` date from Bulbapedia (see release-dates.ts). */
-export type UnstampedCatalogEntry = Omit<StampedCatalogEntry, 'releasedOn'>;
-type CatalogEntry = UnstampedCatalogEntry;
+export type UnstampedCatalogEntry = Omit<CatalogEntry, 'releasedOn'>;
 
 export interface RawNames {
   English: string;
@@ -158,7 +153,7 @@ function baseFields(
   pokemon: RawPokemon | RawRegionPokemon,
   speciesName: string
 ): Pick<
-  CatalogEntry,
+  UnstampedCatalogEntry,
   | 'dexNr'
   | 'generation'
   | 'speciesId'
@@ -189,12 +184,12 @@ function baseFields(
  * sprite.
  */
 function assetToEntries(
-  base: Omit<CatalogEntry, 'id' | 'imgUrl' | 'isShiny' | 'isFemale' | 'order'>,
+  base: Omit<UnstampedCatalogEntry, 'id' | 'imgUrl' | 'isShiny' | 'isFemale' | 'order'>,
   assets: RawAssets,
   isFemale: boolean,
   startOrder: number
-): CatalogEntry[] {
-  const entries: CatalogEntry[] = [];
+): UnstampedCatalogEntry[] {
+  const entries: UnstampedCatalogEntry[] = [];
 
   entries.push({
     ...base,
@@ -244,7 +239,7 @@ function assetFormToEntries(
    * base name — used when this assetForm matches a `regionForms` entry
    * that only supplies the other gender, so both genders share one name. */
   baseNameOverride?: string
-): CatalogEntry[] {
+): UnstampedCatalogEntry[] {
   const formKey = `${assetForm.form ?? ''}|${assetForm.costume ?? ''}`;
   const isGenderedForm = genderedFormKeys.has(formKey);
   const displayName = baseNameOverride
@@ -295,7 +290,7 @@ function megaEvolutionToEntries(
   speciesName: string,
   mega: RawMegaEvolution,
   startOrder: number
-): CatalogEntry[] {
+): UnstampedCatalogEntry[] {
   const base = {
     dexNr: pokemon.dexNr,
     generation: pokemon.generation,
@@ -535,9 +530,9 @@ function groupAdjacentByFormAndGender(assetForms: RawAssetForm[]): RawAssetForm[
  * live payload: regional variants only ever expose `assets` + nested
  * `regionForms`, never `assetForms`).
  */
-export function pokemonToEntries(pokemon: RawPokemon): CatalogEntry[] {
+export function pokemonToEntries(pokemon: RawPokemon): UnstampedCatalogEntry[] {
   const speciesName = pokemon.names.English;
-  const entries: CatalogEntry[] = [];
+  const entries: UnstampedCatalogEntry[] = [];
   const genderedFormKeys = findGenderedFormKeys(pokemon.assetForms);
   // The set of assetForms `form` values that megaEvolutionToEntries below
   // will actually consume as its sprite source (its own suffix-matching
@@ -751,10 +746,10 @@ export function regionPokemonToEntries(
    * form's own `names.English` is a generic copy of it (see hasGenericName
    * below) rather than a real distinguishing label. */
   rootSpeciesName?: string
-): CatalogEntry[] {
+): UnstampedCatalogEntry[] {
   const speciesName = regionPokemon.names.English;
   const region = regionFromFormId(regionPokemon.formId);
-  const entries: CatalogEntry[] = [];
+  const entries: UnstampedCatalogEntry[] = [];
   let order = startOrder;
 
   if (regionPokemon.assets) {
@@ -919,7 +914,7 @@ const SIZE_TIERS = ['xxl', 'xxs'] as const;
  * XXL/XXS in-game, so for exactly these base-form-less species, every
  * regular entry for that species gets cloned instead of none at all.
  */
-function addSizeTierEntries(entries: CatalogEntry[]): CatalogEntry[] {
+function addSizeTierEntries(entries: UnstampedCatalogEntry[]): UnstampedCatalogEntry[] {
   const regularEntries = entries.filter((entry) => entry.pokedexType === 'regular');
   const speciesWithBaseForm = new Set(
     regularEntries.filter((entry) => entry.isBaseForm).map((entry) => entry.speciesId)
@@ -940,7 +935,7 @@ function addSizeTierEntries(entries: CatalogEntry[]): CatalogEntry[] {
   return [...entries, ...sizeTierEntries];
 }
 
-export function pokedexToEntries(pokedex: RawPokemon[]): CatalogEntry[] {
+export function pokedexToEntries(pokedex: RawPokemon[]): UnstampedCatalogEntry[] {
   const entries = pokedex.map(normalizeCostumeLikeForms).flatMap(pokemonToEntries);
   return addSizeTierEntries(entries);
 }

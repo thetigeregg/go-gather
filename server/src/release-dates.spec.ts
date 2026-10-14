@@ -1,6 +1,6 @@
 import { Region, type PokedexType } from '@go-gather/shared';
 import type { AvailabilityData } from './bulbapedia';
-import { stampReleaseDates } from './release-dates';
+import { GO_LAUNCH_DATE, stampReleaseDates } from './release-dates';
 import type { UnstampedCatalogEntry } from './transform';
 
 function entry(
@@ -92,8 +92,27 @@ describe('stampReleaseDates', () => {
     expect(releasedOn(entry(892, { form: 'DYNAMAX', pokedexType: 'dmax' }))).toBe('2025-03-01');
   });
 
-  it("falls back to the species' debut for a Max entry with no Max release", () => {
-    expect(releasedOn(entry(19, { form: 'DYNAMAX', pokedexType: 'dmax' }))).toBe('2016-07-06');
+  it('marks a Max entry with no Max release as not released', () => {
+    expect(releasedOn(entry(19, { form: 'DYNAMAX', pokedexType: 'dmax' }))).toBeNull();
+    expect(releasedOn(entry(19, { form: 'GIGANTAMAX', pokedexType: 'max' }))).toBeNull();
+  });
+
+  it('treats every species as released when no species data is saved yet', () => {
+    const [regular, regional, unknown, gmax] = stampReleaseDates(
+      [
+        entry(386),
+        entry(19, { region: Region.Alola }),
+        entry(1001),
+        entry(892, { form: 'RAPID_STRIKE_GIGANTAMAX', pokedexType: 'max' }),
+      ],
+      { ...availability, species: null }
+    );
+
+    expect(regular.releasedOn).toBe(GO_LAUNCH_DATE);
+    expect(regional.releasedOn).toBe(GO_LAUNCH_DATE);
+    expect(unknown.releasedOn).toBe(GO_LAUNCH_DATE);
+    // Max entries still use their own release dates.
+    expect(gmax.releasedOn).toBe('2026-06-01');
   });
 
   it('keeps announced future debuts as they are', () => {

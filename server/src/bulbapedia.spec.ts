@@ -32,6 +32,12 @@ describe('parseMspGoCodes', () => {
     ]);
   });
 
+  it('appends a form given as a named parameter to the form letters', () => {
+    expect(parseMspGoCodes('{{MSP/GO|size=80|0222|form=G|Corsola}}')).toEqual([
+      { code: '0222 (form=G)', dexNr: 222, formCode: 'G' },
+    ]);
+  });
+
   it('throws on a template without a dex-number code', () => {
     expect(() => parseMspGoCodes('{{MSP/GO|West Sea}}')).toThrow(/unrecognized MSP\/GO code/);
   });
@@ -300,6 +306,18 @@ describe('parseSpeciesReleases', () => {
     });
 
     expect(releases).toContainEqual({ dexNr: 902, formCode: '', releasedOn: '2026-11-14' });
+  });
+
+  it('counts a species in a TBA/TBD row as listed without dating it', () => {
+    const releases = parse({ rows: [row('TBA', '{{MSP/GO|0902|Basculegion}}')] });
+
+    expect(releases.some((r) => r.dexNr === 902)).toBe(false);
+  });
+
+  it('reads a regional form given as a named form parameter', () => {
+    const releases = parse({ rows: [row('Mar 1, 2022', '{{MSP/GO|0222|form=G|Corsola}}')] });
+
+    expect(releases).toContainEqual({ dexNr: 222, formCode: 'G', releasedOn: '2022-03-01' });
   });
 
   it('accepts both MSP and MSP/GO templates in the unreleased list', () => {

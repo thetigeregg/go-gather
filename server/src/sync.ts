@@ -9,8 +9,11 @@ import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import type { CatalogEntry } from '@go-gather/shared';
-import { loadAvailability, syncAvailability } from './availability-store.js';
-import type { AvailabilityData } from './bulbapedia.js';
+import {
+  loadAvailability,
+  syncAvailability,
+  type LoadedAvailability,
+} from './availability-store.js';
 import { db, initSchema } from './db.js';
 import {
   backfillReleasedDynamaxForms,
@@ -416,11 +419,14 @@ async function fetchRawPokedex(): Promise<RawPokemon[]> {
  * then reads it back to drive the DMax/GMax steps here and the release
  * dates stamped in main(). A Bulbapedia outage or parse failure only leaves
  * the saved data as it was (see availability-store.ts) — the sync carries
- * on with it. It only aborts, before upsertCatalog, if a dataset has never
- * been saved. Max releases include announced ones: those entries ship with
+ * on with it. It only aborts, before upsertCatalog, if the Dynamax or
+ * Gigantamax data has never been saved. Max releases include announced ones: those entries ship with
  * a future `releasedOn` and the app hides them until that date.
  */
-async function fetchPokedex(): Promise<{ pokedex: RawPokemon[]; availability: AvailabilityData }> {
+async function fetchPokedex(): Promise<{
+  pokedex: RawPokemon[];
+  availability: LoadedAvailability;
+}> {
   const overrides = await loadSyncOverrides();
   const [pokedex] = await Promise.all([fetchRawPokedex(), syncAvailability(db)]);
   const availability = loadAvailability(db);

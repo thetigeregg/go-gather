@@ -114,9 +114,32 @@ interface PokemonCode {
 }
 
 interface ReleaseRow {
-  /** `YYYY-MM-DD` */
-  releasedOn: string;
+  /** `YYYY-MM-DD`, or null for an announced release dated TBA/TBD. */
+  releasedOn: string | null;
   pokemon: PokemonCode[];
+}
+
+type DatedReleaseRow = ReleaseRow & { releasedOn: string };
+
+function isDated(row: ReleaseRow): row is DatedReleaseRow {
+  return row.releasedOn !== null;
+}
+
+/**
+ * Adds `release` under `key` unless that key already holds an earlier date,
+ * so a Pokemon listed in several rows (e.g. a regional debut followed by a
+ * global one) keeps its earliest date. Shared by every dataset here and by
+ * release-dates.ts.
+ */
+export function keepEarliest<T extends { releasedOn: string }>(
+  releases: Map<string, T>,
+  key: string,
+  release: T
+): void {
+  const existing = releases.get(key);
+  if (!existing || release.releasedOn < existing.releasedOn) {
+    releases.set(key, release);
+  }
 }
 
 interface TableRow {
@@ -127,13 +150,24 @@ interface TableRow {
 /** Reads every `{{MSP/GO|...}}` template in a wikitext fragment, in order. */
 export function parseMspGoCodes(wikitext: string): PokemonCode[] {
   return [...wikitext.matchAll(MSP_GO_TEMPLATE)].map((match) => {
-    const positional = match[1].split('|').filter((param) => !param.includes('='));
-    const code = positional.at(0)?.trim() ?? '';
+    const params = match[1].split('|').map((param) => param.trim());
+    const code = params.filter((param) => !param.includes('=')).at(0) ?? '';
     const codeMatch = MSP_GO_CODE.exec(code);
     if (!codeMatch) {
       throw new Error(`Bulbapedia: unrecognized MSP/GO code in ${match[0]}`);
     }
-    return { code, dexNr: Number(codeMatch[1]), formCode: codeMatch[2] };
+    // Some entries give the form as a named parameter instead of in the
+    // code: `{{MSP/GO|0222|form=G|Corsola}}` is Galarian Corsola.
+    const formParam =
+      params
+        .find((param) => param.startsWith('form='))
+        ?.slice(5)
+        .trim() ?? '';
+    return {
+      code: formParam ? `${code} (form=${formParam})` : code,
+      dexNr: Number(codeMatch[1]),
+      formCode: codeMatch[2] + formParam,
+    };
   });
 }
 
@@ -236,11 +270,12 @@ function parseTableRows(tableLines: string[]): TableRow[] {
  * released. A row layout, date or Pokemon cell this parser doesn't
  * understand throws rather than being skipped, since a silently dropped row is a silently
  * missing release — the species-count check alone wouldn't notice one lost
- * row. Only an explicit TBA/TBD date is skipped: that release hasn't
- * happened yet, so there's nothing to miss.
+ * row. Only an explicit TBA/TBD date is accepted without a date: that row
+ * comes back with `releasedOn: null`, so it isn't treated as released but
+ * still counts as listed (see parseSpeciesReleases' cross-check).
  */
 export function parseReleaseTable(section: string): ReleaseRow[] {
-  return parseTableRows(firstTableLines(section)).flatMap(({ cells, isHeader }) => {
+  return parseTableRows(firstTableLines(section)).flatMap(({ cells, isHeader }): ReleaseRow[] => {
     if (isHeader || cells.length === 0) {
       return [];
     }
@@ -253,8 +288,8 @@ export function parseReleaseTable(section: string): ReleaseRow[] {
       if (!UNSCHEDULED_DATE.test(cells[0])) {
         throw new Error(`Bulbapedia: unreadable release date "${cells[0]}"`);
       }
-      console.warn(`Bulbapedia: skipping release row with unscheduled date "${cells[0]}".`);
-      return [];
+      console.warn(`Bulbapedia: release row with unscheduled date "${cells[0]}" has no date yet.`);
+      return [{ releasedOn: null, pokemon: parseMspGoCodes(cells[1]) }];
     }
     const pokemon = parseMspGoCodes(cells[1]);
     if (pokemon.length === 0) {
@@ -287,7 +322,7 @@ function releasesFromSection(
   minSpecies: number,
   formLetterOf: (pokemon: PokemonCode) => string
 ): DatedMaxRelease[] {
-  const rows = parseReleaseTable(section);
+  const rows = parseReleaseTable(section).filter(isDated);
   const speciesCount = new Set(rows.flatMap((row) => row.pokemon.map((p) => p.dexNr))).size;
   if (speciesCount < minSpecies) {
     throw new Error(
@@ -295,17 +330,14 @@ function releasesFromSection(
     );
   }
 
-  // Keyed by species + form; a Pokemon listed in more than one row (e.g. a
-  // regional debut followed by a global one) keeps its earliest date.
   const releases = new Map<string, DatedMaxRelease>();
   for (const row of rows) {
     for (const pokemon of row.pokemon) {
       const release = toMaxRelease(pokemon, formLetterOf(pokemon));
-      const key = `${String(release.dexNr)}|${release.form ?? ''}`;
-      const existing = releases.get(key);
-      if (!existing || row.releasedOn < existing.releasedOn) {
-        releases.set(key, { ...release, releasedOn: row.releasedOn });
-      }
+      keepEarliest(releases, `${String(release.dexNr)}|${release.form ?? ''}`, {
+        ...release,
+        releasedOn: row.releasedOn,
+      });
     }
   }
   return [...releases.values()];
@@ -345,20 +377,25 @@ function parseUnreleasedSpecies(availabilityPage: string): Set<number> {
  * Every species and form debut in the "List of Pokémon by date" table,
  * keeping each (species, form letters) pair's earliest date. Cross-checked
  * against the "Unreleased Pokémon" list: every dex number up to the highest
- * one seen must be in one or the other. Between them the two lists cover
- * the whole National Dex, so a gap means a row was silently lost.
+ * one seen must be dated, listed with a TBA/TBD date, or listed as
+ * unreleased. Between them those cover the whole National Dex, so a gap
+ * means a row was silently lost.
  */
 export function parseSpeciesReleases(availabilityPage: string): DatedSpeciesRelease[] {
+  const rows = parseReleaseTable(extractSection(availabilityPage, SPECIES_SECTION));
   const releases = new Map<string, DatedSpeciesRelease>();
-  for (const row of parseReleaseTable(extractSection(availabilityPage, SPECIES_SECTION))) {
+  for (const row of rows.filter(isDated)) {
     for (const { dexNr, formCode } of row.pokemon) {
-      const key = `${String(dexNr)}|${formCode}`;
-      const existing = releases.get(key);
-      if (!existing || row.releasedOn < existing.releasedOn) {
-        releases.set(key, { dexNr, formCode, releasedOn: row.releasedOn });
-      }
+      keepEarliest(releases, `${String(dexNr)}|${formCode}`, {
+        dexNr,
+        formCode,
+        releasedOn: row.releasedOn,
+      });
     }
   }
+  const unscheduled = new Set(
+    rows.filter((row) => !isDated(row)).flatMap((row) => row.pokemon.map((p) => p.dexNr))
+  );
 
   const dated = new Set([...releases.values()].map((release) => release.dexNr));
   if (dated.size < MIN_RELEASED_SPECIES) {
@@ -368,9 +405,9 @@ export function parseSpeciesReleases(availabilityPage: string): DatedSpeciesRele
   }
 
   const unreleased = parseUnreleasedSpecies(availabilityPage);
-  const highestDexNr = Math.max(...dated, ...unreleased);
+  const highestDexNr = Math.max(...dated, ...unscheduled, ...unreleased);
   const missing = Array.from({ length: highestDexNr }, (_, index) => index + 1).filter(
-    (dexNr) => !dated.has(dexNr) && !unreleased.has(dexNr)
+    (dexNr) => !dated.has(dexNr) && !unscheduled.has(dexNr) && !unreleased.has(dexNr)
   );
   if (missing.length > 0) {
     throw new Error(

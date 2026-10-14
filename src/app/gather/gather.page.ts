@@ -1,4 +1,5 @@
-import { AfterViewInit, Component, OnInit, ViewChild, inject } from '@angular/core';
+import { AfterViewInit, Component, DestroyRef, OnInit, ViewChild, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin, tap } from 'rxjs';
 import {
   CdkVirtualScrollViewport,
@@ -25,6 +26,7 @@ import { UserDataService } from '../core/services/user-data.service';
 import { FilterService, Generation } from '../core/services/filter.service';
 import { SearchConfigService } from '../core/services/search-config.service';
 import { SyncService } from '../core/services/sync.service';
+import { localDateChanges } from '../core/services/catalog-release.util';
 import { GenerationHeaderRowComponent } from '../features/generation-header-row/generation-header-row.component';
 import { GatherPokemonComponent } from '../features/gather-pokemon/gather-pokemon.component';
 import { GatherRow, flattenGenerations, trackGatherRow } from './gather-row.model';
@@ -66,6 +68,7 @@ export class GatherPage implements OnInit, AfterViewInit {
   private readonly searchConfigService = inject(SearchConfigService);
   private readonly syncService = inject(SyncService);
   private readonly virtualScrollStrategy = inject(PrecomputedSizeVirtualScrollStrategy);
+  private readonly destroyRef = inject(DestroyRef);
 
   @ViewChild('searchbar') searchbarRef?: IonSearchbar;
   @ViewChild(CdkVirtualScrollViewport) viewportRef?: CdkVirtualScrollViewport;
@@ -134,6 +137,17 @@ export class GatherPage implements OnInit, AfterViewInit {
         this.updateHeaderText();
       });
     });
+
+    // Entries are hidden until their `releasedOn` date (see
+    // catalog-release.util.ts), so re-filter when the device date rolls
+    // over — otherwise a page left open past midnight would keep hiding
+    // that day's releases until something else re-grouped it.
+    localDateChanges()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.setGenerations(this.filterService.groupPokemonByGeneration(this.userSettings), false);
+        this.updateHeaderText();
+      });
   }
 
   /** Ionic's `ion-content` finishes sizing itself asynchronously (custom
