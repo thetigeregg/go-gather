@@ -321,6 +321,14 @@ describe('parseUnreleasedForms', () => {
 
     expect(() => parseUnreleasedForms(page)).toThrow(/unreleased forms table not found/);
   });
+
+  it('throws when the intro has no table after it', () => {
+    const species = speciesSections();
+    const intro = species.indexOf('yet to be made available');
+    const page = availabilityPage([], 15, species.slice(0, species.indexOf('\n', intro)));
+
+    expect(() => parseUnreleasedForms(page)).toThrow(/release table not found/);
+  });
 });
 
 describe('parseSpeciesReleases', () => {
