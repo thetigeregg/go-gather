@@ -133,9 +133,13 @@ class FormTargetMap<T> {
     this.byFormId.set(target.formId, forFormId);
   }
 
+  /** A variant target wins over a broad `formId` one, whichever was added
+   * first, so a family-wide value never shadows a variant's own. */
   get(entry: UnstampedCatalogEntry): T | undefined {
-    return this.byFormId.get(entry.formId)?.find(({ target }) => matchesFormTarget(entry, target))
-      ?.value;
+    const matches = (this.byFormId.get(entry.formId) ?? []).filter(({ target }) =>
+      matchesFormTarget(entry, target)
+    );
+    return (matches.find(({ target }) => target.form !== undefined) ?? matches.at(0))?.value;
   }
 
   targets(): FormTarget[] {

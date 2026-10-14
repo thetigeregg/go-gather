@@ -347,6 +347,27 @@ describe('stampReleaseDates for single variants of a shared form', () => {
     expect(dates()).toEqual([null, null]);
   });
 
+  it("dates a variant by its own target's row over an earlier broad one", () => {
+    const VARIANT_CODE = '0999Y';
+    UNRELEASED_FORM_IDS[CODE] = 'GIMMIGHOUL';
+    UNRELEASED_FORM_IDS[VARIANT_CODE] = { formId: 'GIMMIGHOUL', form: 'COIN_A1' };
+    try {
+      const stamped = stampReleaseDates([gimmighoul(null), gimmighoul('COIN_A1')], {
+        ...listing,
+        species: [
+          ...listing.species,
+          { dexNr: 999, formCode: 'X', releasedOn: '2024-01-01' },
+          { dexNr: 999, formCode: 'Y', releasedOn: '2025-01-01' },
+        ],
+      }).map(({ releasedOn }) => releasedOn);
+
+      expect(stamped).toEqual(['2024-01-01', '2025-01-01']);
+    } finally {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- removes the test-only mapping
+      delete UNRELEASED_FORM_IDS[VARIANT_CODE];
+    }
+  });
+
   it('reports a variant target that matches no catalog entry', () => {
     UNRELEASED_FORM_IDS[CODE] = { formId: 'GIMMIGHOUL', form: 'CHEST' };
 
