@@ -4,8 +4,9 @@
  * when — read from Bulbapedia's community-maintained Pokemon GO pages. Neither
  * pokemon-go-api nor PokeAPI says what has actually been released in-game,
  * and the hand-kept lists this replaces (`releasedDynamaxDexNumbers`/
- * `releasedGigantamaxDexNumbers` in sync-overrides.json, the
- * `excludedDexNumbers` user setting) kept drifting behind the game.
+ * `releasedGigantamaxDexNumbers` in sync-overrides.json, and the retired
+ * `excludedDexNumbers`/`excludedShinyDexNumbers` user settings) kept
+ * drifting behind the game.
  * Bulbapedia content is licensed CC BY-NC-SA.
  *
  * Reads raw wikitext through the MediaWiki API (the plain `?action=raw` URL
@@ -106,9 +107,16 @@ export interface DatedShinyRelease {
   /** Whether the row lists any member as catchable as a shiny Dynamax, which
    * evolving makes every Dynamax-capable member of the family available. */
   dynamax: boolean;
-  /** `YYYY-MM-DD` — the family row's first date, its shiny debut. May be in
-   * the future for an announced shiny. */
+  /** `YYYY-MM-DD` — the family row's first date, its shiny debut, or for a
+   * Gigantamax/Mega/Primal code, that form's own shiny date when the row
+   * notes one ("October 26, 2024 (Gigantamax Venusaur)"). May be in the
+   * future for an announced shiny. */
   releasedOn: string;
+  /** For a row flagged `dynamax=yes`: when this Pokemon's shiny Dynamax came
+   * out — a "(Dynamax <name>)" note, else a plain "(Dynamax)" note, else the
+   * row's first date. Absent in data saved before it existed; treat that as
+   * `releasedOn`. */
+  dynamaxReleasedOn?: string;
 }
 
 /** An alternate form Bulbapedia lists as not yet available in Pokemon GO
@@ -172,11 +180,31 @@ const HEADING = /^(={2,6})\s*(.+?)\s*\1\s*$/;
 const HTML_COMMENT = /<!--[\s\S]*?(?:-->|$)/g;
 const NAMED_ARGUMENT = /^\s*[A-Za-z0-9_]+\s*=/;
 const SHINY_DYNAMAX_FLAG = /\bdynamax\s*=\s*yes\b/;
+// A dated note in a shiny row's date cell: "October 26, 2024 <small>(…)</small>".
+const SHINY_DATE_NOTE = /([A-Z][a-z]+\.? \d{1,2}, \d{4})\s*<small>\(([\s\S]*?)\)<\/small>/g;
+// `{{tt|shown text|tooltip}}` inside a note — keep the shown text.
+const TOOLTIP_TEMPLATE = /\{\{tt\|([^|}]*)\|[^}]*\}\}/g;
+const NOTE_PART_SEPARATOR = /\s*;\s*|\s*&\s*|\s+and\s+/;
+const DYNAMAX_NOTE = /^Dynamax(?: (.+))?$/;
+const GIGANTAMAX_NOTE = /^Gigantamax (.+)$/;
+const MEGA_NOTE = /^Mega (.+?)(?: ([XYZ]))?$/;
+const PRIMAL_NOTE = /^Primal (.+)$/;
+// A shiny row's `form=` argument: "Alolan Form", "Galarian Form", …
+const ROW_FORM_ARGUMENT = /^\s*form\s*=\s*(.*)$/;
+const REGION_WORD_LETTERS: Partial<Record<string, string>> = {
+  Alolan: 'A',
+  Galarian: 'G',
+  Hisuian: 'H',
+  Paldean: 'P',
+};
 
 interface PokemonCode {
   code: string;
   dexNr: number;
   formCode: string;
+  /** The template's name argument (`Venusaur` in `{{MSP/GO|0003M|Venusaur}}`),
+   * used to match the shiny list's per-Pokemon date notes. */
+  name: string;
 }
 
 interface ReleaseRow {
@@ -285,7 +313,8 @@ export function templateCalls(wikitext: string, name: string): string[][] {
 export function parseMspGoCodes(wikitext: string, template = MSP_GO_TEMPLATE): PokemonCode[] {
   return [...wikitext.matchAll(template)].map((match) => {
     const params = match[1].split('|').map((param) => param.trim());
-    const code = params.filter((param) => !param.includes('=')).at(0) ?? '';
+    const positional = params.filter((param) => !param.includes('='));
+    const code = positional.at(0) ?? '';
     const codeMatch = MSP_GO_CODE.exec(code);
     if (!codeMatch) {
       throw new Error(`Bulbapedia: unrecognized Pokemon code in ${match[0]}`);
@@ -301,6 +330,7 @@ export function parseMspGoCodes(wikitext: string, template = MSP_GO_TEMPLATE): P
       code: formParam ? `${code} (form=${formParam})` : code,
       dexNr: Number(codeMatch[1]),
       formCode: codeMatch[2] + formParam,
+      name: positional.at(1) ?? '',
     };
   });
 }
@@ -617,14 +647,18 @@ export function parseSpeciesReleases(availabilityPage: string): DatedSpeciesRele
 }
 
 /**
- * Every Pokemon code in Bulbapedia's shiny list, with its family row's
- * shiny debut date. Each `{{lop/shiny/GO|…}}` row is one evolution (or
- * regional) family; its positional arguments are dex, family, the
- * Encounter cell, the Evolution-only cell, the date cell, then event and
- * rates. Codes in either cell have a released shiny. The date cell is free
- * text whose first date is the family's shiny debut; the later segments
- * (Megas, Dynamax, "by encounter", …) aren't parsed — release-dates.ts
- * combines the debut with each entry's own release date instead.
+ * Every Pokemon code in Bulbapedia's shiny list, with its shiny date. Each
+ * `{{lop/shiny/GO|…}}` row is one evolution (or regional) family; its
+ * positional arguments are dex, family, the Encounter cell, the
+ * Evolution-only cell, the date cell, then event and rates. Codes in either
+ * cell have a released shiny. The date cell is free text whose first date
+ * is the family's shiny debut, and which later notes can override: a
+ * Gigantamax, Mega or Primal code takes its form's noted date, and a row
+ * flagged `dynamax=yes` gets a Dynamax date from its Dynamax notes (see
+ * DatedShinyRelease). Other notes ("by encounter", Shadow, …) aren't
+ * parsed — release-dates.ts combines each date with the entry's own
+ * release date instead. A code in more than one row keeps each date's
+ * earliest value.
  */
 export function parseShinyReleases(shinyPage: string): DatedShinyRelease[] {
   const rows = templateCalls(stripComments(shinyPage), SHINY_ROW_TEMPLATE);
@@ -640,7 +674,7 @@ export function parseShinyReleases(shinyPage: string): DatedShinyRelease[] {
     if (positional.length < 5) {
       throw new Error(`Bulbapedia: unexpected shiny row layout: ${args.join('|').slice(0, 120)}`);
     }
-    const [, family, encounter, evolutionOnly, dateCell] = positional;
+    const [rowDex, family, encounter, evolutionOnly, dateCell] = positional;
     const releasedOn = parseReleaseDate(dateCell);
     if (!releasedOn) {
       if (!UNSCHEDULED_DATE.test(dateCell)) {
@@ -653,21 +687,167 @@ export function parseShinyReleases(shinyPage: string): DatedShinyRelease[] {
     }
 
     const cells = `${encounter}${evolutionOnly}`;
-    const pokemon = parseMspGoCodes(cells);
+    const pokemon = withRowRegion(parseMspGoCodes(cells), args, Number(rowDex));
     if (pokemon.length === 0) {
       throw new Error(`Bulbapedia: no MSP/GO Pokemon in shiny row for ${family}`);
     }
     const dynamax = SHINY_DYNAMAX_FLAG.test(cells);
-    for (const { dexNr, formCode } of pokemon) {
-      keepEarliest(releases, `${String(dexNr)}|${formCode}|${String(dynamax)}`, {
+    const notes = shinyDateNotes(dateCell);
+    const used = new Set<NotedDate>();
+    const noteFor = (dates: Map<string, NotedDate>, key: string) => {
+      const note = dates.get(key);
+      if (note) {
+        used.add(note);
+      }
+      return note?.releasedOn;
+    };
+
+    for (const { dexNr, formCode, name } of pokemon) {
+      const megaSuffix = MEGA_CODES[formCode];
+      const noted = formCode.endsWith(GIGANTAMAX_CODE_SUFFIX)
+        ? noteFor(notes.gigantamax, name)
+        : megaSuffix
+          ? noteFor(notes.mega, `${name}|${megaSuffix}`)
+          : undefined;
+      const release: DatedShinyRelease = {
         dexNr,
         formCode,
         dynamax,
-        releasedOn,
-      });
+        releasedOn: noted ?? releasedOn,
+      };
+      if (dynamax) {
+        release.dynamaxReleasedOn =
+          noteFor(notes.dynamax, name) ?? notes.familyDynamax ?? releasedOn;
+      }
+      mergeShinyRelease(releases, release);
+    }
+    // A note no code used names a Pokemon not in the row, or one whose form
+    // isn't (a typo, or a format this parser doesn't read) — say which, since
+    // the affected shiny then keeps the earlier row date.
+    const unused = [...notes.gigantamax.values(), ...notes.mega.values(), ...notes.dynamax.values()]
+      .filter((note) => !used.has(note))
+      .map((note) => `"${note.label}"`);
+    const unread = notes.unrecognized.map((part) => `"${part}"`);
+    if (unused.length > 0 || unread.length > 0) {
+      console.warn(
+        `Bulbapedia: shiny ${family} has date notes it can't apply (${[...unused, ...unread].join(', ')}) — using the row date.`
+      );
     }
   }
   return [...releases.values()];
+}
+
+/** A regional family row (`form=Alolan Form`) may list its own species
+ * without the region letter in the code; give those codes the letter. Only
+ * the row's own species: a separate species the row also lists (Perrserker
+ * in Galarian Meowth's row) isn't regional. */
+function withRowRegion(pokemon: PokemonCode[], args: string[], rowDex: number): PokemonCode[] {
+  const formArgument = args.map((arg) => ROW_FORM_ARGUMENT.exec(arg)).find(Boolean)?.[1] ?? '';
+  const letter = REGION_WORD_LETTERS[formArgument.trim().split(/\s+/)[0] ?? ''];
+  if (!letter) {
+    return pokemon;
+  }
+  return pokemon.map((code) =>
+    code.dexNr === rowDex && code.formCode === '' ? { ...code, formCode: letter } : code
+  );
+}
+
+/** A dated note in a shiny row, with its original wording for warnings. */
+interface NotedDate {
+  releasedOn: string;
+  label: string;
+}
+
+interface ShinyDateNotes {
+  /** By Pokemon name. */
+  gigantamax: Map<string, NotedDate>;
+  /** Keyed `name|suffix` (`Charizard|MEGA_X`, `Kyogre|PRIMAL`). */
+  mega: Map<string, NotedDate>;
+  /** By Pokemon name, from "(Dynamax <name>)". */
+  dynamax: Map<string, NotedDate>;
+  /** From a plain "(Dynamax)" note: the whole family's shiny Dynamax. */
+  familyDynamax?: string;
+  /** Parts after a Max/Mega note that match no note format — likely a
+   * shorthand list ("Mega Charizard X & Y", "Dynamax Hitmonlee &
+   * Hitmonchan") this parser doesn't expand. */
+  unrecognized: string[];
+}
+
+/**
+ * The Gigantamax, Mega/Primal and Dynamax shiny dates a row's date cell
+ * notes after its first date, e.g. "October 26, 2024 <small>(Gigantamax
+ * Venusaur)</small>". Notes are split on `;`, `&` and ` and ` ("Mega Raichu
+ * X & Mega Raichu Y"); other notes ("Shadow", "Ivysaur by encounter") are
+ * ignored. Each keeps its earliest date.
+ */
+function shinyDateNotes(dateCell: string): ShinyDateNotes {
+  const notes: ShinyDateNotes = {
+    gigantamax: new Map(),
+    mega: new Map(),
+    dynamax: new Map(),
+    unrecognized: [],
+  };
+  for (const [, dateText, noteText] of dateCell.matchAll(SHINY_DATE_NOTE)) {
+    const date = parseReleaseDate(dateText);
+    if (!date) {
+      continue;
+    }
+    let afterMaxNote = false;
+    for (const part of noteText.replace(TOOLTIP_TEMPLATE, '$1').split(NOTE_PART_SEPARATOR)) {
+      const text = part.trim();
+      const noted = { releasedOn: date, label: text };
+      const dynamaxNote = DYNAMAX_NOTE.exec(text);
+      const gigantamaxNote = GIGANTAMAX_NOTE.exec(text);
+      const megaNote = MEGA_NOTE.exec(text);
+      const primalNote = PRIMAL_NOTE.exec(text);
+      if (dynamaxNote) {
+        const name = dynamaxNote[1] as string | undefined;
+        if (name) {
+          keepEarliest(notes.dynamax, name, noted);
+        } else if (!notes.familyDynamax || date < notes.familyDynamax) {
+          notes.familyDynamax = date;
+        }
+      } else if (gigantamaxNote) {
+        keepEarliest(notes.gigantamax, gigantamaxNote[1], noted);
+      } else if (megaNote) {
+        const suffix = megaNote[2] ? `MEGA_${megaNote[2]}` : 'MEGA';
+        keepEarliest(notes.mega, `${megaNote[1]}|${suffix}`, noted);
+      } else if (primalNote) {
+        keepEarliest(notes.mega, `${primalNote[1]}|PRIMAL`, noted);
+      } else {
+        if (afterMaxNote && text) {
+          notes.unrecognized.push(text);
+        }
+        continue;
+      }
+      afterMaxNote = true;
+    }
+  }
+  return notes;
+}
+
+/** Adds a shiny release, merging with one already listed for the same code
+ * and Dynamax flag (a Pokemon in more than one row) by keeping each date's
+ * earliest value — `releasedOn` and, for a Dynamax row, `dynamaxReleasedOn`
+ * on their own, so they may come from different rows. */
+function mergeShinyRelease(
+  releases: Map<string, DatedShinyRelease>,
+  release: DatedShinyRelease
+): void {
+  const key = `${String(release.dexNr)}|${release.formCode}|${String(release.dynamax)}`;
+  const existing = releases.get(key);
+  if (!existing) {
+    releases.set(key, release);
+    return;
+  }
+  const earliest = (a?: string, b?: string) => (a && b ? (a < b ? a : b) : (a ?? b));
+  releases.set(key, {
+    ...existing,
+    releasedOn: earliest(existing.releasedOn, release.releasedOn) ?? existing.releasedOn,
+    ...(existing.dynamax
+      ? { dynamaxReleasedOn: earliest(existing.dynamaxReleasedOn, release.dynamaxReleasedOn) }
+      : {}),
+  });
 }
 
 /**

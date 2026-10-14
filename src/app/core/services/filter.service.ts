@@ -31,16 +31,12 @@ export class FilterService {
       userSettings.excludedShinyNamePatterns
     );
 
-    const excludedDexNumbers = new Set(userSettings.excludedDexNumbers);
-    const excludedShinyDexNumbers = new Set(userSettings.excludedShinyDexNumbers);
     const today = localDateString();
 
     const inPokedex = this.pokeDataService.catalog.filter(
       (entry) =>
         entry.pokedexType === userSettings.pokedexType &&
         isReleased(entry, today) &&
-        !excludedDexNumbers.has(entry.dexNr) &&
-        !(entry.isShiny && excludedShinyDexNumbers.has(entry.dexNr)) &&
         !(entry.isShiny && this.isExcludedByName(entry, excludedShinyPatterns)) &&
         !this.isExcludedByName(entry, excludedPatterns)
     );

@@ -86,17 +86,6 @@ describe('FilterService', () => {
     expect(generation.speciesList.flatMap((g) => g.entries)).toHaveLength(1);
   });
 
-  it('drops entries whose dex number is excluded', () => {
-    catalog = [makeEntry({ dexNr: 1 }), makeEntry({ id: 'other', dexNr: 2, speciesId: 'other' })];
-
-    const generations = service.groupPokemonByGeneration(makeSettings({ excludedDexNumbers: [1] }));
-
-    const ids = generations.flatMap((g) =>
-      g.speciesList.flatMap((s) => s.entries.map((e) => e.id))
-    );
-    expect(ids).toEqual(['other']);
-  });
-
   it('drops entries that are not released, or not out yet on the device date', () => {
     vi.useFakeTimers({ toFake: ['Date'], now: new Date(2026, 9, 14, 12) });
     catalog = [
@@ -112,22 +101,6 @@ describe('FilterService', () => {
       g.speciesList.flatMap((s) => s.entries.map((e) => e.id))
     );
     expect(ids).toEqual(['released']);
-  });
-
-  it('only excludes the shiny entry for excludedShinyDexNumbers, not the non-shiny one', () => {
-    catalog = [
-      makeEntry({ id: 'a-normal', isShiny: false }),
-      makeEntry({ id: 'a-shiny', isShiny: true }),
-    ];
-
-    const generations = service.groupPokemonByGeneration(
-      makeSettings({ excludedShinyDexNumbers: [1] })
-    );
-
-    const ids = generations.flatMap((g) =>
-      g.speciesList.flatMap((s) => s.entries.map((e) => e.id))
-    );
-    expect(ids).toEqual(['a-normal']);
   });
 
   it('drops entries matching an excluded name pattern (case-insensitive)', () => {

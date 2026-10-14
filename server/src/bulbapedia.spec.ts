@@ -39,15 +39,15 @@ describe('parseMspGoCodes', () => {
         '{{MSP/GO|size=80|0003GMax s|Venusaur|shadow=yes}}{{MSP/GO|0521 f|Unfezant}}{{MSP/GO|0892R|Urshifu}}'
       )
     ).toEqual([
-      { code: '0003GMax s', dexNr: 3, formCode: 'GMax' },
-      { code: '0521 f', dexNr: 521, formCode: '' },
-      { code: '0892R', dexNr: 892, formCode: 'R' },
+      { code: '0003GMax s', dexNr: 3, formCode: 'GMax', name: 'Venusaur' },
+      { code: '0521 f', dexNr: 521, formCode: '', name: 'Unfezant' },
+      { code: '0892R', dexNr: 892, formCode: 'R', name: 'Urshifu' },
     ]);
   });
 
   it('appends a form given as a named parameter to the form letters', () => {
     expect(parseMspGoCodes('{{MSP/GO|size=80|0222|form=G|Corsola}}')).toEqual([
-      { code: '0222 (form=G)', dexNr: 222, formCode: 'G' },
+      { code: '0222 (form=G)', dexNr: 222, formCode: 'G', name: 'Corsola' },
     ]);
   });
 
@@ -604,13 +604,7 @@ describe('parseShinyReleases', () => {
     const releases = parseShinyReleases(
       shinyPage([
         shinyRow({ dex: 25, family: 'Pikachu', encounter: ['0026 s'], date: 'August 9, 2017' }),
-        shinyRow({
-          dex: 26,
-          family: 'Raichu',
-          encounter: ['0026 s'],
-          date: 'March 3, 2026',
-          form: 'Alolan Form',
-        }),
+        shinyRow({ dex: 26, family: 'Raichu', encounter: ['0026 s'], date: 'March 3, 2026' }),
       ])
     );
 
@@ -642,6 +636,221 @@ describe('parseShinyReleases', () => {
     ).toThrow(/no MSP\/GO Pokemon in shiny row for Bulbasaur/);
     expect(() => parseShinyReleases(shinyPage(['{{lop/shiny/GO|0001|Bulbasaur}}']))).toThrow(
       /unexpected shiny row layout/
+    );
+  });
+
+  it('dates Gigantamax, Mega and Primal codes by their own noted shiny dates', () => {
+    const releases = parseShinyReleases(
+      shinyPage([
+        shinyRow({
+          dex: 4,
+          family: 'Charmander',
+          encounter: ['0004 s|Charmander', '0006 s|Charizard', '0006GMax s|Charizard'],
+          evolution: ['0006MX s|Charizard', '0006MY s|Charizard'],
+          date: 'May 19, 2018',
+          notes: [
+            { date: 'August 27, 2020', text: 'Mega Charizard X & Mega Charizard Y' },
+            { date: 'October 26, 2024', text: 'Gigantamax Charizard' },
+          ],
+        }),
+        shinyRow({
+          dex: 382,
+          family: 'Kyogre',
+          encounter: ['0382 s|Kyogre'],
+          evolution: ['0382P s|Kyogre'],
+          date: 'March 14, 2019',
+          notes: [{ date: 'February 18, 2023', text: 'Primal Kyogre' }],
+        }),
+      ])
+    );
+    const date = (dexNr: number, formCode: string) =>
+      releases.find((r) => r.dexNr === dexNr && r.formCode === formCode)?.releasedOn;
+
+    expect(date(6, '')).toBe('2018-05-19');
+    expect(date(6, 'MX')).toBe('2020-08-27');
+    expect(date(6, 'MY')).toBe('2020-08-27');
+    expect(date(6, 'GMax')).toBe('2024-10-26');
+    expect(date(382, 'P')).toBe('2023-02-18');
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it('dates shiny Dynamax by a named note, else the family note, else the row date', () => {
+    const releases = parseShinyReleases(
+      shinyPage([
+        shinyRow({
+          dex: 236,
+          family: 'Tyrogue',
+          encounter: ['0236 s|Tyrogue|dynamax=yes', '0106 s|Hitmonlee', '0107 s|Hitmonchan'],
+          date: 'August 1, 2019',
+          notes: [
+            { date: 'June 1, 2025', text: 'Dynamax' },
+            { date: 'July 1, 2025', text: 'Dynamax Hitmonlee and Dynamax Hitmonchan' },
+          ],
+        }),
+        shinyRow({
+          dex: 1,
+          family: 'Bulbasaur',
+          encounter: ['0001 s|Bulbasaur|dynamax=yes'],
+          date: 'March 25, 2018',
+        }),
+        shinyRow({
+          dex: 7,
+          family: 'Squirtle',
+          encounter: ['0007 s|Squirtle'],
+          date: 'July 8, 2018',
+        }),
+      ])
+    );
+    const dynamaxDate = (dexNr: number) =>
+      releases.find((r) => r.dexNr === dexNr)?.dynamaxReleasedOn;
+
+    expect(dynamaxDate(236)).toBe('2025-06-01');
+    expect(dynamaxDate(106)).toBe('2025-07-01');
+    expect(dynamaxDate(1)).toBe('2018-03-25');
+    expect(dynamaxDate(7)).toBeUndefined();
+  });
+
+  it('keeps each earliest date for a Dynamax code listed in more than one row', () => {
+    const releases = parseShinyReleases(
+      shinyPage([
+        shinyRow({
+          dex: 25,
+          family: 'Pikachu',
+          encounter: ['0025 s|Pikachu|dynamax=yes', '0026 s|Raichu'],
+          date: 'August 9, 2017',
+          notes: [{ date: 'May 1, 2025', text: 'Dynamax' }],
+        }),
+        shinyRow({
+          dex: 26,
+          family: 'Raichu',
+          encounter: ['0026 s|Raichu|dynamax=yes'],
+          date: 'March 3, 2024',
+        }),
+      ])
+    );
+
+    expect(releases.filter((r) => r.dexNr === 26)).toEqual([
+      {
+        dexNr: 26,
+        formCode: '',
+        dynamax: true,
+        releasedOn: '2017-08-09',
+        dynamaxReleasedOn: '2024-03-03',
+      },
+    ]);
+  });
+
+  it("ignores notes that aren't Max or Mega, like Meganium by encounter", () => {
+    const releases = parseShinyReleases(
+      shinyPage([
+        shinyRow({
+          dex: 152,
+          family: 'Chikorita',
+          encounter: ['0152 s|Chikorita'],
+          evolution: ['0154 s|Meganium'],
+          date: 'March 1, 2018',
+          notes: [{ date: 'March 3, 2026', text: 'Bayleef and Meganium by encounter' }],
+        }),
+      ])
+    );
+
+    expect(releases.find((r) => r.dexNr === 154)?.releasedOn).toBe('2018-03-01');
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it('skips a note whose date is not a real month, keeping the row date', () => {
+    const releases = parseShinyReleases(
+      shinyPage([
+        shinyRow({
+          dex: 1,
+          family: 'Bulbasaur',
+          encounter: ['0001 s|Bulbasaur', '0003GMax s|Venusaur'],
+          date: 'March 25, 2018',
+          notes: [{ date: 'Smarch 26, 2024', text: 'Gigantamax Venusaur' }],
+        }),
+      ])
+    );
+
+    expect(releases.find((r) => r.formCode === 'GMax')?.releasedOn).toBe('2018-03-25');
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it('warns about a note naming a Pokemon not in the row, keeping the row date', () => {
+    const releases = parseShinyReleases(
+      shinyPage([
+        shinyRow({
+          dex: 1,
+          family: 'Bulbasaur',
+          encounter: ['0001 s|Bulbasaur', '0003GMax s|Venusaur'],
+          date: 'March 25, 2018',
+          notes: [{ date: 'October 26, 2024', text: 'Gigantamax Venasaur' }],
+        }),
+      ])
+    );
+
+    expect(releases.find((r) => r.formCode === 'GMax')?.releasedOn).toBe('2018-03-25');
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('Venasaur'));
+  });
+
+  it('warns about a shorthand note list it can only partly read', () => {
+    const releases = parseShinyReleases(
+      shinyPage([
+        shinyRow({
+          dex: 4,
+          family: 'Charmander',
+          encounter: ['0004 s|Charmander'],
+          evolution: ['0006MX s|Charizard', '0006MY s|Charizard'],
+          date: 'May 19, 2018',
+          notes: [{ date: 'August 27, 2020', text: 'Mega Charizard X & Y' }],
+        }),
+      ])
+    );
+
+    expect(releases.find((r) => r.formCode === 'MX')?.releasedOn).toBe('2020-08-27');
+    expect(releases.find((r) => r.formCode === 'MY')?.releasedOn).toBe('2018-05-19');
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('"Y"'));
+  });
+
+  it('warns about a note for a form the row lacks, even when the Pokemon has another note', () => {
+    parseShinyReleases(
+      shinyPage([
+        shinyRow({
+          dex: 4,
+          family: 'Charmander',
+          encounter: ['0004 s|Charmander'],
+          evolution: ['0006M s|Charizard'],
+          date: 'May 19, 2018',
+          notes: [
+            { date: 'August 27, 2020', text: 'Mega Charizard' },
+            { date: 'October 26, 2024', text: 'Gigantamax Charizard' },
+          ],
+        }),
+      ])
+    );
+
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('"Gigantamax Charizard"'));
+  });
+
+  it("gives a regional row's own plain code its region letter, but not other species'", () => {
+    const releases = parseShinyReleases(
+      shinyPage([
+        shinyRow({
+          dex: 52,
+          family: 'Meowth',
+          form: 'Galarian Form',
+          encounter: ['0052 s|Meowth'],
+          evolution: ['0863 s|Perrserker'],
+          date: 'August 20, 2021',
+        }),
+      ])
+    );
+
+    expect(releases).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ dexNr: 52, formCode: 'G' }),
+        expect.objectContaining({ dexNr: 863, formCode: '' }),
+      ])
     );
   });
 

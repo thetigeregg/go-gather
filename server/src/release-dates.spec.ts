@@ -8,6 +8,7 @@ import {
   unlistedShinyCount,
   unmappedUnreleasedForms,
   unmatchedUnreleasedFormIds,
+  UNRELEASED_FORM_IDS,
 } from './release-dates';
 import type { UnstampedCatalogEntry } from './transform';
 
@@ -285,6 +286,137 @@ describe('stampReleaseDates for shiny entries', () => {
     const [stamped] = stampReleaseDates([shiny(128)], { ...availability, shiny: null });
 
     expect(stamped.releasedOn).toBe('2016-07-06');
+  });
+});
+
+describe('stampReleaseDates for shiny Dynamax notes', () => {
+  it("dates a shiny Dynamax by the Pokemon's own noted Dynamax date when there is one", () => {
+    const shinyDmax = entry(849, { form: 'AMPED_DYNAMAX', pokedexType: 'dmax', isShiny: true });
+    const [noted] = stampReleaseDates([shinyDmax], {
+      ...availability,
+      shiny: [
+        {
+          dexNr: 849,
+          formCode: '',
+          dynamax: true,
+          releasedOn: '2024-12-01',
+          dynamaxReleasedOn: '2025-02-01',
+        },
+      ],
+    });
+
+    expect(noted.releasedOn).toBe('2025-02-01');
+  });
+});
+
+describe('stampReleaseDates for single variants of a shared form', () => {
+  // A synthetic code, so the species data doesn't date (and so release) it.
+  const CODE = '0999X';
+  const gimmighoul = (form: string | null) =>
+    entry(999, { formId: 'GIMMIGHOUL', form, speciesId: 'GIMMIGHOUL' });
+  const listing: AvailabilityData = {
+    ...availability,
+    species: [...availability.species, { dexNr: 999, formCode: '', releasedOn: '2023-02-27' }],
+    unreleasedForms: [{ dexNr: 999, formCode: 'X' }],
+  };
+  const dates = () =>
+    stampReleaseDates([gimmighoul(null), gimmighoul('COIN_A1')], listing).map(
+      (stamped) => stamped.releasedOn
+    );
+
+  afterEach(() => {
+    // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- removes the test-only mapping
+    delete UNRELEASED_FORM_IDS[CODE];
+  });
+
+  it('hides only the variant whose form matches a variant target', () => {
+    UNRELEASED_FORM_IDS[CODE] = { formId: 'GIMMIGHOUL', form: 'COIN_A1' };
+
+    expect(dates()).toEqual(['2023-02-27', null]);
+  });
+
+  it('hides the plain variant with a null form target', () => {
+    UNRELEASED_FORM_IDS[CODE] = { formId: 'GIMMIGHOUL', form: null };
+
+    expect(dates()).toEqual([null, '2023-02-27']);
+  });
+
+  it('still hides every variant with a formId string', () => {
+    UNRELEASED_FORM_IDS[CODE] = 'GIMMIGHOUL';
+
+    expect(dates()).toEqual([null, null]);
+  });
+
+  it("dates a variant by its own target's row over an earlier broad one", () => {
+    const VARIANT_CODE = '0999Y';
+    UNRELEASED_FORM_IDS[CODE] = 'GIMMIGHOUL';
+    UNRELEASED_FORM_IDS[VARIANT_CODE] = { formId: 'GIMMIGHOUL', form: 'COIN_A1' };
+    try {
+      const stamped = stampReleaseDates([gimmighoul(null), gimmighoul('COIN_A1')], {
+        ...listing,
+        species: [
+          ...listing.species,
+          { dexNr: 999, formCode: 'X', releasedOn: '2024-01-01' },
+          { dexNr: 999, formCode: 'Y', releasedOn: '2025-01-01' },
+        ],
+      }).map(({ releasedOn }) => releasedOn);
+
+      expect(stamped).toEqual(['2024-01-01', '2025-01-01']);
+    } finally {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- removes the test-only mapping
+      delete UNRELEASED_FORM_IDS[VARIANT_CODE];
+    }
+  });
+
+  it('dates a variant its own row dates despite a broad unreleased listing', () => {
+    const VARIANT_CODE = '0999Y';
+    UNRELEASED_FORM_IDS[CODE] = 'GIMMIGHOUL';
+    UNRELEASED_FORM_IDS[VARIANT_CODE] = { formId: 'GIMMIGHOUL', form: 'COIN_A1' };
+    try {
+      const stamped = stampReleaseDates([gimmighoul(null), gimmighoul('COIN_A1')], {
+        ...listing,
+        species: [...listing.species, { dexNr: 999, formCode: 'Y', releasedOn: '2025-01-01' }],
+      }).map(({ releasedOn }) => releasedOn);
+
+      expect(stamped).toEqual([null, '2025-01-01']);
+    } finally {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- removes the test-only mapping
+      delete UNRELEASED_FORM_IDS[VARIANT_CODE];
+    }
+  });
+
+  it('hides a variant listed as unreleased despite a broad dated row', () => {
+    const VARIANT_CODE = '0999Y';
+    UNRELEASED_FORM_IDS[CODE] = 'GIMMIGHOUL';
+    UNRELEASED_FORM_IDS[VARIANT_CODE] = { formId: 'GIMMIGHOUL', form: 'COIN_A1' };
+    try {
+      const stamped = stampReleaseDates([gimmighoul(null), gimmighoul('COIN_A1')], {
+        ...listing,
+        species: [...listing.species, { dexNr: 999, formCode: 'X', releasedOn: '2024-01-01' }],
+        unreleasedForms: [{ dexNr: 999, formCode: 'Y' }],
+      }).map(({ releasedOn }) => releasedOn);
+
+      expect(stamped).toEqual(['2024-01-01', null]);
+    } finally {
+      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete -- removes the test-only mapping
+      delete UNRELEASED_FORM_IDS[VARIANT_CODE];
+    }
+  });
+
+  it('reports a variant target that matches no catalog entry', () => {
+    UNRELEASED_FORM_IDS[CODE] = { formId: 'GIMMIGHOUL', form: 'CHEST' };
+
+    expect(unmatchedUnreleasedFormIds([gimmighoul(null)], listing)).toEqual([
+      'GIMMIGHOUL (form CHEST)',
+    ]);
+  });
+
+  it('reports an unmatched plain-variant target as form none', () => {
+    UNRELEASED_FORM_IDS[CODE] = { formId: 'GIMMIGHOUL', form: null };
+
+    expect(unmatchedUnreleasedFormIds([gimmighoul('COIN_A1')], listing)).toEqual([
+      'GIMMIGHOUL (form none)',
+    ]);
   });
 });
 

@@ -92,6 +92,8 @@ The app's Settings page has a **Bulbapedia data** card showing each dataset's la
 
 Host copies of `sync-overrides.json` seeded before this change still contain `releasedDynamaxDexNumbers`, `releasedGigantamaxDexNumbers` and `formSplitDynamaxDexNumbers`. They're ignored (the sync logs a warning) and can be deleted from the host file.
 
+Host copies seeded before the `NECROZMA_ULTRA` entry was added to `regionFormNameOverrides` still label plain Necrozma "Necrozma (Ultra Necrozma)". To fix an existing NAS, copy that entry (`dexNr` 800) from the repo's `server/src/sync-overrides.json` into the host file's `regionFormNameOverrides` array, then run `docker compose exec server npm run sync` (or wait for the next scheduled catalog sync).
+
 Bulbapedia content is licensed [CC BY-NC-SA 2.5](https://creativecommons.org/licenses/by-nc-sa/2.5/).
 
 ### Push notifications

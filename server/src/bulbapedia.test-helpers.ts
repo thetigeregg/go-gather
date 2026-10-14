@@ -140,6 +140,9 @@ export interface ShinyRowOptions {
   dateSort?: boolean;
   /** A `form=` argument, as on regional family rows. */
   form?: string;
+  /** Extra dated notes in the date cell, e.g.
+   * `{ date: 'October 26, 2024', text: 'Gigantamax Venusaur' }`. */
+  notes?: { date: string; text: string }[];
 }
 
 function shinyCells(codes: string[]): string {
@@ -157,14 +160,18 @@ export function shinyRow({
   date,
   dateSort = true,
   form,
+  notes = [],
 }: ShinyRowOptions): string {
+  const extraNotes = notes.map(
+    ({ date: noteDate, text }) => `<br>${noteDate} <small>(${text})</small>`
+  );
   return [
     `{{lop/shiny/GO|${String(dex).padStart(4, '0')}|${family}`,
     ...(form ? [`form=${form}`] : []),
     shinyCells(encounter),
     shinyCells(evolution),
     ...(dateSort ? [`datesort=${date}`] : []),
-    `${date} <small>(${family})</small><br>March 3, 2026 <small>(Shadow)</small>`,
+    `${date} <small>(${family})</small><br>March 3, 2026 <small>(Shadow)</small>${extraNotes.join('')}`,
     `[[Community Day|${family} Community Day]]`,
     `{{tt|0.2%|${family}}}}}`,
   ].join('|');

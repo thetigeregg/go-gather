@@ -111,8 +111,6 @@ export class SearchStringService {
     const {
       pokedexType,
       excludedNamePatterns,
-      excludedDexNumbers,
-      excludedShinyDexNumbers,
       excludedShinyNamePatterns,
       excludedSearchTermsByPokedex,
     } = this.userDataService.getUserSettings();
@@ -122,8 +120,6 @@ export class SearchStringService {
 
     const excludedPatterns = this.compileExcludedPatterns(excludedNamePatterns);
     const excludedShinyPatterns = this.compileExcludedPatterns(excludedShinyNamePatterns);
-    const excludedDexNumberSet = new Set(excludedDexNumbers);
-    const excludedShinyDexNumberSet = new Set(excludedShinyDexNumbers);
     const today = localDateString();
 
     // Without this, Mega/Gigantamax entries (which share the same speciesName
@@ -138,8 +134,6 @@ export class SearchStringService {
         entry.pokedexType === pokedexType &&
         isReleased(entry, today) &&
         !entryStates.get(entry.id) &&
-        !excludedDexNumberSet.has(entry.dexNr) &&
-        !(entry.isShiny && excludedShinyDexNumberSet.has(entry.dexNr)) &&
         !(entry.isShiny && this.isExcludedByName(entry, excludedShinyPatterns)) &&
         !this.isExcludedByName(entry, excludedPatterns)
     );

@@ -71,19 +71,14 @@ describe('ChipListInputComponent', () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
-  it('displays values as-is by default', () => {
-    expect(component.labelFn('raw value')).toBe('raw value');
-  });
-
   describe('confirmRemove', () => {
-    it('presents a confirmation alert showing the formatted label, without emitting yet', async () => {
+    it('presents a confirmation alert showing the entry, without emitting yet', async () => {
       component.values = ['a', '25', 'c'];
-      component.labelFn = (value) => `#${value}`;
 
       await component.confirmRemove(1);
 
       expect(alertCreateSpy).toHaveBeenCalledOnce();
-      expect(lastAlertOptions?.message).toBe('Remove "#25"?');
+      expect(lastAlertOptions?.message).toBe('Remove "25"?');
       expect(alertPresentSpy).toHaveBeenCalledOnce();
       expect(emitted).toEqual([]);
     });
