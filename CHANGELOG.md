@@ -331,3 +331,7 @@
 ## v0.20.0 - 2026-10-14
 
 - 08ccdfa feat(sync): hide unreleased shinies using Bulbapedia's shiny list (#87)
+
+## v0.21.0 - 2026-10-14
+
+- 751ae39 feat(sync): hide alternate forms Bulbapedia lists as unreleased (#88)
