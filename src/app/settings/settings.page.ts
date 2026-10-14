@@ -37,6 +37,12 @@ import { pickJsonTextFile } from '../core/utils/pick-file.util';
  * a full ISO value to bind to; only the "HH:mm" substring is ever persisted. */
 const ALL_DAY_TIME_PICKER_DATE = '2000-01-01';
 
+/** Dex exclusion lists are shown in ascending dex order — including lists
+ * saved before sorting existed, hence also applied on hydration. */
+function sortedDexNumberStrings(dexNumbers: readonly number[]): string[] {
+  return [...dexNumbers].sort((a, b) => a - b).map(String);
+}
+
 @Component({
   selector: 'app-settings',
   templateUrl: 'settings.page.html',
@@ -268,17 +274,18 @@ export class SettingsPage implements ViewWillEnter {
    * via the bundled name map, e.g. "pikachu" → "25"). Entries that are
    * neither (e.g. a stray typo) are dropped rather than stored, so the
    * exclusion filter never has to guard against them, and a name that
-   * resolves to an already-listed number doesn't add a duplicate. */
+   * resolves to an already-listed number doesn't add a duplicate. The
+   * result is sorted by dex number. */
   private resolveDexNumbers(values: string[]): string[] {
     const resolved = values.map((value) => {
       const trimmed = value.trim();
       if (/^\d+$/.test(trimmed)) {
-        return trimmed;
+        return Number(trimmed);
       }
-      const id = getPokemonId(trimmed);
-      return id === null ? null : String(id);
+      return getPokemonId(trimmed);
     });
-    return [...new Set(resolved.filter((value): value is string => value !== null))];
+    const dexNumbers = resolved.filter((value): value is number => value !== null);
+    return sortedDexNumberStrings([...new Set(dexNumbers)]);
   }
 
   private async showToast(message: string): Promise<void> {
@@ -293,8 +300,8 @@ export class SettingsPage implements ViewWillEnter {
   private refreshFromUserSettings(): void {
     const userSettings = this.userDataService.getUserSettings();
     this.patterns = [...userSettings.excludedNamePatterns];
-    this.dexNumbers = userSettings.excludedDexNumbers.map(String);
-    this.shinyDexNumbers = userSettings.excludedShinyDexNumbers.map(String);
+    this.dexNumbers = sortedDexNumberStrings(userSettings.excludedDexNumbers);
+    this.shinyDexNumbers = sortedDexNumberStrings(userSettings.excludedShinyDexNumbers);
     this.shinyPatterns = [...userSettings.excludedShinyNamePatterns];
     this.userTags = [...userSettings.userTags];
     this.notificationsEnabled = userSettings.notificationsEnabled;
