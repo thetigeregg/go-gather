@@ -201,8 +201,8 @@ function parseTableRows(tableLines: string[]): TableRow[] {
  * Reads the first wikitable in a section as `Date | Pokemon | Notes` rows.
  * Only the first table counts: the Gigantamax section follows its release
  * table with a second "yet to be released" table that must not be read as
- * released. A row layout or date this parser doesn't understand throws
- * rather than being skipped, since a silently dropped row is a silently
+ * released. A row layout, date or Pokemon cell this parser doesn't
+ * understand throws rather than being skipped, since a silently dropped row is a silently
  * missing release — the species-count check alone wouldn't notice one lost
  * row. Only an explicit TBA/TBD date is skipped: that release hasn't
  * happened yet, so there's nothing to miss.
@@ -231,7 +231,11 @@ export function parseReleaseTable(section: string): ReleaseRow[] {
       console.warn(`Bulbapedia: skipping release row with unscheduled date "${cells[0]}".`);
       return [];
     }
-    return [{ releasedOn, pokemon: parseMspGoCodes(cells[1]) }];
+    const pokemon = parseMspGoCodes(cells[1]);
+    if (pokemon.length === 0) {
+      throw new Error(`Bulbapedia: no MSP/GO Pokemon in release row: ${rowText.slice(0, 120)}`);
+    }
+    return [{ releasedOn, pokemon }];
   });
 }
 

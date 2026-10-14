@@ -192,6 +192,15 @@ describe('parseDynamaxReleases', () => {
     );
   });
 
+  it.each(['[[Dialga]]', '{{MSP|0483|Dialga}}', ''])(
+    'throws on a row whose Pokemon cell %j has no MSP/GO code',
+    (pokemon) => {
+      expect(() => parseDynamaxReleases(dynamaxPage([row('Jun 1, 2025', pokemon)]))).toThrow(
+        /no MSP\/GO Pokemon in release row/
+      );
+    }
+  );
+
   it('throws when far fewer species than expected are parsed', () => {
     expect(() => parseDynamaxReleases(dynamaxPage([], 20))).toThrow(
       /only 20 Dynamax species parsed/

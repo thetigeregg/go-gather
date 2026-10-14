@@ -45,14 +45,15 @@ interface AvailabilitySourceRow {
  * Fetches each Bulbapedia page once and saves every dataset parsed from it.
  * A fetch or parse failure is recorded against that dataset (keeping its
  * previous payload) and logged — never thrown — so callers can always go
- * on to read whatever data is saved.
+ * on to read whatever data is saved. Returns the datasets that failed.
  */
 export async function syncAvailability(
   database: Database,
   fetchPage: (page: string) => Promise<string> = fetchWikitext,
   now: Date = new Date()
-): Promise<void> {
+): Promise<AvailabilityDataset[]> {
   const attemptedAt = now.toISOString();
+  const failed: AvailabilityDataset[] = [];
   const pages = new Map<string, Promise<string>>();
   const saveSuccess = database.prepare(`
     INSERT INTO availability_sources (dataset, payload, fetched_at, last_attempt_at, last_error)
@@ -84,9 +85,11 @@ export async function syncAvailability(
     } catch (err: unknown) {
       const error = err instanceof Error ? err.message : String(err);
       saveFailure.run({ dataset, attemptedAt, error });
+      failed.push(dataset);
       console.warn(`Availability ${dataset}: update failed, keeping saved data — ${error}`);
     }
   }
+  return failed;
 }
 
 /** `YYYY-MM-DD` of `date` in `timeZone` — the server's own zone by default

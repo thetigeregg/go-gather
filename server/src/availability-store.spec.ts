@@ -59,7 +59,7 @@ describe('syncAvailability', () => {
   it('fetches each page once and saves every dataset', async () => {
     const fetchPage = pageFetcher(goodPages);
 
-    await syncAvailability(database, fetchPage, FIRST_SYNC);
+    await expect(syncAvailability(database, fetchPage, FIRST_SYNC)).resolves.toEqual([]);
 
     expect(fetchPage).toHaveBeenCalledTimes(2);
     for (const dataset of ['dynamax', 'gigantamax']) {
@@ -80,7 +80,7 @@ describe('syncAvailability', () => {
     await syncAvailability(database, pageFetcher(goodPages), FIRST_SYNC);
     const goodGigantamax = source('gigantamax').payload;
 
-    await syncAvailability(
+    const failed = await syncAvailability(
       database,
       pageFetcher({
         [DYNAMAX_PAGE]: dynamaxPage([row('Jun 1, 2025', '{{MSP/GO|0416|Vespiquen}}')]),
@@ -89,6 +89,7 @@ describe('syncAvailability', () => {
       SECOND_SYNC
     );
 
+    expect(failed).toEqual(['gigantamax']);
     expect(source('dynamax').fetched_at).toBe(SECOND_SYNC.toISOString());
     expect(source('dynamax').payload).toContain('"dexNr":416');
     expect(source('gigantamax')).toMatchObject({
@@ -128,7 +129,10 @@ describe('syncAvailability', () => {
     // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- the non-Error rejection is what's under test
     const fetchPage = vi.fn(() => Promise.reject('rate limited'));
 
-    await syncAvailability(database, fetchPage, FIRST_SYNC);
+    await expect(syncAvailability(database, fetchPage, FIRST_SYNC)).resolves.toEqual([
+      'dynamax',
+      'gigantamax',
+    ]);
 
     expect(source('dynamax').last_error).toBe('rate limited');
     expect(source('gigantamax').last_error).toBe('rate limited');
