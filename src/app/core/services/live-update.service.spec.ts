@@ -5,23 +5,25 @@ import { LiveUpdateService } from './live-update.service';
 
 const isNativePlatformMock = vi.fn<() => boolean>();
 const liveUpdateReadyMock = vi.fn<
-  [],
-  Promise<{
+  () => Promise<{
     currentBundleId: string | null;
     previousBundleId: string | null;
     rollback: boolean;
   }>
 >();
-const liveUpdateGetVersionCodeMock = vi.fn<[], Promise<{ versionCode: string }>>();
-const liveUpdateGetCurrentBundleMock = vi.fn<[], Promise<{ bundleId: string | null }>>();
-const liveUpdateGetNextBundleMock = vi.fn<[], Promise<{ bundleId: string | null }>>();
-const liveUpdateDownloadBundleMock = vi.fn<[unknown], Promise<void>>();
-const liveUpdateSetNextBundleMock = vi.fn<[unknown], Promise<void>>();
-const liveUpdateReloadMock = vi.fn<[], Promise<void>>();
-const appAddListenerMock = vi.fn<
-  [string, (state: { isActive: boolean }) => void],
-  Promise<{ remove: () => void }>
->();
+const liveUpdateGetVersionCodeMock = vi.fn<() => Promise<{ versionCode: string }>>();
+const liveUpdateGetCurrentBundleMock = vi.fn<() => Promise<{ bundleId: string | null }>>();
+const liveUpdateGetNextBundleMock = vi.fn<() => Promise<{ bundleId: string | null }>>();
+const liveUpdateDownloadBundleMock = vi.fn<(options: unknown) => Promise<void>>();
+const liveUpdateSetNextBundleMock = vi.fn<(options: unknown) => Promise<void>>();
+const liveUpdateReloadMock = vi.fn<() => Promise<void>>();
+const appAddListenerMock =
+  vi.fn<
+    (
+      eventName: string,
+      listener: (state: { isActive: boolean }) => void
+    ) => Promise<{ remove: () => void }>
+  >();
 
 vi.mock('../utils/native-platform.util', () => ({
   isNativePlatform: () => isNativePlatformMock(),
