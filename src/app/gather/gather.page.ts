@@ -88,6 +88,12 @@ export class GatherPage implements OnInit, AfterViewInit {
   stickyGenerationTotal = 0;
   showStickyBar = false;
 
+  /** The viewport's last reported scrolled-to row, kept so a rebuild that
+   * preserves scroll position can refresh the sticky bar itself — the
+   * strategy's `scrolledIndexChange` is `distinctUntilChanged`, so it won't
+   * re-emit when the rows change but the index doesn't. */
+  private scrolledIndex = 0;
+
   constructor() {
     addIcons({ menu, filter, search });
   }
@@ -173,6 +179,8 @@ export class GatherPage implements OnInit, AfterViewInit {
    * scrolled-to row index, since a `position: sticky` header inside the
    * virtualized list would get recycled away after a few rows of scroll. */
   onScrolledIndexChange(index: number): void {
+    this.scrolledIndex = index;
+
     if (this.flatRows.length === 0) {
       this.stickyGenerationName = '';
       this.stickyGenerationCaught = 0;
@@ -237,8 +245,8 @@ export class GatherPage implements OnInit, AfterViewInit {
     if (resetScrollToTop) {
       this.onScrolledIndexChange(0);
       this.viewportRef?.scrollToIndex(0);
-    } else if (this.flatRows.length === 0) {
-      this.onScrolledIndexChange(0);
+    } else {
+      this.onScrolledIndexChange(this.scrolledIndex);
     }
   }
 
