@@ -4,8 +4,17 @@
    go-gather-next (see docs/progress/phase-4-catalog-pipeline.md);
    go-gather-next's own ESLint config doesn't enforce these strictTypeChecked
    rules. Do not reinterpret this file's flattening logic. */
-import type { CatalogEntry, PokedexType, PokemonClass } from '@go-gather/shared';
+import type {
+  CatalogEntry as StampedCatalogEntry,
+  PokedexType,
+  PokemonClass,
+} from '@go-gather/shared';
 import { Region } from '@go-gather/shared';
+
+/** A catalog entry as built here — before the catalog sync stamps its
+ * `releasedOn` date from Bulbapedia (see release-dates.ts). */
+export type UnstampedCatalogEntry = Omit<StampedCatalogEntry, 'releasedOn'>;
+type CatalogEntry = UnstampedCatalogEntry;
 
 export interface RawNames {
   English: string;

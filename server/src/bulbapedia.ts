@@ -1,10 +1,11 @@
 /**
- * Released Dynamax/Gigantamax Pokemon, read from Bulbapedia's
+ * Pokemon GO availability — which species, regional forms and Dynamax/
+ * Gigantamax Pokemon have been released, and when — read from Bulbapedia's
  * community-maintained Pokemon GO pages. Neither pokemon-go-api nor PokeAPI
- * says which species have actually been released for Max Battles, and the
- * hand-kept lists this replaces (`releasedDynamaxDexNumbers`/
- * `releasedGigantamaxDexNumbers` in sync-overrides.json) kept drifting
- * behind the game. Bulbapedia content is licensed CC BY-NC-SA.
+ * says what has actually been released in-game, and the hand-kept lists
+ * this replaces (`releasedDynamaxDexNumbers`/`releasedGigantamaxDexNumbers`
+ * in sync-overrides.json, the `excludedDexNumbers` user setting) kept
+ * drifting behind the game. Bulbapedia content is licensed CC BY-NC-SA.
  *
  * Reads raw wikitext through the MediaWiki API (the plain `?action=raw` URL
  * sits behind a Cloudflare challenge), where every Pokemon is written as a
@@ -15,10 +16,10 @@
  * side never empties the DMax/GMax dexes.
  *
  * Parsing keeps each row's release date rather than filtering to "released
- * today": Bulbapedia lists announced releases ahead of time, and applying
- * the date only when the saved data is used (availability-store.ts's
- * loadMaxReleases) lets those releases still go live on schedule while
- * Bulbapedia is unreachable.
+ * today": Bulbapedia lists announced releases ahead of time. The catalog
+ * sync stamps each entry with its date (release-dates.ts) and the app hides
+ * entries whose date hasn't arrived on the device, so announced releases go
+ * live on schedule even while Bulbapedia is unreachable.
  */
 
 const BULBAPEDIA_API_URL = 'https://bulbapedia.bulbagarden.net/w/api.php';
@@ -30,11 +31,15 @@ const DYNAMAX_PAGE = 'Dynamax (GO)';
 const DYNAMAX_SECTION = 'List of Pokémon capable of Dynamaxing by release date';
 const AVAILABILITY_PAGE = 'List of Pokémon by availability in Pokémon GO';
 const GIGANTAMAX_SECTION = 'Gigantamax';
+const SPECIES_SECTION = 'List of Pokémon by date';
+const UNRELEASED_SECTION = 'Unreleased Pokémon';
 
-// As of October 2026 the pages list 150 Dynamax and 19 Gigantamax species —
-// a count far below that means the page layout changed under the parser.
+// As of October 2026 the pages list 150 Dynamax, 19 Gigantamax and 959
+// released species — a count far below that means the page layout changed
+// under the parser.
 const MIN_DYNAMAX_SPECIES = 100;
 const MIN_GIGANTAMAX_SPECIES = 15;
+const MIN_RELEASED_SPECIES = 900;
 
 const GIGANTAMAX_CODE_SUFFIX = 'GMax';
 
@@ -51,12 +56,24 @@ export interface DatedMaxRelease extends MaxRelease {
   releasedOn: string;
 }
 
-export interface MaxReleases {
-  dynamax: MaxRelease[];
-  gigantamax: MaxRelease[];
+export interface DatedSpeciesRelease {
+  dexNr: number;
+  /** Bulbapedia's form letters for this code — `''` for the plain species,
+   * `A`/`G`/`H`/`P` for a regional form (resolved to a region in
+   * release-dates.ts), other letters for species-specific forms. */
+  formCode: string;
+  /** `YYYY-MM-DD` — may be in the future for an announced debut. */
+  releasedOn: string;
 }
 
-export type AvailabilityDataset = keyof MaxReleases;
+/** Every dataset saved in `availability_sources`, keyed by dataset name. */
+export interface AvailabilityData {
+  dynamax: DatedMaxRelease[];
+  gigantamax: DatedMaxRelease[];
+  species: DatedSpeciesRelease[];
+}
+
+export type AvailabilityDataset = keyof AvailabilityData;
 
 /**
  * Bulbapedia's per-species form letters (the part of an MSP/GO code between
@@ -81,6 +98,9 @@ const RELEASE_DATE = /^([A-Za-z]{3})[A-Za-z]*\.? (\d{1,2}), (\d{4})/;
 // A date cell for a release that's announced but not yet scheduled.
 const UNSCHEDULED_DATE = /^(?:TBA|TBD)\b/i;
 const MSP_GO_TEMPLATE = /\{\{MSP\/GO\|([^}]*)\}\}/g;
+// The Unreleased list also uses the plain `{{MSP|0833|Chewtle}}` template
+// (no GO sprite exists yet), so it's read by dex number alone.
+const ANY_MSP_DEX_NR = /\{\{MSP(?:\/GO)?\|(?:size=\d+\|)?(\d{4})/g;
 // `0892R`, `0003GMax s`, `0521 f`: a 4-digit dex number, optional form
 // letters, then optional space-separated modifiers (shiny/female) that don't
 // matter for Max availability.
@@ -158,6 +178,18 @@ export function extractSection(wikitext: string, title: string): string {
   return lines.slice(start, end === -1 ? undefined : end).join('\n');
 }
 
+/** The lines inside the first wikitable in a section, without its `{|` and
+ * `|}` delimiters. */
+function firstTableLines(section: string): string[] {
+  const lines = section.split('\n');
+  const tableStart = lines.findIndex((line) => line.startsWith('{|'));
+  const tableEnd = lines.findIndex((line, index) => index > tableStart && line.startsWith('|}'));
+  if (tableStart === -1 || tableEnd === -1) {
+    throw new Error('Bulbapedia: release table not found');
+  }
+  return lines.slice(tableStart + 1, tableEnd);
+}
+
 /**
  * Splits wikitable lines into rows of cells. Handles both one-cell-per-line
  * (`| a` / `| b`) and inline (`| a || b`) cells, and appends a line that
@@ -208,14 +240,7 @@ function parseTableRows(tableLines: string[]): TableRow[] {
  * happened yet, so there's nothing to miss.
  */
 export function parseReleaseTable(section: string): ReleaseRow[] {
-  const lines = section.split('\n');
-  const tableStart = lines.findIndex((line) => line.startsWith('{|'));
-  const tableEnd = lines.findIndex((line, index) => index > tableStart && line.startsWith('|}'));
-  if (tableStart === -1 || tableEnd === -1) {
-    throw new Error('Bulbapedia: release table not found');
-  }
-
-  return parseTableRows(lines.slice(tableStart + 1, tableEnd)).flatMap(({ cells, isHeader }) => {
+  return parseTableRows(firstTableLines(section)).flatMap(({ cells, isHeader }) => {
     if (isHeader || cells.length === 0) {
       return [];
     }
@@ -309,6 +334,53 @@ export function parseGigantamaxReleases(availabilityPage: string): DatedMaxRelea
   );
 }
 
+/** Dex numbers in the first table of the "Unreleased Pokémon" section
+ * (the second table there lists unreleased alternate forms, not species). */
+function parseUnreleasedSpecies(availabilityPage: string): Set<number> {
+  const table = firstTableLines(extractSection(availabilityPage, UNRELEASED_SECTION)).join('\n');
+  return new Set([...table.matchAll(ANY_MSP_DEX_NR)].map((match) => Number(match[1])));
+}
+
+/**
+ * Every species and form debut in the "List of Pokémon by date" table,
+ * keeping each (species, form letters) pair's earliest date. Cross-checked
+ * against the "Unreleased Pokémon" list: every dex number up to the highest
+ * one seen must be in one or the other. Between them the two lists cover
+ * the whole National Dex, so a gap means a row was silently lost.
+ */
+export function parseSpeciesReleases(availabilityPage: string): DatedSpeciesRelease[] {
+  const releases = new Map<string, DatedSpeciesRelease>();
+  for (const row of parseReleaseTable(extractSection(availabilityPage, SPECIES_SECTION))) {
+    for (const { dexNr, formCode } of row.pokemon) {
+      const key = `${String(dexNr)}|${formCode}`;
+      const existing = releases.get(key);
+      if (!existing || row.releasedOn < existing.releasedOn) {
+        releases.set(key, { dexNr, formCode, releasedOn: row.releasedOn });
+      }
+    }
+  }
+
+  const dated = new Set([...releases.values()].map((release) => release.dexNr));
+  if (dated.size < MIN_RELEASED_SPECIES) {
+    throw new Error(
+      `Bulbapedia: only ${String(dated.size)} dated species parsed (expected at least ${String(MIN_RELEASED_SPECIES)}) — page layout may have changed.`
+    );
+  }
+
+  const unreleased = parseUnreleasedSpecies(availabilityPage);
+  const highestDexNr = Math.max(...dated, ...unreleased);
+  const missing = Array.from({ length: highestDexNr }, (_, index) => index + 1).filter(
+    (dexNr) => !dated.has(dexNr) && !unreleased.has(dexNr)
+  );
+  if (missing.length > 0) {
+    throw new Error(
+      `Bulbapedia: species ${missing.slice(0, 10).join(', ')} are neither dated nor listed as unreleased — page layout may have changed.`
+    );
+  }
+
+  return [...releases.values()];
+}
+
 /**
  * Every dataset availability-store.ts saves, with the page it's parsed
  * from. Each dataset is saved (or fails) on its own, even when several are
@@ -318,10 +390,11 @@ export function parseGigantamaxReleases(availabilityPage: string): DatedMaxRelea
 export const AVAILABILITY_DATASETS: {
   dataset: AvailabilityDataset;
   page: string;
-  parse: (wikitext: string) => DatedMaxRelease[];
+  parse: (wikitext: string) => AvailabilityData[AvailabilityDataset];
 }[] = [
   { dataset: 'dynamax', page: DYNAMAX_PAGE, parse: parseDynamaxReleases },
   { dataset: 'gigantamax', page: AVAILABILITY_PAGE, parse: parseGigantamaxReleases },
+  { dataset: 'species', page: AVAILABILITY_PAGE, parse: parseSpeciesReleases },
 ];
 
 export async function fetchWikitext(page: string): Promise<string> {

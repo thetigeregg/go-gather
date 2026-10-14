@@ -5,8 +5,9 @@ import {
   parseGigantamaxReleases,
   parseMspGoCodes,
   parseReleaseDate,
+  parseSpeciesReleases,
 } from './bulbapedia';
-import { availabilityPage, dynamaxPage, row } from './bulbapedia.test-helpers';
+import { availabilityPage, dynamaxPage, row, speciesSections } from './bulbapedia.test-helpers';
 
 beforeEach(() => {
   vi.spyOn(console, 'log').mockImplementation(() => undefined);
@@ -256,6 +257,64 @@ describe('parseGigantamaxReleases', () => {
   it('throws when far fewer species than expected are parsed', () => {
     expect(() => parseGigantamaxReleases(availabilityPage([], 3))).toThrow(
       /only 3 Gigantamax species parsed/
+    );
+  });
+});
+
+describe('parseSpeciesReleases', () => {
+  function parse(options: Parameters<typeof speciesSections>[0]) {
+    return parseSpeciesReleases(availabilityPage([], 15, speciesSections(options)));
+  }
+
+  it('dates every species in the date table and ignores the other tables', () => {
+    const releases = parse({});
+
+    expect(releases).toHaveLength(900);
+    expect(releases).toContainEqual({ dexNr: 1, formCode: '', releasedOn: '2016-07-06' });
+    // The unreleased-forms table's Gimmighoul (0999Z) isn't read as a species.
+    expect(releases.some((r) => r.dexNr === 999)).toBe(false);
+  });
+
+  it('keeps form letters and the earliest date per species and form', () => {
+    const releases = parse({
+      rows: [
+        row('Jun 28, 2019', '{{MSP/GO|0019A|Rattata}}'),
+        row('Mar 1, 2020', '{{MSP/GO|0019A|Rattata}}{{MSP/GO|0902|Basculegion}}'),
+        row('Jan 1, 2020', '{{MSP/GO|0902 f|Basculegion}}'),
+      ],
+    });
+
+    expect(releases).toEqual(
+      expect.arrayContaining([
+        { dexNr: 19, formCode: '', releasedOn: '2016-07-06' },
+        { dexNr: 19, formCode: 'A', releasedOn: '2019-06-28' },
+        { dexNr: 902, formCode: '', releasedOn: '2020-01-01' },
+      ])
+    );
+    expect(releases.filter((r) => r.dexNr === 902)).toHaveLength(1);
+  });
+
+  it('keeps announced debuts, reading the first date of a multi-date cell', () => {
+    const releases = parse({
+      rows: [row('Nov 14, 2026/Dec 11, 2026/May 3, 2027', '{{MSP/GO|0902|Basculegion}}')],
+    });
+
+    expect(releases).toContainEqual({ dexNr: 902, formCode: '', releasedOn: '2026-11-14' });
+  });
+
+  it('accepts both MSP and MSP/GO templates in the unreleased list', () => {
+    expect(() => parse({ unreleased: [901, 902, 903] })).not.toThrow();
+  });
+
+  it('throws when a species is neither dated nor listed as unreleased', () => {
+    expect(() =>
+      parse({ rows: [row('Jan 1, 2020', '{{MSP/GO|0905|Overqwil}}')], unreleased: [901, 903] })
+    ).toThrow(/species 902, 904 are neither dated nor listed as unreleased/);
+  });
+
+  it('throws when far fewer species than expected are dated', () => {
+    expect(() => parse({ fillerCount: 500, unreleased: [] })).toThrow(
+      /only 500 dated species parsed/
     );
   });
 });

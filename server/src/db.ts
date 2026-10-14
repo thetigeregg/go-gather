@@ -38,7 +38,8 @@ export function initSchema(): void {
       pokemon_class TEXT,
       is_base_form INTEGER NOT NULL,
       pokedex_type TEXT NOT NULL DEFAULT 'regular',
-      "order" INTEGER NOT NULL
+      "order" INTEGER NOT NULL,
+      released_on TEXT
     );
 
     CREATE TABLE IF NOT EXISTS user_progress (
@@ -170,6 +171,12 @@ export function initSchema(): void {
   const columns = db.prepare(`PRAGMA table_info(pokemon_catalog)`).all() as { name: string }[];
   if (!columns.some((c) => c.name === 'pokedex_type')) {
     db.exec(`ALTER TABLE pokemon_catalog ADD COLUMN pokedex_type TEXT NOT NULL DEFAULT 'regular'`);
+  }
+  // Same rationale, for a gogather.db from before release dates existed.
+  // Rows stay NULL ("not released") only until the next catalog sync, which
+  // replaces every row.
+  if (!columns.some((c) => c.name === 'released_on')) {
+    db.exec(`ALTER TABLE pokemon_catalog ADD COLUMN released_on TEXT`);
   }
 
   // Same rationale as above, for a pre-existing gogather.db from before

@@ -31,6 +31,7 @@ function makeCatalogEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
     secondaryType: 'poison',
     pokemonClass: null,
     isBaseForm: true,
+    releasedOn: '2016-07-06',
     pokedexType: 'regular',
     order: 1,
     ...overrides,

@@ -159,6 +159,7 @@ describe('SyncService', () => {
       secondaryType: null,
       pokemonClass: null,
       isBaseForm: true,
+      releasedOn: '2016-07-06',
       pokedexType: 'regular' as const,
       order: 0,
     };
