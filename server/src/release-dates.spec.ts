@@ -5,6 +5,7 @@ import {
   stampReleaseDates,
   undatedMegaNames,
   unlistedShinyCount,
+  unmappedUnreleasedForms,
 } from './release-dates';
 import type { UnstampedCatalogEntry } from './transform';
 
@@ -80,6 +81,11 @@ const availability: AvailabilityData = {
     { dexNr: 849, formCode: 'GMax', dynamax: true, releasedOn: '2024-12-01' },
     { dexNr: 892, formCode: '', dynamax: false, releasedOn: '2025-06-01' },
     { dexNr: 902, formCode: '', dynamax: false, releasedOn: '2026-11-01' },
+  ],
+  unreleasedForms: [
+    { dexNr: 555, formCode: 'GZ' },
+    { dexNr: 658, formCode: 'A' },
+    { dexNr: 999, formCode: '' },
   ],
 };
 
@@ -255,6 +261,68 @@ describe('stampReleaseDates for shiny entries', () => {
     const [stamped] = stampReleaseDates([shiny(128)], { ...availability, shiny: null });
 
     expect(stamped.releasedOn).toBe('2016-07-06');
+  });
+});
+
+describe('stampReleaseDates for unreleased forms', () => {
+  const form = (formId: string, overrides: Partial<UnstampedCatalogEntry> = {}) =>
+    entry(555, { formId, region: Region.Galar, ...overrides });
+  const speciesFor555: AvailabilityData = {
+    ...availability,
+    species: [
+      ...availability.species,
+      { dexNr: 555, formCode: '', releasedOn: '2020-01-24' },
+      { dexNr: 555, formCode: 'G', releasedOn: '2020-06-03' },
+      { dexNr: 999, formCode: '', releasedOn: '2023-11-01' },
+    ],
+    shiny: [
+      ...availability.shiny,
+      { dexNr: 555, formCode: 'G', dynamax: false, releasedOn: '2021-01-01' },
+    ],
+  };
+  const dated = (unstamped: UnstampedCatalogEntry) =>
+    stampReleaseDates([unstamped], speciesFor555)[0].releasedOn;
+
+  it('hides a listed form, with its shiny and size copies', () => {
+    expect(dated(form('DARMANITAN_GALARIAN_ZEN'))).toBeNull();
+    expect(dated(form('DARMANITAN_GALARIAN_ZEN', { isShiny: true }))).toBeNull();
+    expect(dated(form('DARMANITAN_GALARIAN_ZEN', { pokedexType: 'xxl' }))).toBeNull();
+  });
+
+  it("leaves the species' other forms dated", () => {
+    expect(dated(form('DARMANITAN_GALARIAN_STANDARD'))).toBe('2020-06-03');
+    expect(dated(entry(555, { formId: 'DARMANITAN' }))).toBe('2020-01-24');
+  });
+
+  it('hides nothing for a code with no catalog entry', () => {
+    expect(dated(entry(999, { formId: 'GIMMIGHOUL' }))).toBe('2023-11-01');
+  });
+
+  it('hides nothing when no unreleased-form data is saved', () => {
+    const [stamped] = stampReleaseDates([form('DARMANITAN_GALARIAN_ZEN')], {
+      ...speciesFor555,
+      unreleasedForms: null,
+    });
+
+    expect(stamped.releasedOn).toBe('2020-06-03');
+  });
+});
+
+describe('unmappedUnreleasedForms', () => {
+  it('lists codes the mapping table does not know', () => {
+    expect(
+      unmappedUnreleasedForms({
+        ...availability,
+        unreleasedForms: [
+          { dexNr: 555, formCode: 'Z' },
+          { dexNr: 25, formCode: 'Q' },
+        ],
+      })
+    ).toEqual(['0025Q']);
+  });
+
+  it('lists nothing when no unreleased-form data is saved', () => {
+    expect(unmappedUnreleasedForms({ ...availability, unreleasedForms: null })).toEqual([]);
   });
 });
 

@@ -111,6 +111,16 @@ export interface DatedShinyRelease {
   releasedOn: string;
 }
 
+/** An alternate form Bulbapedia lists as not yet available in Pokemon GO
+ * (e.g. `0555Z`, Zen Mode Darmanitan). Mapped to catalog entries in
+ * release-dates.ts. */
+export interface UnreleasedFormCode {
+  dexNr: number;
+  /** The code's form letters, including a `form=` argument's value
+   * (`{{MSP|0658|form=A|…}}` is `A`). */
+  formCode: string;
+}
+
 /** Every dataset saved in `availability_sources`, keyed by dataset name. */
 export interface AvailabilityData {
   dynamax: DatedMaxRelease[];
@@ -118,6 +128,7 @@ export interface AvailabilityData {
   species: DatedSpeciesRelease[];
   mega: DatedMegaRelease[];
   shiny: DatedShinyRelease[];
+  unreleasedForms: UnreleasedFormCode[];
 }
 
 export type AvailabilityDataset = keyof AvailabilityData;
@@ -145,6 +156,10 @@ const RELEASE_DATE = /^([A-Za-z]{3})[A-Za-z]*\.? (\d{1,2}), (\d{4})/;
 // A date cell for a release that's announced but not yet scheduled.
 const UNSCHEDULED_DATE = /^(?:TBA|TBD)\b/i;
 const MSP_GO_TEMPLATE = /\{\{MSP\/GO\|([^}]*)\}\}/g;
+// Also the plain `{{MSP|…}}` sprite template, used for Pokemon and forms
+// with no GO sprite yet — only read in the unreleased lists.
+const MSP_ANY_TEMPLATE = /\{\{MSP(?:\/GO)?\|([^}]*)\}\}/g;
+const UNRELEASED_FORMS_INTRO = 'yet to be made available';
 // The Unreleased list also uses the plain `{{MSP|0833|Chewtle}}` template
 // (no GO sprite exists yet), so it's read by dex number alone.
 const ANY_MSP_DEX_NR = /\{\{MSP(?:\/GO)?\|(?:size=\d+\|)?(\d{4})/g;
@@ -265,8 +280,8 @@ export function templateCalls(wikitext: string, name: string): string[][] {
 }
 
 /** Reads every `{{MSP/GO|...}}` template in a wikitext fragment, in order. */
-export function parseMspGoCodes(wikitext: string): PokemonCode[] {
-  return [...wikitext.matchAll(MSP_GO_TEMPLATE)].map((match) => {
+export function parseMspGoCodes(wikitext: string, template = MSP_GO_TEMPLATE): PokemonCode[] {
+  return [...wikitext.matchAll(template)].map((match) => {
     const params = match[1].split('|').map((param) => param.trim());
     const code = params.filter((param) => !param.includes('=')).at(0) ?? '';
     const codeMatch = MSP_GO_CODE.exec(code);
@@ -517,6 +532,27 @@ function parseUnreleasedSpecies(availabilityPage: string): Set<number> {
 }
 
 /**
+ * The alternate forms in the "Unreleased Pokémon" section's forms table —
+ * the table after the sentence ending "…have yet to be made available:".
+ * No minimum count: the table is legitimately empty once every form is
+ * out. A missing sentence or table still throws, keeping the last good
+ * data, since that's what a layout change looks like.
+ */
+export function parseUnreleasedForms(availabilityPage: string): UnreleasedFormCode[] {
+  const section = extractSection(stripComments(availabilityPage), UNRELEASED_SECTION);
+  const intro = section.indexOf(UNRELEASED_FORMS_INTRO);
+  if (intro === -1) {
+    throw new Error('Bulbapedia: unreleased forms table not found');
+  }
+  const table = firstTableLines(section.slice(intro)).join('\n');
+  const forms = new Map<string, UnreleasedFormCode>();
+  for (const { dexNr, formCode } of parseMspGoCodes(table, MSP_ANY_TEMPLATE)) {
+    forms.set(`${String(dexNr)}|${formCode}`, { dexNr, formCode });
+  }
+  return [...forms.values()];
+}
+
+/**
  * Every species and form debut in the "List of Pokémon by date" table,
  * keeping each (species, form letters) pair's earliest date. Cross-checked
  * against the "Unreleased Pokémon" list: every dex number up to the highest
@@ -648,6 +684,7 @@ export const AVAILABILITY_DATASETS: {
   { dataset: 'species', page: AVAILABILITY_PAGE, parse: parseSpeciesReleases },
   { dataset: 'mega', page: AVAILABILITY_PAGE, parse: parseMegaReleases },
   { dataset: 'shiny', page: SHINY_PAGE, parse: parseShinyReleases },
+  { dataset: 'unreleasedForms', page: AVAILABILITY_PAGE, parse: parseUnreleasedForms },
 ];
 
 export async function fetchWikitext(page: string): Promise<string> {

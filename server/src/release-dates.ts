@@ -6,6 +6,10 @@
  * against the device's own date to decide what's out.
  *
  * Rules, most specific first:
+ * - An alternate form Bulbapedia lists as not yet available (its "forms yet
+ *   to be made available" table, mapped by UNRELEASED_FORM_IDS) isn't
+ *   released: null — shiny and XXL/XXS copies included, as they share the
+ *   form's `formId`.
  * - Gigantamax / Dynamax entries: that Max release's date — by form when
  *   Bulbapedia lists the form separately (Urshifu's styles), otherwise the
  *   species-level Max release. A Max entry Bulbapedia doesn't list as a Max
@@ -51,6 +55,38 @@ import type { UnstampedCatalogEntry } from './transform.js';
 /** Pokemon GO's launch day — the release date for anything known to be
  * released without a more specific date (see db.ts's migration too). */
 export const GO_LAUNCH_DATE = '2016-07-06';
+
+/**
+ * Bulbapedia's codes in its "forms yet to be made available" table, written
+ * as it writes them (`0555Z`; a `form=` argument's value appended, so
+ * `{{MSP|0658|form=A|…}}` is `0658A`), mapped to the catalog `formId` they
+ * hide. `null` means a known form with no separate catalog entry, so there's
+ * nothing to hide. Every code must be listed: an unknown one is logged by the
+ * catalog sync rather than guessed, since a wrong guess could hide a released
+ * form. When Niantic releases a form, Bulbapedia moves it to the date table
+ * and its entry here simply stops matching.
+ */
+export const UNRELEASED_FORM_IDS: Partial<Record<string, string | null>> = {
+  '0555Z': 'DARMANITAN_ZEN',
+  '0555GZ': 'DARMANITAN_GALARIAN_ZEN',
+  '0648P': 'MELOETTA_PIROUETTE',
+  '0666Fan': 'VIVILLON_FANCY',
+  '0666Pok': 'VIVILLON_POKEBALL',
+  // Ash-Greninja, Eternal Floette, Ultra Necrozma, Dada Zarude and Bloodmoon
+  // Ursaluna have no catalog entry of their own.
+  '0658A': null,
+  '0670E': null,
+  '0800U': null,
+  '0893D': null,
+  '0901B': null,
+  // Gimmighoul's Chest Form. The catalog's only Gimmighoul is the Roaming
+  // Form released in GO, and the same plain code is dated as released.
+  '0999': null,
+};
+
+function unreleasedFormCode(dexNr: number, formCode: string): string {
+  return `${String(dexNr).padStart(4, '0')}${formCode}`;
+}
 
 /** Bulbapedia's regional-form letters. */
 export const REGION_CODES: Partial<Record<string, Region>> = {
@@ -194,8 +230,17 @@ function releaseDating(availability: LoadedAvailability): ReleaseDating {
   for (const { dexNr, form, releasedOn } of availability.mega ?? []) {
     keepEarliest(megaDates, `${String(dexNr)}|${form}`, { releasedOn });
   }
+  const unreleasedFormIds = new Set(
+    (availability.unreleasedForms ?? []).flatMap(({ dexNr, formCode }) => {
+      const formId = UNRELEASED_FORM_IDS[unreleasedFormCode(dexNr, formCode)];
+      return formId ? [formId] : [];
+    })
+  );
 
   function releaseDateFor(entry: UnstampedCatalogEntry): string | null {
+    if (unreleasedFormIds.has(entry.formId)) {
+      return null;
+    }
     const dexNr = String(entry.dexNr);
     const max =
       entry.pokedexType === 'max'
@@ -284,4 +329,15 @@ export function unlistedShinyCount(
     (entry) =>
       entry.isShiny && pokemonDate(entry) !== null && shinyListingDate(entry, shiny) === null
   ).length;
+}
+
+/**
+ * Codes in Bulbapedia's unreleased-forms table that UNRELEASED_FORM_IDS
+ * doesn't know, for the catalog sync to log so they can be mapped. Their
+ * forms stay dated (shown) until then.
+ */
+export function unmappedUnreleasedForms(availability: LoadedAvailability): string[] {
+  return (availability.unreleasedForms ?? [])
+    .map(({ dexNr, formCode }) => unreleasedFormCode(dexNr, formCode))
+    .filter((code) => !Object.hasOwn(UNRELEASED_FORM_IDS, code));
 }

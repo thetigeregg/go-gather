@@ -77,7 +77,14 @@ describe('syncAvailability', () => {
     await expect(syncAvailability(database, fetchPage, FIRST_SYNC)).resolves.toEqual([]);
 
     expect(fetchPage).toHaveBeenCalledTimes(3);
-    for (const dataset of ['dynamax', 'gigantamax', 'species', 'mega', 'shiny']) {
+    for (const dataset of [
+      'dynamax',
+      'gigantamax',
+      'species',
+      'mega',
+      'shiny',
+      'unreleasedForms',
+    ]) {
       expect(source(dataset)).toMatchObject({
         fetched_at: FIRST_SYNC.toISOString(),
         last_attempt_at: FIRST_SYNC.toISOString(),
@@ -169,7 +176,13 @@ describe('syncAvailability', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     releaseDynamax(goodPages[DYNAMAX_PAGE]);
 
-    await expect(syncing).resolves.toEqual(['gigantamax', 'species', 'mega', 'shiny']);
+    await expect(syncing).resolves.toEqual([
+      'gigantamax',
+      'species',
+      'mega',
+      'shiny',
+      'unreleasedForms',
+    ]);
     expect(source('dynamax').last_error).toBeNull();
     expect(source('shiny').last_error).toBe(`Bulbapedia: ${SHINY_PAGE} unavailable`);
   });
@@ -197,6 +210,7 @@ describe('syncAvailability', () => {
       'species',
       'mega',
       'shiny',
+      'unreleasedForms',
     ]);
 
     expect(source('dynamax').last_error).toBe('rate limited');
@@ -337,6 +351,31 @@ describe('loadAvailability', () => {
     expect(availability.mega).not.toBeNull();
     expect(console.warn).toHaveBeenCalledWith(
       expect.stringMatching(/No saved shiny availability yet .*Treating shinies as released/)
+    );
+    fresh.close();
+  });
+
+  it('returns null unreleased-form data when it has never been saved', async () => {
+    const fresh = new BetterSqlite3(':memory:');
+    fresh.exec(AVAILABILITY_SOURCES_SCHEMA);
+    await syncAvailability(
+      fresh,
+      pageFetcher({
+        ...goodPages,
+        [AVAILABILITY_PAGE]: goodPages[AVAILABILITY_PAGE].replace(
+          'yet to be made available',
+          'all released'
+        ),
+      }),
+      FIRST_SYNC
+    );
+
+    const availability = loadAvailability(fresh, SECOND_SYNC);
+
+    expect(availability.unreleasedForms).toBeNull();
+    expect(availability.species).not.toBeNull();
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringMatching(/No saved unreleasedForms availability yet .*Not hiding any/)
     );
     fresh.close();
   });
