@@ -48,18 +48,6 @@ export function getPokemonId(name: string): number | null {
   return getNormalizedNameToIdIndex().get(normalizedInput) ?? null;
 }
 
-// Same lazy-cached-once reasoning as getNormalizedNameToIdIndex() above, for
-// the id → display-name direction (dex IDs in POKEMON_NAME_TO_ID are unique,
-// so no entry ever overwrites another).
-let idToNameIndex: Map<number, string> | null = null;
-
-export function getPokemonName(id: number): string | null {
-  idToNameIndex ??= new Map(
-    Object.entries(POKEMON_NAME_TO_ID).map(([pokeName, pokeId]) => [pokeId, pokeName])
-  );
-  return idToNameIndex.get(id) ?? null;
-}
-
 // Same lazy-cached-once reasoning as getNormalizedNameToIdIndex() above —
 // POKEMON_FAMILY_ID is a static ~1000-entry constant, so normalizing every
 // name is worth doing exactly once rather than on every getFamilyMemberNames()

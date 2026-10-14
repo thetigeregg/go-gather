@@ -16,12 +16,12 @@
       <div slot="content">
         @for (value of values; track $index; let i = $index) {
           <ion-item>
-            <ion-label class="ion-text-wrap">{{ labelFn(value) }}</ion-label>
+            <ion-label class="ion-text-wrap">{{ value }}</ion-label>
             <ion-button
               slot="end"
               fill="clear"
               color="danger"
-              [attr.aria-label]="'Remove ' + labelFn(value)"
+              [attr.aria-label]="'Remove ' + value"
               (mousedown)="keepInputFocus($event)"
               (click)="confirmRemove(i)"
             >

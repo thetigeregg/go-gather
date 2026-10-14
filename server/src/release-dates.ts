@@ -147,20 +147,16 @@ class FormTargetMap<T> {
  * entries they map to — so a form released since it was listed is dated by
  * its own row, not its species' or region's earlier debut. */
 function mappedFormDates(availability: LoadedAvailability): FormTargetMap<Dated> {
-  const earliest = new Map<string, { target: FormTarget; dated: Dated }>();
+  const earliest = new Map<string, { target: FormTarget; releasedOn: string }>();
   for (const { dexNr, formCode, releasedOn } of availability.species ?? []) {
     const target = formTargetFor(dexNr, formCode);
     if (target) {
-      const key = formTargetKey(target);
-      const existing = earliest.get(key);
-      if (!existing || releasedOn < existing.dated.releasedOn) {
-        earliest.set(key, { target, dated: { releasedOn } });
-      }
+      keepEarliest(earliest, formTargetKey(target), { target, releasedOn });
     }
   }
   const dates = new FormTargetMap<Dated>();
-  for (const { target, dated } of earliest.values()) {
-    dates.add(target, dated);
+  for (const { target, releasedOn } of earliest.values()) {
+    dates.add(target, { releasedOn });
   }
   return dates;
 }

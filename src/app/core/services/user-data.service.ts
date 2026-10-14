@@ -32,6 +32,25 @@ export const REGION_BY_GENERATION: Record<number, UnifiedRegion> = {
  * the source of truth (Phase 4), but writes now go through the local-first
  * outbox rather than a direct PUT.
  */
+/** A settings object as stored by an install from before these settings
+ * were retired (replaced by Bulbapedia release data). */
+type SettingsWithRetired = UserSettings & {
+  excludedDexNumbers?: unknown;
+  excludedShinyDexNumbers?: unknown;
+};
+
+/** Drops retired settings from settings read back from storage, so a value
+ * saved (or replayed by a sync pull) before they were retired isn't kept in
+ * memory and re-saved and re-synced with every later settings change. */
+function withoutRetiredSettings(settings: SettingsWithRetired): UserSettings {
+  const {
+    excludedDexNumbers: _excludedDexNumbers,
+    excludedShinyDexNumbers: _excludedShinyDexNumbers,
+    ...current
+  } = settings;
+  return current;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -59,10 +78,11 @@ export class UserDataService {
    * settings object persisted before a new field existed — every existing
    * install, or any fresh sync-pull replaying pre-upgrade history — gets that
    * field backfilled instead of leaving it `undefined` for downstream code
-   * that assumes it's always present. */
+   * that assumes it's always present. Retired fields are dropped the same
+   * way (see withoutRetiredSettings). */
   loadSettings(): Observable<UserSettings> {
     return from(this.repository.getSettings()).pipe(
-      map((settings) => ({ ...DEFAULT_SETTINGS, ...settings })),
+      map((settings) => withoutRetiredSettings({ ...DEFAULT_SETTINGS, ...settings })),
       tap((settings) => (this.userSettings = settings))
     );
   }

@@ -689,21 +689,21 @@ export function parseShinyReleases(shinyPage: string): DatedShinyRelease[] {
     }
     const dynamax = SHINY_DYNAMAX_FLAG.test(cells);
     const notes = shinyDateNotes(dateCell);
-    const unmatched = new Set(notes.names);
-    const noteFor = (dates: Map<string, string>, key: string, name: string) => {
-      const date = dates.get(key);
-      if (date) {
-        unmatched.delete(name);
+    const used = new Set<NotedDate>();
+    const noteFor = (dates: Map<string, NotedDate>, key: string) => {
+      const note = dates.get(key);
+      if (note) {
+        used.add(note);
       }
-      return date;
+      return note?.releasedOn;
     };
 
     for (const { dexNr, formCode, name } of pokemon) {
       const megaSuffix = MEGA_CODES[formCode];
       const noted = formCode.endsWith(GIGANTAMAX_CODE_SUFFIX)
-        ? noteFor(notes.gigantamax, name, name)
+        ? noteFor(notes.gigantamax, name)
         : megaSuffix
-          ? noteFor(notes.mega, `${name}|${megaSuffix}`, name)
+          ? noteFor(notes.mega, `${name}|${megaSuffix}`)
           : undefined;
       const release: DatedShinyRelease = {
         dexNr,
@@ -713,13 +713,20 @@ export function parseShinyReleases(shinyPage: string): DatedShinyRelease[] {
       };
       if (dynamax) {
         release.dynamaxReleasedOn =
-          noteFor(notes.dynamax, name, name) ?? notes.familyDynamax ?? releasedOn;
+          noteFor(notes.dynamax, name) ?? notes.familyDynamax ?? releasedOn;
       }
       mergeShinyRelease(releases, release);
     }
-    if (unmatched.size > 0) {
+    // A note no code used names a Pokemon not in the row, or one whose form
+    // isn't (a typo, or a format this parser doesn't read) — say which, since
+    // the affected shiny then keeps the earlier row date.
+    const unused = [...notes.gigantamax.values(), ...notes.mega.values(), ...notes.dynamax.values()]
+      .filter((note) => !used.has(note))
+      .map((note) => `"${note.label}"`);
+    const unread = notes.unrecognized.map((part) => `"${part}"`);
+    if (unused.length > 0 || unread.length > 0) {
       console.warn(
-        `Bulbapedia: shiny ${family} notes dates for ${[...unmatched].join(', ')}, not in its row — using the row date.`
+        `Bulbapedia: shiny ${family} has date notes it can't apply (${[...unused, ...unread].join(', ')}) — using the row date.`
       );
     }
   }
@@ -741,17 +748,25 @@ function withRowRegion(pokemon: PokemonCode[], args: string[], rowDex: number): 
   );
 }
 
+/** A dated note in a shiny row, with its original wording for warnings. */
+interface NotedDate {
+  releasedOn: string;
+  label: string;
+}
+
 interface ShinyDateNotes {
   /** By Pokemon name. */
-  gigantamax: Map<string, string>;
+  gigantamax: Map<string, NotedDate>;
   /** Keyed `name|suffix` (`Charizard|MEGA_X`, `Kyogre|PRIMAL`). */
-  mega: Map<string, string>;
+  mega: Map<string, NotedDate>;
   /** By Pokemon name, from "(Dynamax <name>)". */
-  dynamax: Map<string, string>;
+  dynamax: Map<string, NotedDate>;
   /** From a plain "(Dynamax)" note: the whole family's shiny Dynamax. */
   familyDynamax?: string;
-  /** Every Pokemon a note names, to report any not in the row. */
-  names: string[];
+  /** Parts after a Max/Mega note that match no note format — likely a
+   * shorthand list ("Mega Charizard X & Y", "Dynamax Hitmonlee &
+   * Hitmonchan") this parser doesn't expand. */
+  unrecognized: string[];
 }
 
 /**
@@ -766,21 +781,17 @@ function shinyDateNotes(dateCell: string): ShinyDateNotes {
     gigantamax: new Map(),
     mega: new Map(),
     dynamax: new Map(),
-    names: [],
-  };
-  const keep = (dates: Map<string, string>, key: string, date: string) => {
-    const existing = dates.get(key);
-    if (!existing || date < existing) {
-      dates.set(key, date);
-    }
+    unrecognized: [],
   };
   for (const [, dateText, noteText] of dateCell.matchAll(SHINY_DATE_NOTE)) {
     const date = parseReleaseDate(dateText);
     if (!date) {
       continue;
     }
+    let afterMaxNote = false;
     for (const part of noteText.replace(TOOLTIP_TEMPLATE, '$1').split(NOTE_PART_SEPARATOR)) {
       const text = part.trim();
+      const noted = { releasedOn: date, label: text };
       const dynamaxNote = DYNAMAX_NOTE.exec(text);
       const gigantamaxNote = GIGANTAMAX_NOTE.exec(text);
       const megaNote = MEGA_NOTE.exec(text);
@@ -788,22 +799,24 @@ function shinyDateNotes(dateCell: string): ShinyDateNotes {
       if (dynamaxNote) {
         const name = dynamaxNote[1] as string | undefined;
         if (name) {
-          keep(notes.dynamax, name, date);
-          notes.names.push(name);
+          keepEarliest(notes.dynamax, name, noted);
         } else if (!notes.familyDynamax || date < notes.familyDynamax) {
           notes.familyDynamax = date;
         }
       } else if (gigantamaxNote) {
-        keep(notes.gigantamax, gigantamaxNote[1], date);
-        notes.names.push(gigantamaxNote[1]);
+        keepEarliest(notes.gigantamax, gigantamaxNote[1], noted);
       } else if (megaNote) {
         const suffix = megaNote[2] ? `MEGA_${megaNote[2]}` : 'MEGA';
-        keep(notes.mega, `${megaNote[1]}|${suffix}`, date);
-        notes.names.push(megaNote[1]);
+        keepEarliest(notes.mega, `${megaNote[1]}|${suffix}`, noted);
       } else if (primalNote) {
-        keep(notes.mega, `${primalNote[1]}|PRIMAL`, date);
-        notes.names.push(primalNote[1]);
+        keepEarliest(notes.mega, `${primalNote[1]}|PRIMAL`, noted);
+      } else {
+        if (afterMaxNote && text) {
+          notes.unrecognized.push(text);
+        }
+        continue;
       }
+      afterMaxNote = true;
     }
   }
   return notes;

@@ -62,6 +62,24 @@ describe('UserDataService', () => {
     expect(service.getUserSettings().disabledSeasonDailyBonusDays).toEqual([]);
   });
 
+  it('loadSettings drops retired settings stored by an older install, so they are not re-saved', async () => {
+    const repository = TestBed.inject(LocalUserDataRepository);
+    await repository.updateSettings({
+      ...DEFAULT_SETTINGS,
+      excludedNamePatterns: ['kept'],
+      excludedDexNumbers: [493],
+      excludedShinyDexNumbers: [25],
+    } as unknown as typeof DEFAULT_SETTINGS);
+
+    await new Promise((resolve) => {
+      service.loadSettings().subscribe(resolve);
+    });
+
+    expect(service.getUserSettings().excludedNamePatterns).toEqual(['kept']);
+    expect(service.getUserSettings()).not.toHaveProperty('excludedDexNumbers');
+    expect(service.getUserSettings()).not.toHaveProperty('excludedShinyDexNumbers');
+  });
+
   it('setEntryState updates in-memory state immediately and persists via the repository', async () => {
     service.setEntryState('bulbasaur-regular', true);
 

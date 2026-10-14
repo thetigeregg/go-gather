@@ -745,6 +745,46 @@ describe('parseShinyReleases', () => {
     expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('Venasaur'));
   });
 
+  it('warns about a shorthand note list it can only partly read', () => {
+    const releases = parseShinyReleases(
+      shinyPage([
+        shinyRow({
+          dex: 4,
+          family: 'Charmander',
+          encounter: ['0004 s|Charmander'],
+          evolution: ['0006MX s|Charizard', '0006MY s|Charizard'],
+          date: 'May 19, 2018',
+          notes: [{ date: 'August 27, 2020', text: 'Mega Charizard X & Y' }],
+        }),
+      ])
+    );
+
+    expect(releases.find((r) => r.formCode === 'MX')?.releasedOn).toBe('2020-08-27');
+    expect(releases.find((r) => r.formCode === 'MY')?.releasedOn).toBe('2018-05-19');
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('"Y"'));
+  });
+
+  it('warns about a note for a form the row lacks, even when the Pokemon has another note', () => {
+    parseShinyReleases(
+      shinyPage([
+        shinyRow({
+          dex: 4,
+          family: 'Charmander',
+          encounter: ['0004 s|Charmander'],
+          evolution: ['0006M s|Charizard'],
+          date: 'May 19, 2018',
+          notes: [
+            { date: 'August 27, 2020', text: 'Mega Charizard' },
+            { date: 'October 26, 2024', text: 'Gigantamax Charizard' },
+          ],
+        }),
+      ])
+    );
+
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('"Gigantamax Charizard"'));
+  });
+
   it("gives a regional row's own plain code its region letter, but not other species'", () => {
     const releases = parseShinyReleases(
       shinyPage([
