@@ -147,12 +147,21 @@ describe('parseDynamaxReleases', () => {
     expect(console.warn).toHaveBeenCalledWith(expect.stringContaining(warning));
   });
 
-  it('skips rows with an unreadable date and warns', () => {
-    const releases = parseDynamaxReleases(dynamaxPage([row('TBA', '{{MSP/GO|0483|Dialga}}')]));
+  it.each(['TBA', 'tbd (summer)'])('skips rows with an unscheduled %s date and warns', (date) => {
+    const releases = parseDynamaxReleases(dynamaxPage([row(date, '{{MSP/GO|0483|Dialga}}')]));
 
     expect(releases.some((r) => r.dexNr === 483)).toBe(false);
-    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('"TBA"'));
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining(`"${date}"`));
   });
+
+  it.each(['Sometime 2026', '2026-06-01', 'Foo 1, 2026'])(
+    'throws on a row with an unreadable %s date',
+    (date) => {
+      expect(() =>
+        parseDynamaxReleases(dynamaxPage([row(date, '{{MSP/GO|0483|Dialga}}')]))
+      ).toThrow(/unreadable release date/);
+    }
+  );
 
   it('reads inline cells and cells wrapped onto following lines', () => {
     const releases = parseDynamaxReleases(

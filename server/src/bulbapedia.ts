@@ -78,6 +78,8 @@ const FORM_CODES: Partial<Record<number, Record<string, string | null>>> = {
 
 const MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
 const RELEASE_DATE = /^([A-Za-z]{3})[A-Za-z]*\.? (\d{1,2}), (\d{4})/;
+// A date cell for a release that's announced but not yet scheduled.
+const UNSCHEDULED_DATE = /^(?:TBA|TBD)\b/i;
 const MSP_GO_TEMPLATE = /\{\{MSP\/GO\|([^}]*)\}\}/g;
 // `0892R`, `0003GMax s`, `0521 f`: a 4-digit dex number, optional form
 // letters, then optional space-separated modifiers (shiny/female) that don't
@@ -199,8 +201,11 @@ function parseTableRows(tableLines: string[]): TableRow[] {
  * Reads the first wikitable in a section as `Date | Pokemon | Notes` rows.
  * Only the first table counts: the Gigantamax section follows its release
  * table with a second "yet to be released" table that must not be read as
- * released. A row layout this parser doesn't understand throws rather than
- * being skipped, since a silently dropped row is a silently missing release.
+ * released. A row layout or date this parser doesn't understand throws
+ * rather than being skipped, since a silently dropped row is a silently
+ * missing release — the species-count check alone wouldn't notice one lost
+ * row. Only an explicit TBA/TBD date is skipped: that release hasn't
+ * happened yet, so there's nothing to miss.
  */
 export function parseReleaseTable(section: string): ReleaseRow[] {
   const lines = section.split('\n');
@@ -220,7 +225,10 @@ export function parseReleaseTable(section: string): ReleaseRow[] {
     }
     const releasedOn = parseReleaseDate(cells[0]);
     if (!releasedOn) {
-      console.warn(`Bulbapedia: skipping release row with unreadable date "${cells[0]}".`);
+      if (!UNSCHEDULED_DATE.test(cells[0])) {
+        throw new Error(`Bulbapedia: unreadable release date "${cells[0]}"`);
+      }
+      console.warn(`Bulbapedia: skipping release row with unscheduled date "${cells[0]}".`);
       return [];
     }
     return [{ releasedOn, pokemon: parseMspGoCodes(cells[1]) }];
