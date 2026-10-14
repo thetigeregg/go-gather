@@ -38,6 +38,7 @@ interface CatalogRow {
   is_base_form: number;
   pokedex_type: string;
   order: number;
+  released_on: string | null;
 }
 
 const REGIONS: readonly Region[] = Object.values(Region);
@@ -67,6 +68,7 @@ function catalogRowToEntry(row: CatalogRow): CatalogEntry {
     isBaseForm: !!row.is_base_form,
     pokedexType: row.pokedex_type as CatalogEntry['pokedexType'],
     order: row.order,
+    releasedOn: row.released_on,
   };
 }
 

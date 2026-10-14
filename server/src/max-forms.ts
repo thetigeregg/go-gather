@@ -51,7 +51,9 @@ function gigantamaxFormSlug(form: string): string {
 /**
  * pokemon-go-api lists GIGANTAMAX assetForms by mainline-game data, not by
  * what Pokemon GO has released, so any upstream GMax form Bulbapedia
- * doesn't list as released is removed here. A species-level release keeps
+ * doesn't list at all — as released or as an announced release — is
+ * removed here. Announced ones stay: they ship with a future `releasedOn`
+ * (see release-dates.ts) and the app hides them until that date. A species-level release keeps
  * every GMax form of that species; a form-level release (e.g. Urshifu's
  * `RAPID_STRIKE`) keeps only that form's own `{FORM}_GIGANTAMAX` entry.
  */

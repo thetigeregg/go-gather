@@ -87,6 +87,52 @@ describe('SearchStringsPage', () => {
     expect(component).toBeTruthy();
   });
 
+  describe('device date rollover', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({
+        toFake: ['Date', 'setInterval', 'clearInterval'],
+        now: new Date(2026, 9, 14, 23, 59, 30),
+      });
+    });
+
+    afterEach(() => {
+      fixture.destroy();
+      vi.useRealTimers();
+    });
+
+    it('regenerates the search strings while the page is active', () => {
+      component.ionViewWillEnter();
+      expect(component.defaultConfig).toBeNull();
+
+      searchStringServiceFake.getDefaultSearchString.mockReturnValue('!shiny&+bulbasaur');
+      vi.advanceTimersByTime(60_000);
+
+      expect(searchStringServiceFake.init).toHaveBeenCalledTimes(2);
+      expect(component.defaultConfig).toEqual({
+        name: 'Default (Non-Shiny)',
+        value: '!shiny&+bulbasaur',
+      });
+    });
+
+    it('stops regenerating once the page is left', () => {
+      component.ionViewWillEnter();
+      component.ionViewWillLeave();
+
+      vi.advanceTimersByTime(60_000);
+
+      expect(searchStringServiceFake.init).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps a single date subscription across repeated enters', () => {
+      component.ionViewWillEnter();
+      component.ionViewWillEnter();
+
+      vi.advanceTimersByTime(60_000);
+
+      expect(searchStringServiceFake.init).toHaveBeenCalledTimes(3);
+    });
+  });
+
   it('leaves every section null when nothing is missing', () => {
     component.ionViewWillEnter();
 

@@ -1,4 +1,5 @@
-import { AfterViewInit, Component, OnInit, ViewChild, inject } from '@angular/core';
+import { AfterViewInit, Component, DestroyRef, OnInit, ViewChild, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin, tap } from 'rxjs';
 import {
   CdkVirtualScrollViewport,
@@ -25,6 +26,7 @@ import { UserDataService } from '../core/services/user-data.service';
 import { FilterService, Generation } from '../core/services/filter.service';
 import { SearchConfigService } from '../core/services/search-config.service';
 import { SyncService } from '../core/services/sync.service';
+import { localDateChanges } from '../core/services/catalog-release.util';
 import { GenerationHeaderRowComponent } from '../features/generation-header-row/generation-header-row.component';
 import { GatherPokemonComponent } from '../features/gather-pokemon/gather-pokemon.component';
 import { GatherRow, flattenGenerations, trackGatherRow } from './gather-row.model';
@@ -66,6 +68,7 @@ export class GatherPage implements OnInit, AfterViewInit {
   private readonly searchConfigService = inject(SearchConfigService);
   private readonly syncService = inject(SyncService);
   private readonly virtualScrollStrategy = inject(PrecomputedSizeVirtualScrollStrategy);
+  private readonly destroyRef = inject(DestroyRef);
 
   @ViewChild('searchbar') searchbarRef?: IonSearchbar;
   @ViewChild(CdkVirtualScrollViewport) viewportRef?: CdkVirtualScrollViewport;
@@ -84,6 +87,12 @@ export class GatherPage implements OnInit, AfterViewInit {
   stickyGenerationCaught = 0;
   stickyGenerationTotal = 0;
   showStickyBar = false;
+
+  /** The viewport's last reported scrolled-to row, kept so a rebuild that
+   * preserves scroll position can refresh the sticky bar itself — the
+   * strategy's `scrolledIndexChange` is `distinctUntilChanged`, so it won't
+   * re-emit when the rows change but the index doesn't. */
+  private scrolledIndex = 0;
 
   constructor() {
     addIcons({ menu, filter, search });
@@ -134,6 +143,17 @@ export class GatherPage implements OnInit, AfterViewInit {
         this.updateHeaderText();
       });
     });
+
+    // Entries are hidden until their `releasedOn` date (see
+    // catalog-release.util.ts), so re-filter when the device date rolls
+    // over — otherwise a page left open past midnight would keep hiding
+    // that day's releases until something else re-grouped it.
+    localDateChanges()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.setGenerations(this.filterService.groupPokemonByGeneration(this.userSettings), false);
+        this.updateHeaderText();
+      });
   }
 
   /** Ionic's `ion-content` finishes sizing itself asynchronously (custom
@@ -159,6 +179,8 @@ export class GatherPage implements OnInit, AfterViewInit {
    * scrolled-to row index, since a `position: sticky` header inside the
    * virtualized list would get recycled away after a few rows of scroll. */
   onScrolledIndexChange(index: number): void {
+    this.scrolledIndex = index;
+
     if (this.flatRows.length === 0) {
       this.stickyGenerationName = '';
       this.stickyGenerationCaught = 0;
@@ -223,8 +245,8 @@ export class GatherPage implements OnInit, AfterViewInit {
     if (resetScrollToTop) {
       this.onScrolledIndexChange(0);
       this.viewportRef?.scrollToIndex(0);
-    } else if (this.flatRows.length === 0) {
-      this.onScrolledIndexChange(0);
+    } else {
+      this.onScrolledIndexChange(this.scrolledIndex);
     }
   }
 

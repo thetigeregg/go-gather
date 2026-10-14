@@ -8,7 +8,12 @@
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { loadMaxReleases, syncAvailability } from './availability-store.js';
+import type { CatalogEntry } from '@go-gather/shared';
+import {
+  loadAvailability,
+  syncAvailability,
+  type LoadedAvailability,
+} from './availability-store.js';
 import { db, initSchema } from './db.js';
 import {
   backfillReleasedDynamaxForms,
@@ -24,6 +29,7 @@ import {
   fetchPokeApiSprites,
   fetchPokeApiSpritesBySlug,
 } from './pokeapi.js';
+import { stampReleaseDates } from './release-dates.js';
 import { pokedexToEntries, type RawPokemon } from './transform.js';
 
 const POKEDEX_URL = 'https://pokemon-go-api.github.io/pokemon-go-api/api/pokedex.json';
@@ -410,15 +416,20 @@ async function fetchRawPokedex(): Promise<RawPokemon[]> {
 
 /**
  * Refreshes the saved Bulbapedia availability data alongside pokedex.json,
- * then reads released DMax/GMax Pokemon from it. A Bulbapedia outage or
- * parse failure only leaves the saved data as it was (see
- * availability-store.ts) — the sync carries on with it. It only aborts,
- * before upsertCatalog, if no availability data has ever been saved.
+ * then reads it back to drive the DMax/GMax steps here and the release
+ * dates stamped in main(). A Bulbapedia outage or parse failure only leaves
+ * the saved data as it was (see availability-store.ts) — the sync carries
+ * on with it. It only aborts, before upsertCatalog, if the Dynamax or
+ * Gigantamax data has never been saved. Max releases include announced ones: those entries ship with
+ * a future `releasedOn` and the app hides them until that date.
  */
-async function fetchPokedex(): Promise<RawPokemon[]> {
+async function fetchPokedex(): Promise<{
+  pokedex: RawPokemon[];
+  availability: LoadedAvailability;
+}> {
   const overrides = await loadSyncOverrides();
   const [pokedex] = await Promise.all([fetchRawPokedex(), syncAvailability(db)]);
-  const maxReleases = loadMaxReleases(db, new Date());
+  const availability = loadAvailability(db);
   const finalEvolutionDexNrs = finalEvolutionDexNumbers(pokedex);
   const nameFixed = patchRegionFormNames(pokedex, overrides);
   const linkPatched = patchMissingAssetLinks(nameFixed, overrides);
@@ -429,15 +440,15 @@ async function fetchPokedex(): Promise<RawPokemon[]> {
     overrides
   );
   const megasBackfilled = await backfillCollidingMegaSpritesFromPokeApi(regionFormsBackfilled);
-  const gmaxFiltered = dropUnreleasedGigantamaxForms(megasBackfilled, maxReleases.gigantamax);
+  const gmaxFiltered = dropUnreleasedGigantamaxForms(megasBackfilled, availability.gigantamax);
   const gmaxBackfilled = await backfillReleasedGigantamaxForms(
     gmaxFiltered,
-    maxReleases.gigantamax,
+    availability.gigantamax,
     fetchPokeApiGigantamaxSprites
   );
   const dmaxBackfilled = backfillReleasedDynamaxForms(
     gmaxBackfilled,
-    maxReleases.dynamax,
+    availability.dynamax,
     overrides.dmaxOnlyFinalEvolution,
     finalEvolutionDexNrs
   );
@@ -446,12 +457,13 @@ async function fetchPokedex(): Promise<RawPokemon[]> {
     overrides.formSplitGigantamaxDexNumbers,
     fetchPokeApiGigantamaxSprites
   );
-  return splitDynamaxForms(
+  const dmaxSplit = splitDynamaxForms(
     gmaxSplit,
-    maxReleases.dynamax,
+    availability.dynamax,
     overrides.dmaxOnlyFinalEvolution,
     finalEvolutionDexNrs
   );
+  return { pokedex: dmaxSplit, availability };
 }
 
 /**
@@ -518,16 +530,18 @@ async function downloadImages(imgUrls: readonly string[]): Promise<void> {
   console.log(`Sprites: ${downloaded} downloaded, ${skipped} already cached.`);
 }
 
-function upsertCatalog(entries: ReturnType<typeof pokedexToEntries>): void {
+function upsertCatalog(entries: CatalogEntry[]): void {
   const insert = db.prepare(`
     INSERT INTO pokemon_catalog (
       id, dex_nr, generation, species_id, form_id, name, species_name,
       img_url, is_shiny, is_female, form, costume, region,
-      primary_type, secondary_type, pokemon_class, is_base_form, pokedex_type, "order"
+      primary_type, secondary_type, pokemon_class, is_base_form, pokedex_type, "order",
+      released_on
     ) VALUES (
       @id, @dexNr, @generation, @speciesId, @formId, @name, @speciesName,
       @imgUrl, @isShiny, @isFemale, @form, @costume, @region,
-      @primaryType, @secondaryType, @pokemonClass, @isBaseForm, @pokedexType, @order
+      @primaryType, @secondaryType, @pokemonClass, @isBaseForm, @pokedexType, @order,
+      @releasedOn
     )
   `);
 
@@ -560,10 +574,10 @@ export async function main(): Promise<void> {
   initSchema();
 
   console.log('Fetching pokedex.json from pokemon-go-api...');
-  const pokedex = await fetchPokedex();
+  const { pokedex, availability } = await fetchPokedex();
   console.log(`Fetched ${pokedex.length} species entries.`);
 
-  const entries = pokedexToEntries(pokedex);
+  const entries = stampReleaseDates(pokedexToEntries(pokedex), availability);
 
   const uniqueImgUrls = [...new Set(entries.map((e) => e.imgUrl))];
   console.log(`Downloading ${uniqueImgUrls.length} unique sprites...`);

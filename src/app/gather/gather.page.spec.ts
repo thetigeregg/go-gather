@@ -56,6 +56,7 @@ describe('GatherPage', () => {
                 secondaryType: 'poison',
                 pokemonClass: null,
                 isBaseForm: true,
+                releasedOn: '2016-07-06',
                 pokedexType: 'regular',
                 order: 1,
               },
@@ -112,6 +113,62 @@ describe('GatherPage', () => {
 
     fixture = TestBed.createComponent(GatherPage);
     component = fixture.componentInstance;
+  });
+
+  it('re-groups the grid when the device date rolls over', () => {
+    vi.useFakeTimers({
+      toFake: ['Date', 'setInterval', 'clearInterval'],
+      now: new Date(2026, 9, 14, 23, 59, 30),
+    });
+    try {
+      fixture.detectChanges();
+      const callsBeforeMidnight = groupPokemonByGenerationCalls.length;
+
+      vi.advanceTimersByTime(60_000);
+
+      expect(groupPokemonByGenerationCalls).toHaveLength(callsBeforeMidnight + 1);
+      fixture.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('refreshes the sticky bar at the retained scroll index on a date-rollover rebuild', () => {
+    vi.useFakeTimers({
+      toFake: ['Date', 'setInterval', 'clearInterval'],
+      now: new Date(2026, 9, 14, 23, 59, 30),
+    });
+    try {
+      fixture.detectChanges();
+      const scrollToIndexSpy = vi.fn();
+      component.viewportRef = {
+        scrollToIndex: scrollToIndexSpy,
+        checkViewportSize: vi.fn(),
+      } as unknown as CdkVirtualScrollViewport;
+      component.onScrolledIndexChange(1);
+      expect(component.stickyGenerationTotal).toBe(1);
+
+      const [existingEntry] = generations[0].speciesList[0].entries;
+      generations = [
+        {
+          ...generations[0],
+          speciesList: [
+            {
+              ...generations[0].speciesList[0],
+              entries: [existingEntry, { ...existingEntry, id: 'bulbasaur-shiny', isShiny: true }],
+            },
+          ],
+        },
+      ];
+      vi.advanceTimersByTime(60_000);
+
+      expect(component.stickyGenerationTotal).toBe(2);
+      expect(component.showStickyBar).toBe(true);
+      expect(scrollToIndexSpy).not.toHaveBeenCalled();
+      fixture.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('hydrates the catalog grid and header count on init', () => {

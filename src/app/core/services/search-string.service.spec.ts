@@ -30,6 +30,7 @@ function makeEntry(overrides: Partial<CatalogEntry> = {}): CatalogEntry {
     secondaryType: 'poison',
     pokemonClass: null,
     isBaseForm: true,
+    releasedOn: '2016-07-06',
     pokedexType: 'regular',
     order: 1,
     ...overrides,
@@ -100,6 +101,29 @@ describe('SearchStringService', () => {
     service.init();
 
     expect(service.getDefaultSearchString()).toBe('!shiny&+bulbasaur,+ivysaur&!#Living Dex');
+  });
+
+  it('leaves unreleased and not-yet-released entries out of search strings', () => {
+    vi.useFakeTimers({ toFake: ['Date'], now: new Date(2026, 9, 14, 12) });
+    catalog = [
+      makeEntry(),
+      makeEntry({
+        id: 'ivysaur',
+        speciesName: 'Ivysaur',
+        speciesId: 'ivysaur',
+        releasedOn: '2026-10-15',
+      }),
+      makeEntry({
+        id: 'venusaur',
+        speciesName: 'Venusaur',
+        speciesId: 'venusaur',
+        releasedOn: null,
+      }),
+    ];
+    service.init();
+    vi.useRealTimers();
+
+    expect(service.getDefaultSearchString()).toBe('!shiny&+bulbasaur&!#Living Dex');
   });
 
   it('excludes already-caught entries from the default search string', () => {
