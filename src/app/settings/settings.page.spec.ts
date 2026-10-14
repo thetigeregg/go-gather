@@ -128,8 +128,8 @@ describe('SettingsPage', () => {
   it('dexNumbersChanged drops non-numeric entries before storing', () => {
     component.dexNumbersChanged(['493', 'not-a-number', '7']);
 
-    expect(component.dexNumbers).toEqual(['493', '7']);
-    expect(updateUserSettingsCalls).toEqual([{ excludedDexNumbers: [493, 7] }]);
+    expect(component.dexNumbers).toEqual(['7', '493']);
+    expect(updateUserSettingsCalls).toEqual([{ excludedDexNumbers: [7, 493] }]);
   });
 
   it('shinyDexNumbersChanged drops non-numeric entries before storing', () => {
@@ -137,6 +137,52 @@ describe('SettingsPage', () => {
 
     expect(component.shinyDexNumbers).toEqual(['25']);
     expect(updateUserSettingsCalls).toEqual([{ excludedShinyDexNumbers: [25] }]);
+  });
+
+  it('dexNumbersChanged resolves Pokemon names to dex numbers and dedupes', () => {
+    component.dexNumbersChanged(['493', ' pikachu ', 'Not A Pokemon', '25']);
+
+    expect(component.dexNumbers).toEqual(['25', '493']);
+    expect(updateUserSettingsCalls).toEqual([{ excludedDexNumbers: [25, 493] }]);
+  });
+
+  it('shinyDexNumbersChanged resolves Pokemon names to dex numbers and dedupes', () => {
+    component.shinyDexNumbersChanged(['25', 'Pikachu', 'Nidoran♀']);
+
+    expect(component.shinyDexNumbers).toEqual(['25', '29']);
+    expect(updateUserSettingsCalls).toEqual([{ excludedShinyDexNumbers: [25, 29] }]);
+  });
+
+  it('dexNumbersChanged sorts numerically and treats leading zeros as the same number', () => {
+    component.dexNumbersChanged(['150', '9', '025', '25', '1000']);
+
+    expect(component.dexNumbers).toEqual(['9', '25', '150', '1000']);
+    expect(updateUserSettingsCalls).toEqual([{ excludedDexNumbers: [9, 25, 150, 1000] }]);
+  });
+
+  it('shinyDexNumbersChanged sorts numerically', () => {
+    component.shinyDexNumbersChanged(['133', 'Bulbasaur', '25']);
+
+    expect(component.shinyDexNumbers).toEqual(['1', '25', '133']);
+    expect(updateUserSettingsCalls).toEqual([{ excludedShinyDexNumbers: [1, 25, 133] }]);
+  });
+
+  it('sorts unsorted stored dex numbers when hydrating', () => {
+    userSettings.excludedDexNumbers = [493, 7, 150];
+    userSettings.excludedShinyDexNumbers = [25, 1];
+
+    component.ionViewWillEnter();
+
+    expect(component.dexNumbers).toEqual(['7', '150', '493']);
+    expect(component.shinyDexNumbers).toEqual(['1', '25']);
+  });
+
+  it('dexNumberLabel shows the Pokemon name alongside a known dex number', () => {
+    expect(component.dexNumberLabel('25')).toBe('#25 · Pikachu');
+  });
+
+  it('dexNumberLabel falls back to the bare number for an unknown dex number', () => {
+    expect(component.dexNumberLabel('99999')).toBe('#99999');
   });
 
   describe('notifications', () => {
