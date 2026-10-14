@@ -10,6 +10,10 @@ ion-input {
 ion-accordion-group {
   margin-top: 12px;
 
+  ion-item[slot='header'] {
+    --padding-start: 8px;
+  }
+
   [slot='content'] ion-item {
     --inner-padding-end: 0;
   }
