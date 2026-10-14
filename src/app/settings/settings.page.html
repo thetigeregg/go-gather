@@ -185,4 +185,62 @@
       </div>
     </ion-card-content>
   </ion-card>
+
+  <ion-card>
+    <ion-card-header>
+      <ion-card-title>Bulbapedia data</ion-card-title>
+    </ion-card-header>
+    <ion-card-content>
+      <p class="settings-hint">
+        Which Pokémon, forms and shinies are out in Pokémon GO comes from Bulbapedia, refreshed by
+        the server with each catalog sync.
+      </p>
+      @if (availabilityStatusUnavailable) {
+        <p class="settings-hint">
+          @if (availabilityStatus) {
+            Couldn't refresh — showing the status from your last visit.
+          } @else {
+            Status unavailable — the server couldn't be reached.
+          }
+        </p>
+      }
+      @if (availabilityStatus) {
+        @for (status of availabilityStatus; track status.dataset) {
+          <ion-item lines="none" class="availability-status">
+            <ion-label>
+              <h3>{{ datasetLabel(status.dataset) }}</h3>
+              <p>
+                @if (status.fetchedAt) {
+                  Updated {{ status.fetchedAt | date: 'd MMM y, HH:mm' }}
+                } @else {
+                  Never fetched
+                }
+              </p>
+              @if (status.lastError) {
+                <ion-note color="danger" class="availability-note">
+                  Last update failed: {{ status.lastError }}
+                </ion-note>
+              }
+              @if (status.stale) {
+                <ion-note color="warning" class="availability-note">
+                  Not updated for over a week
+                </ion-note>
+              }
+            </ion-label>
+          </ion-item>
+        }
+      }
+      <!-- No punctuation right after the links, and each link kept short
+           enough for one line: formatting otherwise moves text onto its own
+           line, which renders as stray spaces. -->
+      <p class="settings-hint availability-attribution">
+        Source:
+        <a [href]="bulbapediaUrl" target="_blank" rel="noopener">Bulbapedia</a>
+      </p>
+      <p class="settings-hint availability-attribution">
+        License:
+        <a [href]="licenseUrl" target="_blank" rel="noopener">CC BY-NC-SA 2.5</a>
+      </p>
+    </ion-card-content>
+  </ion-card>
 </ion-content>

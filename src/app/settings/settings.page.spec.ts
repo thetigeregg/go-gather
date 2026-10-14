@@ -1,9 +1,16 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
-import { of, throwError } from 'rxjs';
-import { DEFAULT_SETTINGS, ExportBundle, ProgressEntry, UserSettings } from '@go-gather/shared';
+import { of, Subject, throwError } from 'rxjs';
+import {
+  AvailabilityStatus,
+  DEFAULT_SETTINGS,
+  ExportBundle,
+  ProgressEntry,
+  UserSettings,
+} from '@go-gather/shared';
 import { ToastController } from '@ionic/angular/standalone';
 import { SettingsPage } from './settings.page';
+import { AvailabilityStatusService } from '../core/services/availability-status.service';
 import { NotificationService } from '../core/services/notification.service';
 import { UserDataService } from '../core/services/user-data.service';
 import { ChipListInputComponent } from '../features/chip-list-input/chip-list-input.component';
@@ -29,6 +36,16 @@ describe('SettingsPage', () => {
   let isPushSupportedMock: ReturnType<typeof vi.fn>;
   let requestPermissionAndRegisterMock: ReturnType<typeof vi.fn>;
   let unregisterCurrentDeviceMock: ReturnType<typeof vi.fn>;
+  let loadStatusMock: ReturnType<typeof vi.fn>;
+  const availabilityStatus: AvailabilityStatus[] = [
+    {
+      dataset: 'shiny',
+      fetchedAt: '2026-10-01T08:00:00.000Z',
+      lastAttemptAt: '2026-10-02T08:00:00.000Z',
+      lastError: 'Bulbapedia: 503',
+      stale: false,
+    },
+  ];
 
   beforeEach(async () => {
     userSettings = {
@@ -57,6 +74,8 @@ describe('SettingsPage', () => {
       .fn()
       .mockResolvedValue({ ok: true, message: 'Notifications disabled on this device.' });
 
+    loadStatusMock = vi.fn(() => of(availabilityStatus));
+
     TestBed.configureTestingModule({
       providers: [
         {
@@ -79,6 +98,7 @@ describe('SettingsPage', () => {
           },
         },
         { provide: ToastController, useValue: { create: toastCreateSpy } },
+        { provide: AvailabilityStatusService, useValue: { loadStatus: loadStatusMock } },
       ],
     });
     TestBed.overrideComponent(SettingsPage, { set: { template: '<div></div>', styleUrls: [] } });
@@ -94,6 +114,54 @@ describe('SettingsPage', () => {
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('loads the Bulbapedia data status on ionViewWillEnter', () => {
+    component.ionViewWillEnter();
+
+    expect(loadStatusMock).toHaveBeenCalledTimes(1);
+    expect(component.availabilityStatus).toEqual(availabilityStatus);
+    expect(component.availabilityStatusUnavailable).toBe(false);
+  });
+
+  it('marks the status unavailable when the first request fails, and recovers on the next visit', () => {
+    loadStatusMock.mockReturnValueOnce(throwError(() => new Error('offline')));
+
+    component.ionViewWillEnter();
+    expect(component.availabilityStatus).toBeNull();
+    expect(component.availabilityStatusUnavailable).toBe(true);
+
+    component.ionViewWillEnter();
+    expect(component.availabilityStatus).toEqual(availabilityStatus);
+    expect(component.availabilityStatusUnavailable).toBe(false);
+  });
+
+  it('keeps the status from an earlier visit when a refresh fails', () => {
+    component.ionViewWillEnter();
+    loadStatusMock.mockReturnValueOnce(throwError(() => new Error('offline')));
+
+    component.ionViewWillEnter();
+
+    expect(component.availabilityStatus).toEqual(availabilityStatus);
+    expect(component.availabilityStatusUnavailable).toBe(true);
+  });
+
+  it("doesn't let a slow earlier request overwrite a newer one", () => {
+    const slowRequest = new Subject<AvailabilityStatus[]>();
+    loadStatusMock.mockReturnValueOnce(slowRequest);
+
+    component.ionViewWillEnter();
+    component.ionViewWillEnter();
+    slowRequest.next([]);
+
+    expect(component.availabilityStatus).toEqual(availabilityStatus);
+  });
+
+  it('labels known datasets and falls back to the raw name for others', () => {
+    expect(component.datasetLabel('species')).toBe('Released Pokémon');
+    expect(component.datasetLabel('mega')).toBe('Mega & Primal forms');
+    expect(component.datasetLabel('unreleasedForms')).toBe('Unreleased forms');
+    expect(component.datasetLabel('somethingNew')).toBe('somethingNew');
   });
 
   it('hydrates the 5 fields from UserDataService on ionViewWillEnter', () => {

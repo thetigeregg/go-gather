@@ -6,6 +6,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { CatalogEntry, PogoEvent, Season, UserSettings } from '@go-gather/shared';
 import { Region } from '@go-gather/shared';
+import { availabilityStatus } from './availability-store.js';
 import { maybeBackupAfterModifications } from './backup.js';
 import { db } from './db.js';
 import { registerNotificationRoutes } from './notifications.js';
@@ -315,6 +316,10 @@ export function buildApp() {
     const overrides = JSON.parse(raw) as { costumeGenderEnabled: boolean };
     return { costumeGenderEnabled: overrides.costumeGenderEnabled };
   });
+
+  // Health of each saved Bulbapedia dataset for the Settings status card —
+  // read live per request, like search-config, not cached or synced.
+  app.get('/api/availability-status', () => availabilityStatus(db));
 
   // Local-first sync: the client is the one deciding what to write (via its
   // own outbox); this route's job is just idempotent apply + append to the

@@ -1,6 +1,7 @@
 import BetterSqlite3 from 'better-sqlite3';
 import {
   AVAILABILITY_SOURCES_SCHEMA,
+  availabilityStatus,
   loadAvailability,
   syncAvailability,
 } from './availability-store';
@@ -396,5 +397,60 @@ describe('loadAvailability', () => {
       /No saved dynamax availability yet .*last error: none recorded/
     );
     fresh.close();
+  });
+});
+
+describe('availabilityStatus', () => {
+  const datasets = ['dynamax', 'gigantamax', 'species', 'mega', 'shiny', 'unreleasedForms'];
+
+  it('lists every dataset as never fetched, and not stale, before any sync', () => {
+    expect(availabilityStatus(database, FIRST_SYNC)).toEqual(
+      datasets.map((dataset) => ({
+        dataset,
+        fetchedAt: null,
+        lastAttemptAt: null,
+        lastError: null,
+        stale: false,
+      }))
+    );
+  });
+
+  it('shows a fresh successful fetch', async () => {
+    await syncAvailability(database, pageFetcher(goodPages), FIRST_SYNC);
+
+    const status = availabilityStatus(database, SECOND_SYNC);
+
+    expect(status.map((s) => s.dataset)).toEqual(datasets);
+    expect(status[0]).toEqual({
+      dataset: 'dynamax',
+      fetchedAt: FIRST_SYNC.toISOString(),
+      lastAttemptAt: FIRST_SYNC.toISOString(),
+      lastError: null,
+      stale: false,
+    });
+  });
+
+  it('keeps the last good fetch alongside a failed attempt', async () => {
+    await syncAvailability(database, pageFetcher(goodPages), FIRST_SYNC);
+    await syncAvailability(
+      database,
+      pageFetcher({ ...goodPages, [SHINY_PAGE]: new Error('Bulbapedia: 503') }),
+      SECOND_SYNC
+    );
+
+    expect(availabilityStatus(database, SECOND_SYNC).find((s) => s.dataset === 'shiny')).toEqual({
+      dataset: 'shiny',
+      fetchedAt: FIRST_SYNC.toISOString(),
+      lastAttemptAt: SECOND_SYNC.toISOString(),
+      lastError: 'Bulbapedia: 503',
+      stale: false,
+    });
+  });
+
+  it('marks data stale from a week old', async () => {
+    await syncAvailability(database, pageFetcher(goodPages), FIRST_SYNC);
+
+    expect(availabilityStatus(database, new Date('2026-10-07T12:00:00Z'))[0].stale).toBe(false);
+    expect(availabilityStatus(database, new Date('2026-10-08T08:00:00Z'))[0].stale).toBe(true);
   });
 });

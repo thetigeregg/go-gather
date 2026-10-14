@@ -1,4 +1,6 @@
+import { DatePipe } from '@angular/common';
 import { Component, inject } from '@angular/core';
+import { Subscription } from 'rxjs';
 import {
   IonHeader,
   IonToolbar,
@@ -19,12 +21,14 @@ import {
   IonDatetime,
   IonDatetimeButton,
   IonModal,
+  IonNote,
   ToastController,
   ViewWillEnter,
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { download, share } from 'ionicons/icons';
-import { DEFAULT_SETTINGS, ExportBundle } from '@go-gather/shared';
+import { AvailabilityStatus, DEFAULT_SETTINGS, ExportBundle } from '@go-gather/shared';
+import { AvailabilityStatusService } from '../core/services/availability-status.service';
 import { NotificationService } from '../core/services/notification.service';
 import { UserDataService } from '../core/services/user-data.service';
 import { getPokemonId, getPokemonName } from '../core/services/pokemon-sprite-mapper.util';
@@ -36,6 +40,18 @@ import { pickJsonTextFile } from '../core/utils/pick-file.util';
  * arbitrary fixed date is only ever used as a wrapper so the time picker has
  * a full ISO value to bind to; only the "HH:mm" substring is ever persisted. */
 const ALL_DAY_TIME_PICKER_DATE = '2000-01-01';
+
+/** Display names for the server's Bulbapedia datasets (see
+ * server/src/bulbapedia.ts's AVAILABILITY_DATASETS). A dataset added later
+ * that isn't listed here is shown by its raw name. */
+const DATASET_LABELS: Partial<Record<string, string>> = {
+  dynamax: 'Dynamax',
+  gigantamax: 'Gigantamax',
+  species: 'Released Pokémon',
+  mega: 'Mega & Primal forms',
+  shiny: 'Shinies',
+  unreleasedForms: 'Unreleased forms',
+};
 
 /** Dex exclusion lists are shown in ascending dex order — including lists
  * saved before sorting existed, hence also applied on hydration. */
@@ -67,12 +83,15 @@ function sortedDexNumberStrings(dexNumbers: readonly number[]): string[] {
     IonDatetime,
     IonDatetimeButton,
     IonModal,
+    IonNote,
+    DatePipe,
     ChipListInputComponent,
   ],
 })
 export class SettingsPage implements ViewWillEnter {
   private readonly userDataService = inject(UserDataService);
   private readonly notificationService = inject(NotificationService);
+  private readonly availabilityStatusService = inject(AvailabilityStatusService);
   private readonly toastController = inject(ToastController);
 
   patterns: string[] = [];
@@ -80,6 +99,14 @@ export class SettingsPage implements ViewWillEnter {
   shinyDexNumbers: string[] = [];
   shinyPatterns: string[] = [];
   userTags: string[] = [];
+
+  availabilityStatus: AvailabilityStatus[] | null = null;
+  readonly bulbapediaUrl = 'https://bulbapedia.bulbagarden.net/';
+  readonly licenseUrl = 'https://creativecommons.org/licenses/by-nc-sa/2.5/';
+
+  /** The latest request failed; any status shown is from an earlier visit. */
+  availabilityStatusUnavailable = false;
+  private availabilityStatusRequest?: Subscription;
 
   notificationsSupported = false;
   notificationsEnabled = false;
@@ -93,6 +120,29 @@ export class SettingsPage implements ViewWillEnter {
 
   ionViewWillEnter(): void {
     this.refreshFromUserSettings();
+    this.loadAvailabilityStatus();
+  }
+
+  /** Display name for a Bulbapedia dataset in the status card. */
+  datasetLabel(dataset: string): string {
+    return DATASET_LABELS[dataset] ?? dataset;
+  }
+
+  /** Re-read on every visit, since it reflects the server's latest syncs.
+   * A newer visit cancels an older request still in flight, so a slow
+   * response can't overwrite a newer one. A failed request (offline, server
+   * down) keeps the status from an earlier visit and only affects this card. */
+  private loadAvailabilityStatus(): void {
+    this.availabilityStatusRequest?.unsubscribe();
+    this.availabilityStatusRequest = this.availabilityStatusService.loadStatus().subscribe({
+      next: (status) => {
+        this.availabilityStatus = status;
+        this.availabilityStatusUnavailable = false;
+      },
+      error: () => {
+        this.availabilityStatusUnavailable = true;
+      },
+    });
   }
 
   async notificationsEnabledChanged(event: CustomEvent<{ checked: boolean }>): Promise<void> {
