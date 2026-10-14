@@ -389,11 +389,10 @@ describe('parseMegaReleases', () => {
     expect(releases.some((r) => r.dexNr === 36 || r.dexNr === 359)).toBe(false);
   });
 
-  it('keeps an unmapped code as a species-level release, and warns', () => {
-    const releases = parse([row('Mar 1, 2027', '{{MSP/GO|0978DM|Tatsugiri}}')]);
-
-    expect(releases).toContainEqual({ dexNr: 978, form: null, releasedOn: '2027-03-01' });
-    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('"0978DM"'));
+  it('throws on an unmapped code rather than dating every Mega of the species', () => {
+    expect(() => parse([row('Mar 1, 2027', '{{MSP/GO|0978DM|Tatsugiri}}')])).toThrow(
+      /no Mega mapping for "0978DM"/
+    );
   });
 
   it('throws when far fewer species than expected are parsed', () => {

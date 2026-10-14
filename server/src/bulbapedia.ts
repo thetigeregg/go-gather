@@ -77,10 +77,10 @@ export type MaxRelease = FormRelease;
 export type DatedMaxRelease = DatedFormRelease;
 
 /** A Mega/Primal release. `form` is the Mega's form suffix (`MEGA`,
- * `MEGA_X`, `PRIMAL`, …), or null when Bulbapedia's code isn't mapped — a
- * release for that species' Megas when none of its codes are mapped (see
- * release-dates.ts). */
-export type DatedMegaRelease = DatedFormRelease;
+ * `MEGA_X`, `PRIMAL`, …). */
+export interface DatedMegaRelease extends DatedFormRelease {
+  form: string;
+}
 
 export interface DatedSpeciesRelease {
   dexNr: number;
@@ -343,27 +343,23 @@ function toMaxRelease(pokemon: PokemonCode, formLetter: string): MaxRelease {
   return { dexNr: pokemon.dexNr, form: null };
 }
 
-function toMegaRelease(pokemon: PokemonCode): FormRelease {
+function toMegaRelease(pokemon: PokemonCode): FormRelease & { form: string } {
   const form = MEGA_CODES[pokemon.formCode];
-  if (form) {
-    return { dexNr: pokemon.dexNr, form };
+  if (!form) {
+    // Not safe to date as the whole species: that would release every Mega
+    // the species has. Failing the parse keeps the last good Mega data until
+    // the code is mapped.
+    throw new Error(`Bulbapedia: no Mega mapping for "${pokemon.code}"`);
   }
-  // A species-level release instead. release-dates.ts only uses it for a
-  // species with no mapped Mega codes at all, so an unknown code can date a
-  // Mega that would otherwise be hidden without spilling onto siblings that
-  // have their own rows (or were never released).
-  console.warn(
-    `Bulbapedia: no Mega mapping for "${pokemon.code}" — keeping it as a species-level Mega release.`
-  );
-  return { dexNr: pokemon.dexNr, form: null };
+  return { dexNr: pokemon.dexNr, form };
 }
 
-function releasesFromSection(
+function releasesFromSection<R extends FormRelease>(
   section: string,
   label: string,
   minSpecies: number,
-  toRelease: (pokemon: PokemonCode) => FormRelease
-): DatedFormRelease[] {
+  toRelease: (pokemon: PokemonCode) => R
+): (R & { releasedOn: string })[] {
   const rows = parseReleaseTable(section).filter(isDated);
   const speciesCount = new Set(rows.flatMap((row) => row.pokemon.map((p) => p.dexNr))).size;
   if (speciesCount < minSpecies) {
@@ -372,7 +368,7 @@ function releasesFromSection(
     );
   }
 
-  const releases = new Map<string, DatedFormRelease>();
+  const releases = new Map<string, R & { releasedOn: string }>();
   for (const row of rows) {
     for (const pokemon of row.pokemon) {
       const release = toRelease(pokemon);

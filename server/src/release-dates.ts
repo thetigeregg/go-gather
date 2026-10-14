@@ -11,10 +11,7 @@
  *   species-level Max release. A Max entry Bulbapedia doesn't list as a Max
  *   release at all isn't released: null.
  * - Mega / Primal entries: that Mega's release date, matched by its form
- *   suffix (`MEGA_X`, `PRIMAL`, …). Failing that, a release from an
- *   unmapped Bulbapedia code — but only for a species with no mapped Mega
- *   codes, so it can't date a sibling that has its own row or was never
- *   released. Otherwise null (not released).
+ *   suffix (`MEGA_X`, `PRIMAL`, …), or null (not released).
  * - Regional-form entries: the earliest debut of that species' regional
  *   code (`0019A` = Alolan Rattata), falling back to the species' own date
  *   when Bulbapedia has no separate regional row.
@@ -89,16 +86,10 @@ export function stampReleaseDates(
   }
   const gigantamaxDates = maxReleaseDates(availability.gigantamax, GIGANTAMAX_FORM);
   const dynamaxDates = maxReleaseDates(availability.dynamax, DYNAMAX_FORM);
-  // Keyed `dexNr|suffix`, or `dexNr|` for a species-level release.
+  // Keyed `dexNr|suffix`.
   const megaDates = new Map<string, Dated>();
-  // Species with at least one mapped Mega code: their species-level
-  // (unmapped-code) release, if any, isn't spread onto their other Megas.
-  const speciesWithMappedMegas = new Set<number>();
   for (const { dexNr, form, releasedOn } of availability.mega ?? []) {
-    keepEarliest(megaDates, `${String(dexNr)}|${form ?? ''}`, { releasedOn });
-    if (form) {
-      speciesWithMappedMegas.add(dexNr);
-    }
+    keepEarliest(megaDates, `${String(dexNr)}|${form}`, { releasedOn });
   }
 
   function releaseDateFor(entry: UnstampedCatalogEntry): string | null {
@@ -120,13 +111,7 @@ export function stampReleaseDates(
     }
 
     if (entry.pokedexType === 'mega' && availability.mega) {
-      const suffix = megaFormSuffix(entry);
-      // An empty suffix would look up the species-level key itself.
-      const exact = suffix ? megaDates.get(`${dexNr}|${suffix}`) : undefined;
-      const speciesLevel = speciesWithMappedMegas.has(entry.dexNr)
-        ? undefined
-        : megaDates.get(`${dexNr}|`);
-      return (exact ?? speciesLevel)?.releasedOn ?? null;
+      return megaDates.get(`${dexNr}|${megaFormSuffix(entry)}`)?.releasedOn ?? null;
     }
 
     const speciesDate = availability.species

@@ -54,10 +54,6 @@ const availability: AvailabilityData = {
   mega: [
     { dexNr: 6, form: 'MEGA_X', releasedOn: '2020-08-27' },
     { dexNr: 6, form: 'MEGA_Y', releasedOn: '2020-09-01' },
-    // Unmapped Bulbapedia codes: species-level releases. Charizard also has
-    // mapped codes, so its one must not spread to its other Megas.
-    { dexNr: 6, form: null, releasedOn: '2027-03-01' },
-    { dexNr: 445, form: null, releasedOn: '2027-03-01' },
     { dexNr: 382, form: 'PRIMAL', releasedOn: '2023-02-18' },
   ],
 };
@@ -117,8 +113,7 @@ describe('stampReleaseDates', () => {
     expect(releasedOn(mega(382, 'KYOGRE', 'PRIMAL'))).toBe('2023-02-18');
   });
 
-  it('uses a species-level Mega release only for a species with no mapped Mega codes', () => {
-    expect(releasedOn(mega(445, 'GARCHOMP', 'MEGA_Z'))).toBe('2027-03-01');
+  it("doesn't date a Mega from its sibling Megas' releases", () => {
     expect(releasedOn(mega(6, 'CHARIZARD', 'MEGA_Z'))).toBeNull();
   });
 
