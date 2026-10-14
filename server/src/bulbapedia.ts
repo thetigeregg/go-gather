@@ -1,12 +1,12 @@
 /**
  * Pokemon GO availability — which species, regional forms, Mega/Primal
  * forms and Dynamax/Gigantamax Pokemon have been released, and when — read
- * from Bulbapedia's
- * community-maintained Pokemon GO pages. Neither pokemon-go-api nor PokeAPI
- * says what has actually been released in-game, and the hand-kept lists
- * this replaces (`releasedDynamaxDexNumbers`/`releasedGigantamaxDexNumbers`
- * in sync-overrides.json, the `excludedDexNumbers` user setting) kept
- * drifting behind the game. Bulbapedia content is licensed CC BY-NC-SA.
+ * from Bulbapedia's community-maintained Pokemon GO pages. Neither
+ * pokemon-go-api nor PokeAPI says what has actually been released in-game,
+ * and the hand-kept lists this replaces (`releasedDynamaxDexNumbers`/
+ * `releasedGigantamaxDexNumbers` in sync-overrides.json, the
+ * `excludedDexNumbers` user setting) kept drifting behind the game.
+ * Bulbapedia content is licensed CC BY-NC-SA.
  *
  * Reads raw wikitext through the MediaWiki API (the plain `?action=raw` URL
  * sits behind a Cloudflare challenge), where every Pokemon is written as a
@@ -36,9 +36,9 @@ const SPECIES_SECTION = 'List of Pokémon by date';
 const UNRELEASED_SECTION = 'Unreleased Pokémon';
 const MEGA_SECTION = 'Mega Evolution and Primal Reversion';
 
-// As of October 2026 the pages list 150 Dynamax, 19 Gigantamax and 959
-// released species — a count far below that means the page layout changed
-// under the parser.
+// As of October 2026 the pages list 150 Dynamax, 19 Gigantamax, 959
+// released and 60 Mega/Primal species — a count far below that means the
+// page layout changed under the parser.
 const MIN_DYNAMAX_SPECIES = 100;
 const MIN_GIGANTAMAX_SPECIES = 15;
 const MIN_RELEASED_SPECIES = 900;
@@ -53,21 +53,34 @@ const MEGA_CODES: Partial<Record<string, string>> = {
   M: 'MEGA',
   MX: 'MEGA_X',
   MY: 'MEGA_Y',
+  MZ: 'MEGA_Z',
   P: 'PRIMAL',
 };
 
-export interface MaxRelease {
+/** A release of a whole species (`form: null`) or of one of its forms.
+ * What `form` holds depends on the dataset — see the aliases below. */
+export interface FormRelease {
   dexNr: number;
-  /** pokemon-go-api `form` value (e.g. `RAPID_STRIKE`) when Bulbapedia lists
-   * a specific form's release rather than the whole species; null otherwise. */
   form: string | null;
 }
 
-export interface DatedMaxRelease extends MaxRelease {
+export interface DatedFormRelease extends FormRelease {
   /** `YYYY-MM-DD`, as listed on Bulbapedia — may be in the future for an
    * announced release. */
   releasedOn: string;
 }
+
+/** A Dynamax/Gigantamax release. `form` is pokemon-go-api's `form` value
+ * (e.g. `RAPID_STRIKE`) when Bulbapedia lists a specific form's release
+ * rather than the whole species. */
+export type MaxRelease = FormRelease;
+export type DatedMaxRelease = DatedFormRelease;
+
+/** A Mega/Primal release. `form` is the Mega's form suffix (`MEGA`,
+ * `MEGA_X`, `PRIMAL`, …), or null when Bulbapedia's code isn't mapped — a
+ * release for that species' Megas when none of its codes are mapped (see
+ * release-dates.ts). */
+export type DatedMegaRelease = DatedFormRelease;
 
 export interface DatedSpeciesRelease {
   dexNr: number;
@@ -76,16 +89,6 @@ export interface DatedSpeciesRelease {
    * release-dates.ts), other letters for species-specific forms. */
   formCode: string;
   /** `YYYY-MM-DD` — may be in the future for an announced debut. */
-  releasedOn: string;
-}
-
-export interface DatedMegaRelease {
-  dexNr: number;
-  /** The Mega's form suffix (`MEGA`, `MEGA_X`, `PRIMAL`, …), or null when
-   * Bulbapedia's code isn't mapped — a release for every Mega of that
-   * species without a more specific date. */
-  form: string | null;
-  /** `YYYY-MM-DD` — may be in the future for an announced release. */
   releasedOn: string;
 }
 
@@ -340,15 +343,17 @@ function toMaxRelease(pokemon: PokemonCode, formLetter: string): MaxRelease {
   return { dexNr: pokemon.dexNr, form: null };
 }
 
-function toMegaRelease(pokemon: PokemonCode): MaxRelease {
+function toMegaRelease(pokemon: PokemonCode): FormRelease {
   const form = MEGA_CODES[pokemon.formCode];
   if (form) {
     return { dexNr: pokemon.dexNr, form };
   }
-  // Same fail-open fallback as toMaxRelease: an unmapped code still dates
-  // that species' Megas rather than silently leaving them unreleased.
+  // A species-level release instead. release-dates.ts only uses it for a
+  // species with no mapped Mega codes at all, so an unknown code can date a
+  // Mega that would otherwise be hidden without spilling onto siblings that
+  // have their own rows (or were never released).
   console.warn(
-    `Bulbapedia: no Mega mapping for "${pokemon.code}" — treating it as every Mega of that species.`
+    `Bulbapedia: no Mega mapping for "${pokemon.code}" — keeping it as a species-level Mega release.`
   );
   return { dexNr: pokemon.dexNr, form: null };
 }
@@ -357,8 +362,8 @@ function releasesFromSection(
   section: string,
   label: string,
   minSpecies: number,
-  toRelease: (pokemon: PokemonCode) => MaxRelease
-): DatedMaxRelease[] {
+  toRelease: (pokemon: PokemonCode) => FormRelease
+): DatedFormRelease[] {
   const rows = parseReleaseTable(section).filter(isDated);
   const speciesCount = new Set(rows.flatMap((row) => row.pokemon.map((p) => p.dexNr))).size;
   if (speciesCount < minSpecies) {
@@ -367,7 +372,7 @@ function releasesFromSection(
     );
   }
 
-  const releases = new Map<string, DatedMaxRelease>();
+  const releases = new Map<string, DatedFormRelease>();
   for (const row of rows) {
     for (const pokemon of row.pokemon) {
       const release = toRelease(pokemon);

@@ -354,10 +354,12 @@ describe('parseMegaReleases', () => {
       row('Aug 27, 2020', '{{MSP/GO|0006MX|Charizard}}{{MSP/GO|0006MY|Charizard}}'),
       row('Feb 18, 2023', '{{MSP/GO|0382P|Kyogre}}'),
       row('Sep 18, 2020', '{{MSP/GO|0018M|Pidgeot}}'),
+      row('Mar 1, 2027', '{{MSP/GO|0445MZ|Garchomp}}'),
     ]);
 
     expect(releases).toEqual(
       expect.arrayContaining([
+        { dexNr: 445, form: 'MEGA_Z', releasedOn: '2027-03-01' },
         { dexNr: 6, form: 'MEGA_X', releasedOn: '2020-08-27' },
         { dexNr: 6, form: 'MEGA_Y', releasedOn: '2020-08-27' },
         { dexNr: 382, form: 'PRIMAL', releasedOn: '2023-02-18' },
@@ -387,11 +389,11 @@ describe('parseMegaReleases', () => {
     expect(releases.some((r) => r.dexNr === 36 || r.dexNr === 359)).toBe(false);
   });
 
-  it('treats an unmapped code as a release for every Mega of that species, and warns', () => {
-    const releases = parse([row('Mar 1, 2027', '{{MSP/GO|0445MZ|Garchomp}}')]);
+  it('keeps an unmapped code as a species-level release, and warns', () => {
+    const releases = parse([row('Mar 1, 2027', '{{MSP/GO|0978DM|Tatsugiri}}')]);
 
-    expect(releases).toContainEqual({ dexNr: 445, form: null, releasedOn: '2027-03-01' });
-    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('"0445MZ"'));
+    expect(releases).toContainEqual({ dexNr: 978, form: null, releasedOn: '2027-03-01' });
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('"0978DM"'));
   });
 
   it('throws when far fewer species than expected are parsed', () => {

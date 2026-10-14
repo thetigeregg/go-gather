@@ -1,6 +1,6 @@
 import { Region, type PokedexType } from '@go-gather/shared';
 import type { AvailabilityData } from './bulbapedia';
-import { GO_LAUNCH_DATE, stampReleaseDates } from './release-dates';
+import { GO_LAUNCH_DATE, stampReleaseDates, undatedMegaNames } from './release-dates';
 import type { UnstampedCatalogEntry } from './transform';
 
 function entry(
@@ -54,9 +54,11 @@ const availability: AvailabilityData = {
   mega: [
     { dexNr: 6, form: 'MEGA_X', releasedOn: '2020-08-27' },
     { dexNr: 6, form: 'MEGA_Y', releasedOn: '2020-09-01' },
-    { dexNr: 382, form: 'PRIMAL', releasedOn: '2023-02-18' },
-    // From a Bulbapedia code with no mapping: every Mega of the species.
+    // Unmapped Bulbapedia codes: species-level releases. Charizard also has
+    // mapped codes, so its one must not spread to its other Megas.
+    { dexNr: 6, form: null, releasedOn: '2027-03-01' },
     { dexNr: 445, form: null, releasedOn: '2027-03-01' },
+    { dexNr: 382, form: 'PRIMAL', releasedOn: '2023-02-18' },
   ],
 };
 
@@ -105,35 +107,38 @@ describe('stampReleaseDates', () => {
     expect(releasedOn(entry(19, { form: 'GIGANTAMAX', pokedexType: 'max' }))).toBeNull();
   });
 
+  function mega(dexNr: number, speciesId: string, suffix: string): UnstampedCatalogEntry {
+    return entry(dexNr, { speciesId, form: `${speciesId}_${suffix}`, pokedexType: 'mega' });
+  }
+
   it('dates a Mega or Primal entry by its own form suffix', () => {
-    expect(releasedOn(entry(6, { form: 'CHARIZARD_MEGA_X', pokedexType: 'mega' }))).toBe(
-      '2020-08-27'
-    );
-    expect(releasedOn(entry(6, { form: 'CHARIZARD_MEGA_Y', pokedexType: 'mega' }))).toBe(
-      '2020-09-01'
-    );
-    expect(releasedOn(entry(382, { form: 'KYOGRE_PRIMAL', pokedexType: 'mega' }))).toBe(
-      '2023-02-18'
-    );
+    expect(releasedOn(mega(6, 'CHARIZARD', 'MEGA_X'))).toBe('2020-08-27');
+    expect(releasedOn(mega(6, 'CHARIZARD', 'MEGA_Y'))).toBe('2020-09-01');
+    expect(releasedOn(mega(382, 'KYOGRE', 'PRIMAL'))).toBe('2023-02-18');
   });
 
-  it('falls back to a species-level Mega release for a Mega with no exact match', () => {
-    expect(releasedOn(entry(445, { form: 'GARCHOMP_MEGA_Z', pokedexType: 'mega' }))).toBe(
-      '2027-03-01'
-    );
+  it('uses a species-level Mega release only for a species with no mapped Mega codes', () => {
+    expect(releasedOn(mega(445, 'GARCHOMP', 'MEGA_Z'))).toBe('2027-03-01');
+    expect(releasedOn(mega(6, 'CHARIZARD', 'MEGA_Z'))).toBeNull();
+  });
+
+  it("can't match a Mega whose form doesn't start with its species id", () => {
+    expect(
+      releasedOn(entry(6, { speciesId: 'CHARIZARD', form: 'MEGA_X', pokedexType: 'mega' }))
+    ).toBeNull();
   });
 
   it('marks a Mega with no Mega release as not released', () => {
-    expect(releasedOn(entry(386, { form: 'DEOXYS_MEGA', pokedexType: 'mega' }))).toBeNull();
+    expect(releasedOn(mega(386, 'DEOXYS', 'MEGA'))).toBeNull();
   });
 
   it("dates Megas by their species' debut when no Mega data is saved yet", () => {
-    const [mega] = stampReleaseDates([entry(386, { form: 'DEOXYS_MEGA', pokedexType: 'mega' })], {
+    const [stamped] = stampReleaseDates([mega(386, 'DEOXYS', 'MEGA')], {
       ...availability,
       mega: null,
     });
 
-    expect(mega.releasedOn).toBe('2018-11-01');
+    expect(stamped.releasedOn).toBe('2018-11-01');
   });
 
   it('treats every species as released when no species data is saved yet', () => {
@@ -172,5 +177,26 @@ describe('stampReleaseDates', () => {
       { ...entries[0], releasedOn: '2016-07-06' },
       { ...entries[1], releasedOn: '2018-11-01' },
     ]);
+  });
+});
+
+describe('undatedMegaNames', () => {
+  const megaEntry = (name: string, releasedOn: string | null, isShiny = false) => ({
+    ...entry(6, { name, pokedexType: 'mega', isShiny }),
+    releasedOn,
+  });
+  const entries = [
+    megaEntry('Mega Charizard X', '2020-08-27'),
+    megaEntry('Mega Charizard Z', null),
+    megaEntry('Mega Charizard Z', null, true),
+    { ...entry(1001), releasedOn: null },
+  ];
+
+  it('lists non-shiny Megas left without a date', () => {
+    expect(undatedMegaNames(entries, availability)).toEqual(['Mega Charizard Z']);
+  });
+
+  it('lists nothing when no Mega data is saved, since Megas then use species dates', () => {
+    expect(undatedMegaNames(entries, { ...availability, mega: null })).toEqual([]);
   });
 });

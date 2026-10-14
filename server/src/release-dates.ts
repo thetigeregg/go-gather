@@ -11,8 +11,10 @@
  *   species-level Max release. A Max entry Bulbapedia doesn't list as a Max
  *   release at all isn't released: null.
  * - Mega / Primal entries: that Mega's release date, matched by its form
- *   suffix (`MEGA_X`, `PRIMAL`, …), else a species-level Mega release from
- *   an unmapped Bulbapedia code, else null (not released).
+ *   suffix (`MEGA_X`, `PRIMAL`, …). Failing that, a release from an
+ *   unmapped Bulbapedia code — but only for a species with no mapped Mega
+ *   codes, so it can't date a sibling that has its own row or was never
+ *   released. Otherwise null (not released).
  * - Regional-form entries: the earliest debut of that species' regional
  *   code (`0019A` = Alolan Rattata), falling back to the species' own date
  *   when Bulbapedia has no separate regional row.
@@ -51,10 +53,15 @@ interface Dated {
   releasedOn: string;
 }
 
-/** A Mega entry's `form` is pokemon-go-api's `megaEvolutions` key
- * (`VENUSAUR_MEGA`, `CHARIZARD_MEGA_X`, `KYOGRE_PRIMAL`); this reads the
- * suffix Bulbapedia's codes are mapped to. */
-const MEGA_FORM_SUFFIX = /_(MEGA(?:_[A-Z])?|PRIMAL)$/;
+/** A Mega entry's `form` is pokemon-go-api's `megaEvolutions` key, which
+ * is always its species id plus a suffix (`CHARIZARD_MEGA_X`,
+ * `KYOGRE_PRIMAL`) — the same split transform.ts makes. Returns the suffix
+ * Bulbapedia's codes are mapped to, or '' if the key doesn't start with the
+ * species id. */
+function megaFormSuffix(entry: UnstampedCatalogEntry): string {
+  const prefix = `${entry.speciesId}_`;
+  return entry.form?.startsWith(prefix) ? entry.form.slice(prefix.length) : '';
+}
 
 /** Keyed by `dexNr|assetForm form`, matching the catalog entry's own
  * `form`: `${FORM}_${suffix}` for a form-level release, the bare suffix for
@@ -84,8 +91,14 @@ export function stampReleaseDates(
   const dynamaxDates = maxReleaseDates(availability.dynamax, DYNAMAX_FORM);
   // Keyed `dexNr|suffix`, or `dexNr|` for a species-level release.
   const megaDates = new Map<string, Dated>();
+  // Species with at least one mapped Mega code: their species-level
+  // (unmapped-code) release, if any, isn't spread onto their other Megas.
+  const speciesWithMappedMegas = new Set<number>();
   for (const { dexNr, form, releasedOn } of availability.mega ?? []) {
     keepEarliest(megaDates, `${String(dexNr)}|${form ?? ''}`, { releasedOn });
+    if (form) {
+      speciesWithMappedMegas.add(dexNr);
+    }
   }
 
   function releaseDateFor(entry: UnstampedCatalogEntry): string | null {
@@ -107,10 +120,13 @@ export function stampReleaseDates(
     }
 
     if (entry.pokedexType === 'mega' && availability.mega) {
-      const suffix = MEGA_FORM_SUFFIX.exec(entry.form ?? '')?.[1] ?? '';
-      return (
-        (megaDates.get(`${dexNr}|${suffix}`) ?? megaDates.get(`${dexNr}|`))?.releasedOn ?? null
-      );
+      const suffix = megaFormSuffix(entry);
+      // An empty suffix would look up the species-level key itself.
+      const exact = suffix ? megaDates.get(`${dexNr}|${suffix}`) : undefined;
+      const speciesLevel = speciesWithMappedMegas.has(entry.dexNr)
+        ? undefined
+        : megaDates.get(`${dexNr}|`);
+      return (exact ?? speciesLevel)?.releasedOn ?? null;
     }
 
     const speciesDate = availability.species
@@ -123,4 +139,23 @@ export function stampReleaseDates(
   }
 
   return entries.map((entry) => ({ ...entry, releasedOn: releaseDateFor(entry) }));
+}
+
+/**
+ * Non-shiny Mega entries left without a date by stampReleaseDates, for the
+ * catalog sync to log. An undated Mega is hidden as unreleased: right for
+ * one Niantic hasn't released, but also what a Bulbapedia row the parser
+ * missed looks like. Empty when no Mega data is saved, since Megas are then
+ * dated by their species and an undated one points at the species data.
+ */
+export function undatedMegaNames(
+  entries: CatalogEntry[],
+  availability: LoadedAvailability
+): string[] {
+  if (!availability.mega) {
+    return [];
+  }
+  return entries
+    .filter((entry) => entry.pokedexType === 'mega' && !entry.isShiny && entry.releasedOn === null)
+    .map((entry) => entry.name);
 }
