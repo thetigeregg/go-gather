@@ -710,6 +710,36 @@ describe('parseShinyReleases', () => {
     expect(dynamaxDate(7)).toBeUndefined();
   });
 
+  it('keeps each earliest date for a Dynamax code listed in more than one row', () => {
+    const releases = parseShinyReleases(
+      shinyPage([
+        shinyRow({
+          dex: 25,
+          family: 'Pikachu',
+          encounter: ['0025 s|Pikachu|dynamax=yes', '0026 s|Raichu'],
+          date: 'August 9, 2017',
+          notes: [{ date: 'May 1, 2025', text: 'Dynamax' }],
+        }),
+        shinyRow({
+          dex: 26,
+          family: 'Raichu',
+          encounter: ['0026 s|Raichu|dynamax=yes'],
+          date: 'March 3, 2024',
+        }),
+      ])
+    );
+
+    expect(releases.filter((r) => r.dexNr === 26)).toEqual([
+      {
+        dexNr: 26,
+        formCode: '',
+        dynamax: true,
+        releasedOn: '2017-08-09',
+        dynamaxReleasedOn: '2024-03-03',
+      },
+    ]);
+  });
+
   it("ignores notes that aren't Max or Mega, like Meganium by encounter", () => {
     const releases = parseShinyReleases(
       shinyPage([

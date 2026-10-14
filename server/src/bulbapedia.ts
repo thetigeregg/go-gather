@@ -647,14 +647,18 @@ export function parseSpeciesReleases(availabilityPage: string): DatedSpeciesRele
 }
 
 /**
- * Every Pokemon code in Bulbapedia's shiny list, with its family row's
- * shiny debut date. Each `{{lop/shiny/GO|…}}` row is one evolution (or
- * regional) family; its positional arguments are dex, family, the
- * Encounter cell, the Evolution-only cell, the date cell, then event and
- * rates. Codes in either cell have a released shiny. The date cell is free
- * text whose first date is the family's shiny debut; the later segments
- * (Megas, Dynamax, "by encounter", …) aren't parsed — release-dates.ts
- * combines the debut with each entry's own release date instead.
+ * Every Pokemon code in Bulbapedia's shiny list, with its shiny date. Each
+ * `{{lop/shiny/GO|…}}` row is one evolution (or regional) family; its
+ * positional arguments are dex, family, the Encounter cell, the
+ * Evolution-only cell, the date cell, then event and rates. Codes in either
+ * cell have a released shiny. The date cell is free text whose first date
+ * is the family's shiny debut, and which later notes can override: a
+ * Gigantamax, Mega or Primal code takes its form's noted date, and a row
+ * flagged `dynamax=yes` gets a Dynamax date from its Dynamax notes (see
+ * DatedShinyRelease). Other notes ("by encounter", Shadow, …) aren't
+ * parsed — release-dates.ts combines each date with the entry's own
+ * release date instead. A code in more than one row keeps each date's
+ * earliest value.
  */
 export function parseShinyReleases(shinyPage: string): DatedShinyRelease[] {
   const rows = templateCalls(stripComments(shinyPage), SHINY_ROW_TEMPLATE);
@@ -823,7 +827,9 @@ function shinyDateNotes(dateCell: string): ShinyDateNotes {
 }
 
 /** Adds a shiny release, merging with one already listed for the same code
- * (a Pokemon in more than one row) by keeping each date's earliest value. */
+ * and Dynamax flag (a Pokemon in more than one row) by keeping each date's
+ * earliest value — `releasedOn` and, for a Dynamax row, `dynamaxReleasedOn`
+ * on their own, so they may come from different rows. */
 function mergeShinyRelease(
   releases: Map<string, DatedShinyRelease>,
   release: DatedShinyRelease
