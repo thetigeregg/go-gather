@@ -335,3 +335,7 @@
 ## v0.21.0 - 2026-10-14
 
 - 751ae39 feat(sync): hide alternate forms Bulbapedia lists as unreleased (#88)
+
+## v0.22.0 - 2026-10-14
+
+- 62a63cb feat(settings): show Bulbapedia data status and attribution (#89)
