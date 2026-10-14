@@ -6,13 +6,18 @@ import {
   parseMegaReleases,
   parseMspGoCodes,
   parseReleaseDate,
+  parseShinyReleases,
   parseSpeciesReleases,
+  stripComments,
+  templateCalls,
 } from './bulbapedia';
 import {
   availabilityPage,
   dynamaxPage,
   megaSection,
   row,
+  shinyPage,
+  shinyRow,
   speciesSections,
 } from './bulbapedia.test-helpers';
 
@@ -288,6 +293,14 @@ describe('parseSpeciesReleases', () => {
     expect(releases.some((r) => r.dexNr === 999)).toBe(false);
   });
 
+  it('ignores a commented-out row', () => {
+    const releases = parse({
+      rows: [`<!--${row('Jan 1, 2020', '{{MSP/GO|0901|Ursaluna}}')}-->`],
+    });
+
+    expect(releases.some((r) => r.dexNr === 901)).toBe(false);
+  });
+
   it('keeps form letters and the earliest date per species and form', () => {
     const releases = parse({
       rows: [
@@ -397,6 +410,158 @@ describe('parseMegaReleases', () => {
 
   it('throws when far fewer species than expected are parsed', () => {
     expect(() => parse([], 10)).toThrow(/only 10 Mega species parsed/);
+  });
+});
+
+describe('stripComments', () => {
+  it('removes single- and multi-line HTML comments', () => {
+    expect(stripComments('a<!-- one -->b<!--\ntwo\n-->c')).toBe('abc');
+  });
+});
+
+describe('templateCalls', () => {
+  it('splits top-level arguments, keeping nested templates and links whole', () => {
+    expect(
+      templateCalls('x {{row|1|{{MSP/GO|0001 s|A}}|[[Link|text]]|n=v}} y {{row|2}}', 'row')
+    ).toEqual([['1', '{{MSP/GO|0001 s|A}}', '[[Link|text]]', 'n=v'], ['2']]);
+  });
+
+  it('ignores templates with other names', () => {
+    expect(templateCalls('{{other|1}}{{rows|2}}', 'row')).toEqual([]);
+  });
+
+  it('throws on an unclosed template', () => {
+    expect(() => templateCalls('{{row|1|{{tt|x}}', 'row')).toThrow(/unclosed \{\{row\}\}/);
+  });
+});
+
+describe('parseShinyReleases', () => {
+  it("reads codes from both cells with the family row's first date", () => {
+    const releases = parseShinyReleases(
+      shinyPage([
+        shinyRow({
+          dex: 1,
+          family: 'Bulbasaur',
+          encounter: ['0001 s|Bulbasaur|shadow=yes', '0003GMax s'],
+          evolution: ['0003M s'],
+          date: 'March 25, 2018',
+        }),
+      ])
+    );
+
+    expect(releases).toEqual(
+      expect.arrayContaining([
+        { dexNr: 1, formCode: '', dynamax: false, releasedOn: '2018-03-25' },
+        { dexNr: 3, formCode: 'GMax', dynamax: false, releasedOn: '2018-03-25' },
+        { dexNr: 3, formCode: 'M', dynamax: false, releasedOn: '2018-03-25' },
+      ])
+    );
+  });
+
+  it('reads the positional date cell when a row has no datesort', () => {
+    const releases = parseShinyReleases(
+      shinyPage([
+        shinyRow({
+          dex: 808,
+          family: 'Meltan',
+          encounter: ['0808 s'],
+          evolution: ['0809 s'],
+          date: 'February 5, 2019',
+          dateSort: false,
+        }),
+      ])
+    );
+
+    expect(releases).toContainEqual({
+      dexNr: 809,
+      formCode: '',
+      dynamax: false,
+      releasedOn: '2019-02-05',
+    });
+  });
+
+  it('flags every code in a row with a shiny Dynamax member', () => {
+    const releases = parseShinyReleases(
+      shinyPage([
+        shinyRow({
+          dex: 1,
+          family: 'Bulbasaur',
+          encounter: ['0001 s|Bulbasaur|dynamax=yes', '0003 s'],
+          date: 'March 25, 2018',
+        }),
+      ])
+    );
+
+    expect(releases.filter((r) => r.dexNr === 1 || r.dexNr === 3).map((r) => r.dynamax)).toEqual([
+      true,
+      true,
+    ]);
+  });
+
+  it('ignores commented-out rows and dates', () => {
+    const releases = parseShinyReleases(
+      shinyPage([
+        `{{lop/shiny/GO|0624|Pawniard|{{MSP/GO|size=80|0624 s|Pawniard}}||<!--November 21, 2026 -->November 14, 2022|Event|0.2%}}`,
+      ])
+    );
+
+    // The page's commented-out Zorua placeholder row isn't listed.
+    expect(releases.some((r) => r.dexNr === 570)).toBe(false);
+    expect(releases).toContainEqual({
+      dexNr: 624,
+      formCode: '',
+      dynamax: false,
+      releasedOn: '2022-11-14',
+    });
+  });
+
+  it('keeps the earliest date for a code listed in more than one row', () => {
+    const releases = parseShinyReleases(
+      shinyPage([
+        shinyRow({ dex: 25, family: 'Pikachu', encounter: ['0026 s'], date: 'August 9, 2017' }),
+        shinyRow({
+          dex: 26,
+          family: 'Raichu',
+          encounter: ['0026 s'],
+          date: 'March 3, 2026',
+          form: 'Alolan Form',
+        }),
+      ])
+    );
+
+    expect(releases.filter((r) => r.dexNr === 26)).toEqual([
+      { dexNr: 26, formCode: '', dynamax: false, releasedOn: '2017-08-09' },
+    ]);
+  });
+
+  it('skips a row with an unscheduled date and warns', () => {
+    const releases = parseShinyReleases(
+      shinyPage([shinyRow({ dex: 570, family: 'Zorua', encounter: ['0570 s'], date: 'TBA' })])
+    );
+
+    expect(releases.some((r) => r.dexNr === 570)).toBe(false);
+    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('Zorua'));
+  });
+
+  it('throws on an unreadable date', () => {
+    expect(() =>
+      parseShinyReleases(
+        shinyPage([shinyRow({ dex: 1, family: 'Bulbasaur', encounter: ['0001 s'], date: 'Soon' })])
+      )
+    ).toThrow(/unreadable shiny date "Soon/);
+  });
+
+  it('throws on a row with no Pokemon codes or too few arguments', () => {
+    expect(() =>
+      parseShinyReleases(shinyPage(['{{lop/shiny/GO|0001|Bulbasaur|||March 25, 2018|Event}}']))
+    ).toThrow(/no MSP\/GO Pokemon in shiny row for Bulbasaur/);
+    expect(() => parseShinyReleases(shinyPage(['{{lop/shiny/GO|0001|Bulbasaur}}']))).toThrow(
+      /unexpected shiny row layout/
+    );
+  });
+
+  it('throws when far fewer families than expected are parsed', () => {
+    expect(() => parseShinyReleases(shinyPage([], 50))).toThrow(/only 50 shiny families parsed/);
   });
 });
 

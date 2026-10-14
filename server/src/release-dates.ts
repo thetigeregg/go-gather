@@ -19,15 +19,32 @@
  *   species' earliest debut, under any form.
  * - A species Bulbapedia doesn't date at all isn't released: null.
  *
+ * Shiny entries then need their shiny listed in Bulbapedia's shiny list too,
+ * and are released from the later of the date above and that listing's
+ * family shiny debut — null if either is null. Which listing counts depends
+ * on the entry: a `…GMax` code for Gigantamax, a family row flagged
+ * `dynamax=yes` for Dynamax, the matching Mega code for Megas, a code
+ * starting with the region's letter for regional forms (Paldean Tauros is
+ * `PC`/`PB`/`PA`), and a plain or species-specific code for everything else.
+ * Costumes and species-specific forms (Unown, Vivillon, …) aren't in the
+ * shiny list, so they follow their species' shiny.
+ *
  * Without any saved species data yet (see availability-store.ts's
  * loadAvailability), every species counts as released since Pokemon GO's
  * launch — the behaviour from before species dates existed. Without saved
  * Mega data, Megas fall back to the species rule, as before Mega dates
- * existed.
+ * existed. Without saved shiny data, shiny entries share their non-shiny
+ * twin's date, as before shiny data existed.
  */
 import { Region, type CatalogEntry } from '@go-gather/shared';
 import type { LoadedAvailability } from './availability-store.js';
-import { keepEarliest, type DatedMaxRelease } from './bulbapedia.js';
+import {
+  GIGANTAMAX_CODE_SUFFIX,
+  keepEarliest,
+  MEGA_CODES,
+  type DatedMaxRelease,
+  type DatedShinyRelease,
+} from './bulbapedia.js';
 import { DYNAMAX_FORM, GIGANTAMAX_FORM } from './max-forms.js';
 import type { UnstampedCatalogEntry } from './transform.js';
 
@@ -69,6 +86,82 @@ function maxReleaseDates(releases: DatedMaxRelease[], suffix: string): Map<strin
     keepEarliest(dates, `${String(dexNr)}|${form ? `${form}_${suffix}` : suffix}`, { releasedOn });
   }
   return dates;
+}
+
+/** Earliest family shiny debut per key, by what a shiny-list code is
+ * listed as. */
+interface ShinyListings {
+  /** Keyed by dex number. */
+  base: Map<string, Dated>;
+  /** Keyed `dexNr|region`. */
+  region: Map<string, Dated>;
+  /** Keyed `dexNr|suffix`, like megaDates. */
+  mega: Map<string, Dated>;
+  /** Keyed by dex number. */
+  gigantamax: Map<string, Dated>;
+  /** Keyed by dex number. */
+  dynamax: Map<string, Dated>;
+}
+
+function shinyListings(releases: DatedShinyRelease[]): ShinyListings {
+  const listings: ShinyListings = {
+    base: new Map(),
+    region: new Map(),
+    mega: new Map(),
+    gigantamax: new Map(),
+    dynamax: new Map(),
+  };
+  for (const { dexNr, formCode, dynamax, releasedOn } of releases) {
+    const dex = String(dexNr);
+    const dated = { releasedOn };
+    if (dynamax) {
+      keepEarliest(listings.dynamax, dex, dated);
+    }
+    // GMax first, so `0052GMax` never counts as Galarian Meowth.
+    if (formCode.endsWith(GIGANTAMAX_CODE_SUFFIX)) {
+      keepEarliest(listings.gigantamax, dex, dated);
+      continue;
+    }
+    const megaSuffix = MEGA_CODES[formCode];
+    if (megaSuffix) {
+      keepEarliest(listings.mega, `${dex}|${megaSuffix}`, dated);
+    }
+    // A prefix, not an exact letter: Paldean Tauros breeds are `PC`/`PB`/
+    // `PA`, Galarian Zen Darmanitan `GZ`. A species-specific code that
+    // happens to start with a region letter (Deoxys `A`) only ever meets an
+    // entry with a region, so it's harmless; `P` is both Primal and Paldea
+    // for the same reason.
+    const region = REGION_CODES[formCode.charAt(0)];
+    if (region) {
+      keepEarliest(listings.region, `${dex}|${region}`, dated);
+    }
+    if (!megaSuffix && !region) {
+      keepEarliest(listings.base, dex, dated);
+    }
+  }
+  return listings;
+}
+
+function shinyListingDate(entry: UnstampedCatalogEntry, listings: ShinyListings): string | null {
+  const dex = String(entry.dexNr);
+  const listing =
+    entry.pokedexType === 'max'
+      ? listings.gigantamax.get(dex)
+      : entry.pokedexType === 'dmax'
+        ? listings.dynamax.get(dex)
+        : entry.pokedexType === 'mega'
+          ? listings.mega.get(`${dex}|${megaFormSuffix(entry)}`)
+          : entry.region
+            ? listings.region.get(`${dex}|${entry.region}`)
+            : listings.base.get(dex);
+  return listing?.releasedOn ?? null;
+}
+
+function laterOf(first: string | null, second: string | null): string | null {
+  if (first === null || second === null) {
+    return null;
+  }
+  return first > second ? first : second;
 }
 
 export function stampReleaseDates(
@@ -123,7 +216,16 @@ export function stampReleaseDates(
     return speciesDate;
   }
 
-  return entries.map((entry) => ({ ...entry, releasedOn: releaseDateFor(entry) }));
+  const shiny = availability.shiny ? shinyListings(availability.shiny) : null;
+
+  return entries.map((entry) => {
+    const releasedOn = releaseDateFor(entry);
+    return {
+      ...entry,
+      releasedOn:
+        entry.isShiny && shiny ? laterOf(releasedOn, shinyListingDate(entry, shiny)) : releasedOn,
+    };
+  });
 }
 
 /**
@@ -143,4 +245,30 @@ export function undatedMegaNames(
   return entries
     .filter((entry) => entry.pokedexType === 'mega' && !entry.isShiny && entry.releasedOn === null)
     .map((entry) => entry.name);
+}
+
+/**
+ * How many shiny entries stampReleaseDates hid because Bulbapedia doesn't
+ * list their shiny, while their non-shiny twin is dated — for the catalog
+ * sync to log. Shiny and non-shiny twins share an id apart from its
+ * `-shiny` / `-normal` segment (see transform.ts's buildCatalogId), which
+ * XXL/XXS copies follow with `-xxl` / `-xxs`.
+ * Zero when no shiny data is saved, since shinies then follow their twin.
+ */
+export function unlistedShinyCount(
+  entries: CatalogEntry[],
+  availability: LoadedAvailability
+): number {
+  if (!availability.shiny) {
+    return 0;
+  }
+  const nonShinyDates = new Map(
+    entries.filter((entry) => !entry.isShiny).map((entry) => [entry.id, entry.releasedOn])
+  );
+  return entries.filter(
+    (entry) =>
+      entry.isShiny &&
+      entry.releasedOn === null &&
+      (nonShinyDates.get(entry.id.replace(/-shiny(?=-|$)/, '-normal')) ?? null) !== null
+  ).length;
 }

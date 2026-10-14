@@ -40,8 +40,8 @@ interface AvailabilitySourceRow {
 }
 
 /** A dataset has never been fetched successfully, so there's nothing saved
- * to load — the one load failure loadAvailability tolerates for species
- * and Mega data. */
+ * to load — the one load failure loadAvailability tolerates for species,
+ * Mega and shiny data. */
 class NoSavedAvailabilityError extends Error {}
 
 /**
@@ -128,10 +128,10 @@ function loadDataset<K extends AvailabilityDataset>(
 
 /** Datasets that may not have been saved yet without stopping the catalog
  * sync — see loadAvailability. */
-type OptionalDataset = 'species' | 'mega';
+type OptionalDataset = 'species' | 'mega' | 'shiny';
 
-/** `AvailabilityData`, except species and Mega data may not exist yet —
- * see loadAvailability. */
+/** `AvailabilityData`, except species, Mega and shiny data may not exist
+ * yet — see loadAvailability. */
 export type LoadedAvailability = Omit<AvailabilityData, OptionalDataset> & {
   [K in OptionalDataset]: AvailabilityData[K] | null;
 };
@@ -164,7 +164,7 @@ function loadOptionalDataset<K extends OptionalDataset>(
  *
  * Throws if the Dynamax or Gigantamax data has never been fetched
  * successfully, since the DMax/GMax dexes can't be built without it.
- * Species and Mega data that has never been fetched comes back as null
+ * Species, Mega and shiny data that has never been fetched comes back as null
  * instead, and release-dates.ts falls back to how those entries were dated
  * before that dataset existed, rather than holding up the whole catalog
  * sync (e.g. on the first sync after upgrading) until Bulbapedia parses.
@@ -184,6 +184,12 @@ export function loadAvailability(database: Database, now: Date = new Date()): Lo
       'mega',
       now,
       "Dating Megas by their species' debut until it is."
+    ),
+    shiny: loadOptionalDataset(
+      database,
+      'shiny',
+      now,
+      'Treating shinies as released along with their Pokemon until it is.'
     ),
   };
 }
