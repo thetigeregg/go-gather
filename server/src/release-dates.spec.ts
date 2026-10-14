@@ -322,13 +322,34 @@ describe('stampReleaseDates for unreleased forms', () => {
     expect(dated(entry(999, { formId: 'GIMMIGHOUL' }))).toBe('2023-11-01');
   });
 
-  it('never hides a form the species data dates, even from a stale forms list', () => {
-    const [stamped] = stampReleaseDates([form('DARMANITAN_GALARIAN_ZEN')], {
+  it('dates a form the species data dates by its own row, even from a stale forms list', () => {
+    const [stamped, stampedShiny] = stampReleaseDates(
+      [form('DARMANITAN_GALARIAN_ZEN'), form('DARMANITAN_GALARIAN_ZEN', { isShiny: true })],
+      {
+        ...speciesFor555,
+        species: [
+          ...speciesFor555.species,
+          { dexNr: 555, formCode: 'GZ', releasedOn: '2027-01-01' },
+        ],
+      }
+    );
+
+    expect(stamped.releasedOn).toBe('2027-01-01');
+    expect(stampedShiny.releasedOn).toBe('2027-01-01');
+  });
+
+  it('dates a released form by its own row once off the forms list', () => {
+    const [stamped] = stampReleaseDates([entry(666, { formId: 'VIVILLON_FANCY' })], {
       ...speciesFor555,
-      species: [...speciesFor555.species, { dexNr: 555, formCode: 'GZ', releasedOn: '2027-01-01' }],
+      species: [
+        ...speciesFor555.species,
+        { dexNr: 666, formCode: '', releasedOn: '2019-06-14' },
+        { dexNr: 666, formCode: 'Fan', releasedOn: '2026-12-01' },
+      ],
+      unreleasedForms: [],
     });
 
-    expect(stamped.releasedOn).toBe('2020-06-03');
+    expect(stamped.releasedOn).toBe('2026-12-01');
   });
 
   it('hides nothing when no unreleased-form data is saved', () => {

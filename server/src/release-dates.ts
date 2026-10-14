@@ -16,6 +16,9 @@
  *   release at all isn't released: null.
  * - Mega / Primal entries: that Mega's release date, matched by its form
  *   suffix (`MEGA_X`, `PRIMAL`, …), or null (not released).
+ * - A form UNRELEASED_FORM_IDS maps that the species data dates under its
+ *   own code (Bulbapedia moved it to the date table once released): that
+ *   date, never hidden even if a stale forms list still has it.
  * - Regional-form entries: the earliest debut of that species' regional
  *   code (`0019A` = Alolan Rattata), falling back to the species' own date
  *   when Bulbapedia has no separate regional row.
@@ -65,7 +68,8 @@ export const GO_LAUNCH_DATE = '2016-07-06';
  * catalog sync rather than guessed, since a wrong guess could hide a released
  * form. When Niantic releases a form, Bulbapedia moves it to the date table,
  * and a code the species data dates is never hidden — even if a stale
- * forms list (one that failed to update) still has it.
+ * forms list (one that failed to update) still has it — and is dated by
+ * that row.
  */
 export const UNRELEASED_FORM_IDS: Partial<Record<string, string | null>> = {
   '0555Z': 'DARMANITAN_ZEN',
@@ -90,17 +94,30 @@ function unreleasedFormCode(dexNr: number, formCode: string): string {
   return `${String(dexNr).padStart(4, '0')}${formCode}`;
 }
 
+/** The species data's dates for UNRELEASED_FORM_IDS's codes, keyed by the
+ * catalog `formId` they map to — so a form released since it was listed is
+ * dated by its own row, not its species' or region's earlier debut. */
+function mappedFormDates(availability: LoadedAvailability): Map<string, Dated> {
+  const dates = new Map<string, Dated>();
+  for (const { dexNr, formCode, releasedOn } of availability.species ?? []) {
+    const formId = UNRELEASED_FORM_IDS[unreleasedFormCode(dexNr, formCode)];
+    if (formId) {
+      keepEarliest(dates, formId, { releasedOn });
+    }
+  }
+  return dates;
+}
+
 /** The catalog formIds to hide: mapped codes from the unreleased-forms
- * table, except any the species data dates under the same code. */
-function hiddenUnreleasedFormIds(availability: LoadedAvailability): Set<string> {
-  const datedCodes = new Set(
-    (availability.species ?? []).map(({ dexNr, formCode }) => unreleasedFormCode(dexNr, formCode))
-  );
+ * table, except any the species data dates. */
+function hiddenUnreleasedFormIds(
+  availability: LoadedAvailability,
+  formDates: Map<string, Dated> = mappedFormDates(availability)
+): Set<string> {
   return new Set(
     (availability.unreleasedForms ?? []).flatMap(({ dexNr, formCode }) => {
-      const code = unreleasedFormCode(dexNr, formCode);
-      const formId = UNRELEASED_FORM_IDS[code];
-      return formId && !datedCodes.has(code) ? [formId] : [];
+      const formId = UNRELEASED_FORM_IDS[unreleasedFormCode(dexNr, formCode)];
+      return formId && !formDates.has(formId) ? [formId] : [];
     })
   );
 }
@@ -252,7 +269,8 @@ function releaseDating(availability: LoadedAvailability): ReleaseDating {
   for (const { dexNr, form, releasedOn } of availability.mega ?? []) {
     keepEarliest(megaDates, `${String(dexNr)}|${form}`, { releasedOn });
   }
-  const unreleasedFormIds = hiddenUnreleasedFormIds(availability);
+  const formDates = mappedFormDates(availability);
+  const unreleasedFormIds = hiddenUnreleasedFormIds(availability, formDates);
 
   function releaseDateFor(entry: UnstampedCatalogEntry): string | null {
     if (unreleasedFormIds.has(entry.formId)) {
@@ -277,6 +295,11 @@ function releaseDating(availability: LoadedAvailability): ReleaseDating {
 
     if (entry.pokedexType === 'mega' && availability.mega) {
       return megaDates.get(`${dexNr}|${megaFormSuffix(entry)}`)?.releasedOn ?? null;
+    }
+
+    const formDate = formDates.get(entry.formId);
+    if (formDate) {
+      return formDate.releasedOn;
     }
 
     const speciesDate = availability.species
