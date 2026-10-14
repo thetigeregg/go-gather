@@ -47,6 +47,9 @@ export interface SpeciesSectionOptions {
   unreleased?: number[];
   /** Filler species dex 1…fillerCount, all dated Jul 6, 2016. */
   fillerCount?: number;
+  /** Sprite templates in the "forms yet to be made available" table, e.g.
+   * `{{MSP/GO|0555Z|Darmanitan}}` or `{{MSP|0658|form=A|Greninja}}`. */
+  unreleasedForms?: string[];
 }
 
 /**
@@ -58,6 +61,7 @@ export function speciesSections({
   rows = [],
   unreleased = [901],
   fillerCount = 900,
+  unreleasedForms = ['{{MSP/GO|0999Z|Gimmighoul}}'],
 }: SpeciesSectionOptions = {}): string {
   const unreleasedCodes = unreleased
     .map(
@@ -71,7 +75,12 @@ export function speciesSections({
     '===Unreleased Pokémon===',
     ...table(['|- style=background:#FFF', '! IX', "| '''1'''", `| ${unreleasedCodes}`]),
     'The following forms have yet to be made available:',
-    ...table(['|- style=background:#FFF', '! V', "| '''1'''", '| {{MSP/GO|0999Z|Gimmighoul}}']),
+    ...table([
+      '|- style=background:#FFF',
+      '! V',
+      `| '''${String(unreleasedForms.length)}'''`,
+      `| ${unreleasedForms.join('')}`,
+    ]),
   ].join('\n');
 }
 

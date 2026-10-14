@@ -29,7 +29,13 @@ import {
   fetchPokeApiSprites,
   fetchPokeApiSpritesBySlug,
 } from './pokeapi.js';
-import { stampReleaseDates, undatedMegaNames, unlistedShinyCount } from './release-dates.js';
+import {
+  stampReleaseDates,
+  undatedMegaNames,
+  unlistedShinyCount,
+  unmappedUnreleasedForms,
+  unmatchedUnreleasedFormIds,
+} from './release-dates.js';
 import { pokedexToEntries, type RawPokemon } from './transform.js';
 
 const POKEDEX_URL = 'https://pokemon-go-api.github.io/pokemon-go-api/api/pokedex.json';
@@ -588,6 +594,18 @@ export async function main(): Promise<void> {
   if (unlistedShinies > 0) {
     console.log(
       `Shinies not in Bulbapedia's shiny list (hidden as unreleased): ${String(unlistedShinies)} entries.`
+    );
+  }
+  const unmatchedForms = unmatchedUnreleasedFormIds(entries, availability);
+  if (unmatchedForms.length > 0) {
+    console.warn(
+      `Unreleased forms that match no catalog entry (still shown — renamed upstream?): ${unmatchedForms.join(', ')}`
+    );
+  }
+  const unmappedForms = unmappedUnreleasedForms(availability);
+  if (unmappedForms.length > 0) {
+    console.warn(
+      `Bulbapedia lists unreleased forms with no mapping in release-dates.ts's UNRELEASED_FORM_IDS (still shown): ${unmappedForms.join(', ')}`
     );
   }
 

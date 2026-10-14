@@ -1,10 +1,13 @@
 import { Region, type PokedexType } from '@go-gather/shared';
+import type { LoadedAvailability } from './availability-store';
 import type { AvailabilityData } from './bulbapedia';
 import {
   GO_LAUNCH_DATE,
   stampReleaseDates,
   undatedMegaNames,
   unlistedShinyCount,
+  unmappedUnreleasedForms,
+  unmatchedUnreleasedFormIds,
 } from './release-dates';
 import type { UnstampedCatalogEntry } from './transform';
 
@@ -81,6 +84,11 @@ const availability: AvailabilityData = {
     { dexNr: 892, formCode: '', dynamax: false, releasedOn: '2025-06-01' },
     { dexNr: 902, formCode: '', dynamax: false, releasedOn: '2026-11-01' },
   ],
+  unreleasedForms: [
+    { dexNr: 555, formCode: 'GZ' },
+    { dexNr: 658, formCode: 'A' },
+    { dexNr: 999, formCode: '' },
+  ],
 };
 
 function releasedOn(unstamped: UnstampedCatalogEntry): string | null {
@@ -104,8 +112,20 @@ describe('stampReleaseDates', () => {
     expect(releasedOn(entry(52, { region: Region.Alola }))).toBe('2016-07-06');
   });
 
-  it('matches regional codes by their first letter, like Paldean Tauros breeds', () => {
+  it('matches longer all-capital regional codes, like Paldean Tauros breeds', () => {
     expect(releasedOn(entry(128, { region: Region.Paldea }))).toBe('2023-11-01');
+  });
+
+  it("doesn't read a lowercase species-specific code as regional", () => {
+    const [vivillon] = stampReleaseDates([entry(666, { region: Region.Paldea })], {
+      ...availability,
+      species: [
+        { dexNr: 666, formCode: '', releasedOn: '2019-06-14' },
+        { dexNr: 666, formCode: 'Pol', releasedOn: '2023-01-01' },
+      ],
+    });
+
+    expect(vivillon.releasedOn).toBe('2019-06-14');
   });
 
   it('dates a Gigantamax entry by its own form, then by the species-level release', () => {
@@ -219,7 +239,17 @@ describe('stampReleaseDates for shiny entries', () => {
     expect(releasedOn(shiny(1001))).toBeNull();
   });
 
-  it('matches regional shinies by the code prefix, never by a GMax code', () => {
+  it('files a lowercase species-specific shiny code as the base listing', () => {
+    const [vivillon] = stampReleaseDates([shiny(666)], {
+      ...availability,
+      species: [...availability.species, { dexNr: 666, formCode: '', releasedOn: '2019-06-14' }],
+      shiny: [{ dexNr: 666, formCode: 'Pol', dynamax: false, releasedOn: '2022-03-01' }],
+    });
+
+    expect(vivillon.releasedOn).toBe('2022-03-01');
+  });
+
+  it('matches regional shinies by all-capital regional codes, never by a GMax code', () => {
     expect(releasedOn(shiny(19, { region: Region.Alola }))).toBe('2019-01-01');
     expect(releasedOn(shiny(128, { region: Region.Paldea }))).toBe('2024-01-01');
     expect(releasedOn(shiny(52, { region: Region.Galar }))).toBeNull();
@@ -255,6 +285,117 @@ describe('stampReleaseDates for shiny entries', () => {
     const [stamped] = stampReleaseDates([shiny(128)], { ...availability, shiny: null });
 
     expect(stamped.releasedOn).toBe('2016-07-06');
+  });
+});
+
+describe('stampReleaseDates for unreleased forms', () => {
+  const form = (formId: string, overrides: Partial<UnstampedCatalogEntry> = {}) =>
+    entry(555, { formId, region: Region.Galar, ...overrides });
+  const speciesFor555: AvailabilityData = {
+    ...availability,
+    species: [
+      ...availability.species,
+      { dexNr: 555, formCode: '', releasedOn: '2020-01-24' },
+      { dexNr: 555, formCode: 'G', releasedOn: '2020-06-03' },
+      { dexNr: 999, formCode: '', releasedOn: '2023-11-01' },
+    ],
+    shiny: [
+      ...availability.shiny,
+      { dexNr: 555, formCode: 'G', dynamax: false, releasedOn: '2021-01-01' },
+    ],
+  };
+  const dated = (unstamped: UnstampedCatalogEntry) =>
+    stampReleaseDates([unstamped], speciesFor555)[0].releasedOn;
+
+  it('hides a listed form, with its shiny and size copies', () => {
+    expect(dated(form('DARMANITAN_GALARIAN_ZEN'))).toBeNull();
+    expect(dated(form('DARMANITAN_GALARIAN_ZEN', { isShiny: true }))).toBeNull();
+    expect(dated(form('DARMANITAN_GALARIAN_ZEN', { pokedexType: 'xxl' }))).toBeNull();
+  });
+
+  it("leaves the species' other forms dated", () => {
+    expect(dated(form('DARMANITAN_GALARIAN_STANDARD'))).toBe('2020-06-03');
+    expect(dated(entry(555, { formId: 'DARMANITAN' }))).toBe('2020-01-24');
+  });
+
+  it('hides nothing for a code with no catalog entry', () => {
+    expect(dated(entry(999, { formId: 'GIMMIGHOUL' }))).toBe('2023-11-01');
+  });
+
+  it('dates a form the species data dates by its own row, even from a stale forms list', () => {
+    const [stamped, stampedShiny] = stampReleaseDates(
+      [form('DARMANITAN_GALARIAN_ZEN'), form('DARMANITAN_GALARIAN_ZEN', { isShiny: true })],
+      {
+        ...speciesFor555,
+        species: [
+          ...speciesFor555.species,
+          { dexNr: 555, formCode: 'GZ', releasedOn: '2027-01-01' },
+        ],
+      }
+    );
+
+    expect(stamped.releasedOn).toBe('2027-01-01');
+    expect(stampedShiny.releasedOn).toBe('2027-01-01');
+  });
+
+  it('dates a released form by its own row once off the forms list', () => {
+    const [stamped] = stampReleaseDates([entry(666, { formId: 'VIVILLON_FANCY' })], {
+      ...speciesFor555,
+      species: [
+        ...speciesFor555.species,
+        { dexNr: 666, formCode: '', releasedOn: '2019-06-14' },
+        { dexNr: 666, formCode: 'Fan', releasedOn: '2026-12-01' },
+      ],
+      unreleasedForms: [],
+    });
+
+    expect(stamped.releasedOn).toBe('2026-12-01');
+  });
+
+  it('hides nothing when no unreleased-form data is saved', () => {
+    const [stamped] = stampReleaseDates([form('DARMANITAN_GALARIAN_ZEN')], {
+      ...speciesFor555,
+      unreleasedForms: null,
+    });
+
+    expect(stamped.releasedOn).toBe('2020-06-03');
+  });
+});
+
+describe('unmatchedUnreleasedFormIds', () => {
+  it('lists forms to hide that no catalog entry has', () => {
+    const entries = [entry(555, { formId: 'DARMANITAN_GALARIAN_ZEN' })];
+    const listing: LoadedAvailability = {
+      ...availability,
+      unreleasedForms: [
+        { dexNr: 555, formCode: 'GZ' },
+        { dexNr: 666, formCode: 'Pok' },
+      ],
+    };
+
+    expect(unmatchedUnreleasedFormIds(entries, listing)).toEqual(['VIVILLON_POKEBALL']);
+  });
+
+  it('lists nothing when no unreleased-form data is saved', () => {
+    expect(unmatchedUnreleasedFormIds([], { ...availability, unreleasedForms: null })).toEqual([]);
+  });
+});
+
+describe('unmappedUnreleasedForms', () => {
+  it('lists codes the mapping table does not know', () => {
+    expect(
+      unmappedUnreleasedForms({
+        ...availability,
+        unreleasedForms: [
+          { dexNr: 555, formCode: 'Z' },
+          { dexNr: 25, formCode: 'Q' },
+        ],
+      })
+    ).toEqual(['0025Q']);
+  });
+
+  it('lists nothing when no unreleased-form data is saved', () => {
+    expect(unmappedUnreleasedForms({ ...availability, unreleasedForms: null })).toEqual([]);
   });
 });
 

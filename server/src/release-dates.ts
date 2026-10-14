@@ -6,12 +6,19 @@
  * against the device's own date to decide what's out.
  *
  * Rules, most specific first:
+ * - An alternate form Bulbapedia lists as not yet available (its "forms yet
+ *   to be made available" table, mapped by UNRELEASED_FORM_IDS) isn't
+ *   released: null — shiny and XXL/XXS copies included, as they share the
+ *   form's `formId`.
  * - Gigantamax / Dynamax entries: that Max release's date — by form when
  *   Bulbapedia lists the form separately (Urshifu's styles), otherwise the
  *   species-level Max release. A Max entry Bulbapedia doesn't list as a Max
  *   release at all isn't released: null.
  * - Mega / Primal entries: that Mega's release date, matched by its form
  *   suffix (`MEGA_X`, `PRIMAL`, …), or null (not released).
+ * - A form UNRELEASED_FORM_IDS maps that the species data dates under its
+ *   own code (Bulbapedia moved it to the date table once released): that
+ *   date, never hidden even if a stale forms list still has it.
  * - Regional-form entries: the earliest debut of that species' regional
  *   code (`0019A` = Alolan Rattata), falling back to the species' own date
  *   when Bulbapedia has no separate regional row.
@@ -52,6 +59,71 @@ import type { UnstampedCatalogEntry } from './transform.js';
  * released without a more specific date (see db.ts's migration too). */
 export const GO_LAUNCH_DATE = '2016-07-06';
 
+/**
+ * Bulbapedia's codes in its "forms yet to be made available" table, written
+ * as it writes them (`0555Z`; a `form=` argument's value appended, so
+ * `{{MSP|0658|form=A|…}}` is `0658A`), mapped to the catalog `formId` they
+ * hide. `null` means a known form with no separate catalog entry, so there's
+ * nothing to hide. Every code must be listed: an unknown one is logged by the
+ * catalog sync rather than guessed, since a wrong guess could hide a released
+ * form. When Niantic releases a form, Bulbapedia moves it to the date table,
+ * and a code the species data dates is never hidden — even if a stale
+ * forms list (one that failed to update) still has it — and is dated by
+ * that row.
+ */
+export const UNRELEASED_FORM_IDS: Partial<Record<string, string | null>> = {
+  '0555Z': 'DARMANITAN_ZEN',
+  '0555GZ': 'DARMANITAN_GALARIAN_ZEN',
+  '0648P': 'MELOETTA_PIROUETTE',
+  '0666Fan': 'VIVILLON_FANCY',
+  '0666Pok': 'VIVILLON_POKEBALL',
+  // Ash-Greninja, Eternal Floette, Ultra Necrozma, Dada Zarude and Bloodmoon
+  // Ursaluna have no catalog entry of their own.
+  '0658A': null,
+  '0670E': null,
+  '0800U': null,
+  '0893D': null,
+  '0901B': null,
+  // Gimmighoul's Chest Form. Both catalog Gimmighoul entries (plain and
+  // `COIN_A1`) are the Roaming Form released in GO, and the same plain code
+  // is dated as released.
+  '0999': null,
+};
+
+function unreleasedFormCode(dexNr: number, formCode: string): string {
+  return `${String(dexNr).padStart(4, '0')}${formCode}`;
+}
+
+/** The species data's dates for UNRELEASED_FORM_IDS's codes, keyed by the
+ * catalog `formId` they map to — so a form released since it was listed is
+ * dated by its own row, not its species' or region's earlier debut. */
+function mappedFormDates(availability: LoadedAvailability): Map<string, Dated> {
+  const dates = new Map<string, Dated>();
+  for (const { dexNr, formCode, releasedOn } of availability.species ?? []) {
+    const formId = UNRELEASED_FORM_IDS[unreleasedFormCode(dexNr, formCode)];
+    if (formId) {
+      keepEarliest(dates, formId, { releasedOn });
+    }
+  }
+  return dates;
+}
+
+/** The catalog formIds to hide: mapped codes from the unreleased-forms
+ * table, except any the species data dates. */
+function hiddenUnreleasedFormIds(
+  availability: LoadedAvailability,
+  formDates: Map<string, Dated> = mappedFormDates(availability)
+): Set<string> {
+  return new Set(
+    (availability.unreleasedForms ?? []).flatMap(({ dexNr, formCode }) => {
+      const formId = UNRELEASED_FORM_IDS[unreleasedFormCode(dexNr, formCode)];
+      return formId && !formDates.has(formId) ? [formId] : [];
+    })
+  );
+}
+
+const REGIONAL_CODE = /^[AGHP][A-Z]*$/;
+
 /** Bulbapedia's regional-form letters. */
 export const REGION_CODES: Partial<Record<string, Region>> = {
   A: Region.Alola,
@@ -61,15 +133,18 @@ export const REGION_CODES: Partial<Record<string, Region>> = {
 };
 
 /**
- * The region a Bulbapedia form code belongs to, by its first letter — a
- * prefix rather than an exact letter, since some regional forms have longer
- * codes (Paldean Tauros breeds are `PC`/`PB`/`PA`, Galarian Zen Darmanitan
- * `GZ`). A species-specific code that happens to start with one of these
- * letters (Deoxys `A` is Attack Forme, Vivillon `Pa` Poké Ball Pattern)
- * only ever meets an entry with a region, so the overlap is harmless.
+ * The region a Bulbapedia form code belongs to: a region letter followed
+ * by capital letters only. That covers the plain letters and the longer
+ * regional codes (Paldean Tauros breeds are `PC`/`PB`/`PA`, Galarian Zen
+ * Darmanitan `GZ`), while species-specific codes that merely start with a
+ * region letter (Vivillon `Pol`, Furfrou `He`, Oricorio `Pa`) are written
+ * with lowercase letters and stay non-regional. The plain letters still
+ * collide with a few species-specific codes (Deoxys `A` is Attack Forme,
+ * Primal `P`), but those species have no regional form in the catalog,
+ * so the extra regional date is never looked up.
  */
 function regionForCode(formCode: string): Region | undefined {
-  return REGION_CODES[formCode.charAt(0)];
+  return REGIONAL_CODE.test(formCode) ? REGION_CODES[formCode.charAt(0)] : undefined;
 }
 
 interface Dated {
@@ -194,8 +269,13 @@ function releaseDating(availability: LoadedAvailability): ReleaseDating {
   for (const { dexNr, form, releasedOn } of availability.mega ?? []) {
     keepEarliest(megaDates, `${String(dexNr)}|${form}`, { releasedOn });
   }
+  const formDates = mappedFormDates(availability);
+  const unreleasedFormIds = hiddenUnreleasedFormIds(availability, formDates);
 
   function releaseDateFor(entry: UnstampedCatalogEntry): string | null {
+    if (unreleasedFormIds.has(entry.formId)) {
+      return null;
+    }
     const dexNr = String(entry.dexNr);
     const max =
       entry.pokedexType === 'max'
@@ -215,6 +295,11 @@ function releaseDating(availability: LoadedAvailability): ReleaseDating {
 
     if (entry.pokedexType === 'mega' && availability.mega) {
       return megaDates.get(`${dexNr}|${megaFormSuffix(entry)}`)?.releasedOn ?? null;
+    }
+
+    const formDate = formDates.get(entry.formId);
+    if (formDate) {
+      return formDate.releasedOn;
     }
 
     const speciesDate = availability.species
@@ -284,4 +369,28 @@ export function unlistedShinyCount(
     (entry) =>
       entry.isShiny && pokemonDate(entry) !== null && shinyListingDate(entry, shiny) === null
   ).length;
+}
+
+/**
+ * Codes in Bulbapedia's unreleased-forms table that UNRELEASED_FORM_IDS
+ * doesn't know, for the catalog sync to log so they can be mapped. Their
+ * forms stay dated (shown) until then.
+ */
+export function unmappedUnreleasedForms(availability: LoadedAvailability): string[] {
+  return (availability.unreleasedForms ?? [])
+    .map(({ dexNr, formCode }) => unreleasedFormCode(dexNr, formCode))
+    .filter((code) => !Object.hasOwn(UNRELEASED_FORM_IDS, code));
+}
+
+/**
+ * Forms the unreleased-forms table should hide that match no catalog entry
+ * — most likely pokemon-go-api renamed the `formId` — for the catalog sync
+ * to log, since the form is then shown instead of hidden.
+ */
+export function unmatchedUnreleasedFormIds(
+  entries: UnstampedCatalogEntry[],
+  availability: LoadedAvailability
+): string[] {
+  const catalogFormIds = new Set(entries.map((entry) => entry.formId));
+  return [...hiddenUnreleasedFormIds(availability)].filter((formId) => !catalogFormIds.has(formId));
 }

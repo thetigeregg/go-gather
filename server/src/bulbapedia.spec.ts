@@ -8,6 +8,7 @@ import {
   parseReleaseDate,
   parseShinyReleases,
   parseSpeciesReleases,
+  parseUnreleasedForms,
   stripComments,
   templateCalls,
 } from './bulbapedia';
@@ -51,7 +52,7 @@ describe('parseMspGoCodes', () => {
   });
 
   it('throws on a template without a dex-number code', () => {
-    expect(() => parseMspGoCodes('{{MSP/GO|West Sea}}')).toThrow(/unrecognized MSP\/GO code/);
+    expect(() => parseMspGoCodes('{{MSP/GO|West Sea}}')).toThrow(/unrecognized Pokemon code/);
   });
 });
 
@@ -276,6 +277,57 @@ describe('parseGigantamaxReleases', () => {
     expect(() => parseGigantamaxReleases(availabilityPage([], 3))).toThrow(
       /only 3 Gigantamax species parsed/
     );
+  });
+});
+
+describe('parseUnreleasedForms', () => {
+  function parse(options: Parameters<typeof speciesSections>[0]) {
+    return parseUnreleasedForms(availabilityPage([], 15, speciesSections(options)));
+  }
+
+  it('reads MSP/GO and plain MSP codes, including form= arguments', () => {
+    expect(
+      parse({
+        unreleasedForms: [
+          '{{MSP/GO|0555Z|Darmanitan}}',
+          '{{MSP/GO|0666Fan|Vivillon}}',
+          '{{MSP|0658|form=A|Greninja}}',
+          '{{MSP|0999|Gimmighoul}}',
+        ],
+      })
+    ).toEqual([
+      { dexNr: 555, formCode: 'Z' },
+      { dexNr: 666, formCode: 'Fan' },
+      { dexNr: 658, formCode: 'A' },
+      { dexNr: 999, formCode: '' },
+    ]);
+  });
+
+  it('ignores the unreleased species table and commented-out codes', () => {
+    const forms = parse({
+      unreleased: [901, 902],
+      unreleasedForms: ['{{MSP/GO|0648P|Meloetta}}', '<!--{{MSP/GO|0555Z|Darmanitan}}-->'],
+    });
+
+    expect(forms).toEqual([{ dexNr: 648, formCode: 'P' }]);
+  });
+
+  it('returns nothing for an empty table', () => {
+    expect(parse({ unreleasedForms: [] })).toEqual([]);
+  });
+
+  it('throws when the forms table is gone', () => {
+    const page = availabilityPage([]).replace('yet to be made available', 'all released');
+
+    expect(() => parseUnreleasedForms(page)).toThrow(/unreleased forms table not found/);
+  });
+
+  it('throws when the intro has no table after it', () => {
+    const species = speciesSections();
+    const intro = species.indexOf('yet to be made available');
+    const page = availabilityPage([], 15, species.slice(0, species.indexOf('\n', intro)));
+
+    expect(() => parseUnreleasedForms(page)).toThrow(/release table not found/);
   });
 });
 
