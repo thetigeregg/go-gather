@@ -139,6 +139,12 @@
       "regionForm": "SQUAWKABILLY_WHITE",
       "name": "Squawkabilly (White Plumage)",
       "notes": "pokemon-go-api's own names.English for this regionForm is wrong — it says 'Squawkabilly (White Kyurem)', an apparent copy-paste error from Kyurem's own form naming, unrelated to Squawkabilly. Corrected here to match its Blue/Green/Yellow siblings' naming pattern. Only surfaced once regionFormAssetBackfill above gave this regionForm a real sprite — it previously produced no row at all, so the wrong name was invisible."
+    },
+    {
+      "dexNr": 800,
+      "regionForm": "NECROZMA_ULTRA",
+      "name": "Necrozma",
+      "notes": "pokemon-go-api's NECROZMA_ULTRA regionForm reuses plain Necrozma's own sprite, so transform.ts's findBaseFormDuplicate treats it as the plain entry's named form and labels plain Necrozma 'Necrozma (Ultra Necrozma)'. Renaming it here names the plain entry just 'Necrozma'. Ultra Necrozma itself isn't in Pokemon GO and has no catalog row of its own (dropped as a sprite duplicate)."
     }
   ],
   "costumeGenderEnabled": false

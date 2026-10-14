@@ -31,7 +31,6 @@ import { AvailabilityStatus, DEFAULT_SETTINGS, ExportBundle } from '@go-gather/s
 import { AvailabilityStatusService } from '../core/services/availability-status.service';
 import { NotificationService } from '../core/services/notification.service';
 import { UserDataService } from '../core/services/user-data.service';
-import { getPokemonId, getPokemonName } from '../core/services/pokemon-sprite-mapper.util';
 import { ChipListInputComponent } from '../features/chip-list-input/chip-list-input.component';
 import { presentShareFile } from '../core/utils/share-file.util';
 import { pickJsonTextFile } from '../core/utils/pick-file.util';
@@ -52,12 +51,6 @@ const DATASET_LABELS: Partial<Record<string, string>> = {
   shiny: 'Shinies',
   unreleasedForms: 'Unreleased forms',
 };
-
-/** Dex exclusion lists are shown in ascending dex order — including lists
- * saved before sorting existed, hence also applied on hydration. */
-function sortedDexNumberStrings(dexNumbers: readonly number[]): string[] {
-  return [...dexNumbers].sort((a, b) => a - b).map(String);
-}
 
 @Component({
   selector: 'app-settings',
@@ -95,8 +88,6 @@ export class SettingsPage implements ViewWillEnter {
   private readonly toastController = inject(ToastController);
 
   patterns: string[] = [];
-  dexNumbers: string[] = [];
-  shinyDexNumbers: string[] = [];
   shinyPatterns: string[] = [];
   userTags: string[] = [];
 
@@ -197,25 +188,6 @@ export class SettingsPage implements ViewWillEnter {
     this.userDataService.updateUserSettings({ excludedNamePatterns: patterns });
   }
 
-  dexNumbersChanged(dexNumbers: string[]): void {
-    this.dexNumbers = this.resolveDexNumbers(dexNumbers);
-    const excludedDexNumbers = this.dexNumbers.map(Number);
-    this.userDataService.updateUserSettings({ excludedDexNumbers });
-  }
-
-  shinyDexNumbersChanged(shinyDexNumbers: string[]): void {
-    this.shinyDexNumbers = this.resolveDexNumbers(shinyDexNumbers);
-    const excludedShinyDexNumbers = this.shinyDexNumbers.map(Number);
-    this.userDataService.updateUserSettings({ excludedShinyDexNumbers });
-  }
-
-  /** Display formatter for the dex number lists — an arrow property so it
-   * can be handed to `app-chip-list-input`'s `labelFn` without rebinding. */
-  readonly dexNumberLabel = (value: string): string => {
-    const name = getPokemonName(Number(value));
-    return name ? `#${value} · ${name}` : `#${value}`;
-  };
-
   shinyPatternsChanged(shinyPatterns: string[]): void {
     this.shinyPatterns = shinyPatterns;
     this.userDataService.updateUserSettings({ excludedShinyNamePatterns: shinyPatterns });
@@ -279,8 +251,6 @@ export class SettingsPage implements ViewWillEnter {
         exportedAt: new Date().toISOString(),
         progress: parsed as ExportBundle['progress'],
         excludedNamePatterns: this.userDataService.getUserSettings().excludedNamePatterns,
-        excludedDexNumbers: this.userDataService.getUserSettings().excludedDexNumbers,
-        excludedShinyDexNumbers: this.userDataService.getUserSettings().excludedShinyDexNumbers,
         excludedShinyNamePatterns: this.userDataService.getUserSettings().excludedShinyNamePatterns,
         userTags: this.userDataService.getUserSettings().userTags,
         presetQueries: this.userDataService.getUserSettings().presetQueries,
@@ -301,8 +271,6 @@ export class SettingsPage implements ViewWillEnter {
         exportedAt: bundle.exportedAt ?? new Date().toISOString(),
         progress: bundle.progress,
         excludedNamePatterns: bundle.excludedNamePatterns ?? [],
-        excludedDexNumbers: bundle.excludedDexNumbers ?? [],
-        excludedShinyDexNumbers: bundle.excludedShinyDexNumbers ?? [],
         excludedShinyNamePatterns: bundle.excludedShinyNamePatterns ?? [],
         userTags: bundle.userTags ?? [],
         presetQueries: bundle.presetQueries ?? [],
@@ -320,24 +288,6 @@ export class SettingsPage implements ViewWillEnter {
     throw new Error('Unrecognized backup file format');
   }
 
-  /** Accepts each entry as either a dex number or a Pokemon name (resolved
-   * via the bundled name map, e.g. "pikachu" → "25"). Entries that are
-   * neither (e.g. a stray typo) are dropped rather than stored, so the
-   * exclusion filter never has to guard against them, and a name that
-   * resolves to an already-listed number doesn't add a duplicate. The
-   * result is sorted by dex number. */
-  private resolveDexNumbers(values: string[]): string[] {
-    const resolved = values.map((value) => {
-      const trimmed = value.trim();
-      if (/^\d+$/.test(trimmed)) {
-        return Number(trimmed);
-      }
-      return getPokemonId(trimmed);
-    });
-    const dexNumbers = resolved.filter((value): value is number => value !== null);
-    return sortedDexNumberStrings([...new Set(dexNumbers)]);
-  }
-
   private async showToast(message: string): Promise<void> {
     const toast = await this.toastController.create({
       message,
@@ -350,8 +300,6 @@ export class SettingsPage implements ViewWillEnter {
   private refreshFromUserSettings(): void {
     const userSettings = this.userDataService.getUserSettings();
     this.patterns = [...userSettings.excludedNamePatterns];
-    this.dexNumbers = sortedDexNumberStrings(userSettings.excludedDexNumbers);
-    this.shinyDexNumbers = sortedDexNumberStrings(userSettings.excludedShinyDexNumbers);
     this.shinyPatterns = [...userSettings.excludedShinyNamePatterns];
     this.userTags = [...userSettings.userTags];
     this.notificationsEnabled = userSettings.notificationsEnabled;

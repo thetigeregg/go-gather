@@ -49,10 +49,8 @@ const IMAGE_CONCURRENCY = 16;
  * this sync script patches from PokeAPI — see sync-overrides.json's own
  * `_readme` for the full rationale on each list. Kept in a plain JSON file
  * (rather than hardcoded here) so they can be edited directly without a
- * code change, matching how equivalent per-dex-number lists (e.g.
- * excludedDexNumbers) are already user-editable via the Settings UI —
- * this file is this script's equivalent, since sync.ts runs standalone
- * before the frontend/UserSettings exist to read from.
+ * code change — sync.ts runs standalone, before the frontend/UserSettings
+ * exist to read from.
  */
 interface SyncOverrides {
   missingAssetLinkDexNumbers: { dexNr: number }[];

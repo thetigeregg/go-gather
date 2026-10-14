@@ -106,8 +106,10 @@ describe('UserDataService', () => {
     expect(bundle.userTags).toEqual(['tag1']);
   });
 
-  it('importBundle applies settings and progress, then refreshes local state', async () => {
-    const bundle: ExportBundle = {
+  it('importBundle applies settings and progress, ignoring retired fields from older backups', async () => {
+    // Backups from before Bulbapedia release data also carry the retired
+    // dex-number exclusion lists.
+    const bundle = {
       version: 1,
       exportedAt: new Date().toISOString(),
       progress: [
@@ -116,7 +118,7 @@ describe('UserDataService', () => {
       ],
       excludedNamePatterns: ['imported-pattern'],
       excludedDexNumbers: [7],
-      excludedShinyDexNumbers: [],
+      excludedShinyDexNumbers: [25],
       excludedShinyNamePatterns: [],
       userTags: ['imported-tag'],
       presetQueries: [],
@@ -124,7 +126,7 @@ describe('UserDataService', () => {
         ...DEFAULT_SETTINGS.excludedSearchTermsByPokedex,
         regular: [{ kind: 'tag', value: 'Trade' }],
       },
-    };
+    } as ExportBundle;
 
     const progress = await new Promise((resolve) => {
       service.importBundle(bundle).subscribe(resolve);
@@ -138,6 +140,8 @@ describe('UserDataService', () => {
     expect(service.getUserSettings().excludedSearchTermsByPokedex.regular).toEqual([
       { kind: 'tag', value: 'Trade' },
     ]);
+    expect(service.getUserSettings()).not.toHaveProperty('excludedDexNumbers');
+    expect(service.getUserSettings()).not.toHaveProperty('excludedShinyDexNumbers');
   });
 
   it("importBundle doesn't clear progress entries absent from the bundle", async () => {
@@ -151,8 +155,6 @@ describe('UserDataService', () => {
         { catalogEntryId: 'new-entry', caught: true, updatedAt: new Date().toISOString() },
       ],
       excludedNamePatterns: [],
-      excludedDexNumbers: [],
-      excludedShinyDexNumbers: [],
       excludedShinyNamePatterns: [],
       userTags: [],
       presetQueries: [],

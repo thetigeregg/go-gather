@@ -119,17 +119,17 @@ export interface ExcludedSearchTerm {
 
 /**
  * A full user-data backup: caught progress plus the excluded-patterns
- * filters (name regex + dex numbers). `version` is bumped whenever the
- * shape changes, so a future import can detect and migrate an older file
- * instead of silently misreading it.
+ * filters. `version` is bumped whenever the shape changes incompatibly, so a
+ * future import can detect and migrate an older file instead of silently
+ * misreading it. Backups from before Bulbapedia release data also carry
+ * `excludedDexNumbers`/`excludedShinyDexNumbers`; those settings were retired,
+ * and import ignores the extra fields, so the version stays 1.
  */
 export interface ExportBundle {
   version: 1;
   exportedAt: string;
   progress: ProgressEntry[];
   excludedNamePatterns: string[];
-  excludedDexNumbers: number[];
-  excludedShinyDexNumbers: number[];
   excludedShinyNamePatterns: string[];
   userTags: string[];
   presetQueries: PresetQuery[];
@@ -250,15 +250,11 @@ export interface UserSettings {
   showUncaughtOnly: boolean;
   /** Case-insensitive regex patterns; any entry whose name matches one is hidden. */
   excludedNamePatterns: string[];
-  /** National dex numbers to hide entirely — e.g. species pokemon-go-api
-   * lists but Niantic hasn't actually released in-game yet. */
-  excludedDexNumbers: number[];
-  /** National dex numbers whose shiny entries are hidden — e.g. a species is
-   * released but its shiny form isn't out yet. */
-  excludedShinyDexNumbers: number[];
   /** Case-insensitive regex patterns; only the SHINY entry of any matching
-   * form is hidden (non-shiny stays visible) — e.g. a specific costume's
-   * shiny variant hasn't been released, unlike the rest of that species. */
+   * form is hidden (non-shiny stays visible) — e.g. a costume's shiny that
+   * isn't out yet. Unreleased species and shinies are hidden automatically
+   * from Bulbapedia's data (see `CatalogEntry.releasedOn`), but its shiny
+   * list doesn't cover costumes. */
   excludedShinyNamePatterns: string[];
   /** Custom tags the user has assigned to Pokemon in-game — kept here as a
    * reference list (not tied to any catalog entry) so search strings can be
@@ -310,8 +306,6 @@ export const DEFAULT_SETTINGS: UserSettings = {
   showGender: true,
   showUncaughtOnly: false,
   excludedNamePatterns: ['\\(Copy \\d{4}\\)'],
-  excludedDexNumbers: [],
-  excludedShinyDexNumbers: [],
   excludedShinyNamePatterns: [],
   userTags: [],
   presetQueries: [],

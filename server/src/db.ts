@@ -59,6 +59,8 @@ export function initSchema(): void {
       show_gender INTEGER NOT NULL,
       show_uncaught_only INTEGER NOT NULL,
       excluded_name_patterns TEXT NOT NULL,
+      -- Retired settings (replaced by Bulbapedia release data): no longer
+      -- read or written, kept so existing databases need no migration.
       excluded_dex_numbers TEXT NOT NULL,
       excluded_shiny_dex_numbers TEXT NOT NULL,
       excluded_shiny_name_patterns TEXT NOT NULL,
@@ -253,8 +255,8 @@ export function initSchema(): void {
     ) VALUES (
       1, @pokedexType, @shinyFilter, @regionFilter,
       @showRegional, @showAlternate, @showGender, @showUncaughtOnly,
-      @excludedNamePatterns, @excludedDexNumbers,
-      @excludedShinyDexNumbers, @excludedShinyNamePatterns,
+      @excludedNamePatterns, '[]',
+      '[]', @excludedShinyNamePatterns,
       @userTags, @presetQueries, @excludedSearchTermsByPokedex,
       @hiddenEventIds, @disabledEventTypes, @disabledSeasonDailyBonusDays,
       @notificationsEnabled,
@@ -269,8 +271,6 @@ export function initSchema(): void {
     showGender: DEFAULT_SETTINGS.showGender ? 1 : 0,
     showUncaughtOnly: DEFAULT_SETTINGS.showUncaughtOnly ? 1 : 0,
     excludedNamePatterns: JSON.stringify(DEFAULT_SETTINGS.excludedNamePatterns),
-    excludedDexNumbers: JSON.stringify(DEFAULT_SETTINGS.excludedDexNumbers),
-    excludedShinyDexNumbers: JSON.stringify(DEFAULT_SETTINGS.excludedShinyDexNumbers),
     excludedShinyNamePatterns: JSON.stringify(DEFAULT_SETTINGS.excludedShinyNamePatterns),
     userTags: JSON.stringify(DEFAULT_SETTINGS.userTags),
     presetQueries: JSON.stringify(DEFAULT_SETTINGS.presetQueries),

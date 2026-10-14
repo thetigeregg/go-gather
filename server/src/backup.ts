@@ -22,8 +22,6 @@ interface ProgressRow {
 
 interface SettingsRow {
   excluded_name_patterns: string;
-  excluded_dex_numbers: string;
-  excluded_shiny_dex_numbers: string;
   excluded_shiny_name_patterns: string;
   user_tags: string;
   preset_queries: string;
@@ -52,8 +50,7 @@ function buildExportBundle(): ExportBundle {
 
   const settingsRow = db
     .prepare(
-      `SELECT excluded_name_patterns, excluded_dex_numbers, excluded_shiny_dex_numbers,
-              excluded_shiny_name_patterns, user_tags, preset_queries,
+      `SELECT excluded_name_patterns, excluded_shiny_name_patterns, user_tags, preset_queries,
               excluded_search_terms_by_pokedex
        FROM user_settings WHERE id = 1`
     )
@@ -64,8 +61,6 @@ function buildExportBundle(): ExportBundle {
     exportedAt: new Date().toISOString(),
     progress,
     excludedNamePatterns: JSON.parse(settingsRow.excluded_name_patterns) as string[],
-    excludedDexNumbers: JSON.parse(settingsRow.excluded_dex_numbers) as number[],
-    excludedShinyDexNumbers: JSON.parse(settingsRow.excluded_shiny_dex_numbers) as number[],
     excludedShinyNamePatterns: JSON.parse(settingsRow.excluded_shiny_name_patterns) as string[],
     userTags: JSON.parse(settingsRow.user_tags) as string[],
     presetQueries: JSON.parse(settingsRow.preset_queries) as PresetQuery[],

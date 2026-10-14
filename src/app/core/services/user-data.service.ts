@@ -119,8 +119,6 @@ export class UserDataService {
       exportedAt: new Date().toISOString(),
       progress,
       excludedNamePatterns: this.userSettings.excludedNamePatterns,
-      excludedDexNumbers: this.userSettings.excludedDexNumbers,
-      excludedShinyDexNumbers: this.userSettings.excludedShinyDexNumbers,
       excludedShinyNamePatterns: this.userSettings.excludedShinyNamePatterns,
       userTags: this.userSettings.userTags,
       presetQueries: this.userSettings.presetQueries,
@@ -137,8 +135,6 @@ export class UserDataService {
   importBundle(bundle: ExportBundle): Observable<ProgressEntry[]> {
     const settingsPartial: Partial<UserSettings> = {
       excludedNamePatterns: bundle.excludedNamePatterns,
-      excludedDexNumbers: bundle.excludedDexNumbers,
-      excludedShinyDexNumbers: bundle.excludedShinyDexNumbers,
       excludedShinyNamePatterns: bundle.excludedShinyNamePatterns,
       userTags: bundle.userTags,
       presetQueries: bundle.presetQueries,
