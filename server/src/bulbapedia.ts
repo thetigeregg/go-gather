@@ -1,7 +1,7 @@
 /**
  * Pokemon GO availability — which species, regional forms, Mega/Primal
- * forms and Dynamax/Gigantamax Pokemon have been released, and when — read
- * from Bulbapedia's community-maintained Pokemon GO pages. Neither
+ * forms, Dynamax/Gigantamax Pokemon and shinies have been released, and
+ * when — read from Bulbapedia's community-maintained Pokemon GO pages. Neither
  * pokemon-go-api nor PokeAPI says what has actually been released in-game,
  * and the hand-kept lists this replaces (`releasedDynamaxDexNumbers`/
  * `releasedGigantamaxDexNumbers` in sync-overrides.json, the
@@ -35,21 +35,24 @@ const GIGANTAMAX_SECTION = 'Gigantamax';
 const SPECIES_SECTION = 'List of Pokémon by date';
 const UNRELEASED_SECTION = 'Unreleased Pokémon';
 const MEGA_SECTION = 'Mega Evolution and Primal Reversion';
+const SHINY_PAGE = 'List of Shiny Pokémon in Pokémon GO';
+const SHINY_ROW_TEMPLATE = 'lop/shiny/GO';
 
 // As of October 2026 the pages list 150 Dynamax, 19 Gigantamax, 959
-// released and 60 Mega/Primal species — a count far below that means the
-// page layout changed under the parser.
+// released and 60 Mega/Primal species, and 479 shiny families — a count
+// far below that means the page layout changed under the parser.
 const MIN_DYNAMAX_SPECIES = 100;
 const MIN_GIGANTAMAX_SPECIES = 15;
 const MIN_RELEASED_SPECIES = 900;
 const MIN_MEGA_SPECIES = 40;
+const MIN_SHINY_FAMILIES = 400;
 
-const GIGANTAMAX_CODE_SUFFIX = 'GMax';
+export const GIGANTAMAX_CODE_SUFFIX = 'GMax';
 
 /** Bulbapedia's Mega/Primal form letters mapped to the suffix of
  * pokemon-go-api's `megaEvolutions` keys (`CHARIZARD_MEGA_X`,
  * `KYOGRE_PRIMAL`), which the catalog keeps as each Mega entry's `form`. */
-const MEGA_CODES: Partial<Record<string, string>> = {
+export const MEGA_CODES: Partial<Record<string, string>> = {
   M: 'MEGA',
   MX: 'MEGA_X',
   MY: 'MEGA_Y',
@@ -92,12 +95,29 @@ export interface DatedSpeciesRelease {
   releasedOn: string;
 }
 
+/** One Pokemon code listed in a family row of Bulbapedia's shiny list —
+ * its shiny is out (or announced) from the row's shiny debut date. */
+export interface DatedShinyRelease {
+  dexNr: number;
+  /** Bulbapedia's form letters, as in `DatedSpeciesRelease` — plus Mega
+   * (`M`, `MX`, …) and Gigantamax (`GMax`) codes, which the species list
+   * doesn't have. Classified in release-dates.ts. */
+  formCode: string;
+  /** Whether the row lists any member as catchable as a shiny Dynamax, which
+   * evolving makes every Dynamax-capable member of the family available. */
+  dynamax: boolean;
+  /** `YYYY-MM-DD` — the family row's first date, its shiny debut. May be in
+   * the future for an announced shiny. */
+  releasedOn: string;
+}
+
 /** Every dataset saved in `availability_sources`, keyed by dataset name. */
 export interface AvailabilityData {
   dynamax: DatedMaxRelease[];
   gigantamax: DatedMaxRelease[];
   species: DatedSpeciesRelease[];
   mega: DatedMegaRelease[];
+  shiny: DatedShinyRelease[];
 }
 
 export type AvailabilityDataset = keyof AvailabilityData;
@@ -133,6 +153,10 @@ const ANY_MSP_DEX_NR = /\{\{MSP(?:\/GO)?\|(?:size=\d+\|)?(\d{4})/g;
 // matter for Max availability.
 const MSP_GO_CODE = /^(\d{4})(\S*)(?:\s+\S+)*$/;
 const HEADING = /^(={2,6})\s*(.+?)\s*\1\s*$/;
+// An unclosed `<!--` runs to the end of the page, as MediaWiki renders it.
+const HTML_COMMENT = /<!--[\s\S]*?(?:-->|$)/g;
+const NAMED_ARGUMENT = /^\s*[A-Za-z0-9_]+\s*=/;
+const SHINY_DYNAMAX_FLAG = /\bdynamax\s*=\s*yes\b/;
 
 interface PokemonCode {
   code: string;
@@ -172,6 +196,72 @@ export function keepEarliest<T extends { releasedOn: string }>(
 interface TableRow {
   cells: string[];
   isHeader: boolean;
+}
+
+/** Removes `<!-- … -->` comments. Bulbapedia's editors comment out rows and
+ * dates that aren't live yet — 40 whole families on the shiny list, and an
+ * announced date inside another row — so every parser starts with this. */
+export function stripComments(wikitext: string): string {
+  return wikitext.replace(HTML_COMMENT, '');
+}
+
+/**
+ * Every `{{name|…}}` call in `wikitext`, as its arguments after the name.
+ * Arguments are split on `|` only outside nested `{{…}}` and `[[…]]`, since
+ * cells hold templates and links with their own `|`s. Each closer must match
+ * its opener — `[[` with `]]`, `{{` with `}}` — or the call is rejected.
+ */
+export function templateCalls(wikitext: string, name: string): string[][] {
+  const opener = `{{${name}|`;
+  const calls: string[][] = [];
+  let start = wikitext.indexOf(opener);
+  while (start !== -1) {
+    const args: string[] = [];
+    let argStart = start + opener.length;
+    let index = argStart;
+    // The closer each open `{{` or `[[` is waiting for, innermost last.
+    const closers: string[] = [];
+    let end = -1;
+    while (index < wikitext.length) {
+      const pair = wikitext.substring(index, index + 2);
+      if (pair === '{{' || pair === '[[') {
+        closers.push(pair === '{{' ? '}}' : ']]');
+        index += 2;
+      } else if (pair === '}}' && closers.length === 0) {
+        end = index;
+        break;
+      } else if (pair === '}}' || pair === ']]') {
+        if (closers.pop() !== pair) {
+          throw new Error(
+            `Bulbapedia: unbalanced brackets in {{${name}|${args.slice(0, 2).join('|')}…}}: unexpected ${pair}`
+          );
+        }
+        index += 2;
+      } else if (wikitext[index] === '|' && closers.length === 0) {
+        args.push(wikitext.slice(argStart, index));
+        index++;
+        argStart = index;
+      } else {
+        index++;
+      }
+    }
+    if (end === -1) {
+      throw new Error(`Bulbapedia: unclosed {{${name}}} template`);
+    }
+    args.push(wikitext.slice(argStart, end));
+    // An unclosed `[[` that a later `]]` happens to close keeps the call open
+    // past its own `}}`, so it runs on into the next call instead of failing
+    // — catch that here rather than date the next rows' Pokemon with this
+    // row's date.
+    if (args.some((arg) => arg.includes(opener))) {
+      throw new Error(
+        `Bulbapedia: unbalanced brackets in {{${name}|${args.slice(0, 2).join('|')}…}} ran into the next call`
+      );
+    }
+    calls.push(args);
+    start = wikitext.indexOf(opener, end + 2);
+  }
+  return calls;
 }
 
 /** Reads every `{{MSP/GO|...}}` template in a wikitext fragment, in order. */
@@ -383,7 +473,7 @@ function releasesFromSection<R extends FormRelease>(
 
 export function parseDynamaxReleases(dynamaxPage: string): DatedMaxRelease[] {
   return releasesFromSection(
-    extractSection(dynamaxPage, DYNAMAX_SECTION),
+    extractSection(stripComments(dynamaxPage), DYNAMAX_SECTION),
     'Dynamax',
     MIN_DYNAMAX_SPECIES,
     (pokemon) => toMaxRelease(pokemon, pokemon.formCode)
@@ -392,7 +482,7 @@ export function parseDynamaxReleases(dynamaxPage: string): DatedMaxRelease[] {
 
 export function parseGigantamaxReleases(availabilityPage: string): DatedMaxRelease[] {
   return releasesFromSection(
-    extractSection(availabilityPage, GIGANTAMAX_SECTION),
+    extractSection(stripComments(availabilityPage), GIGANTAMAX_SECTION),
     'Gigantamax',
     MIN_GIGANTAMAX_SPECIES,
     (pokemon) => {
@@ -412,7 +502,7 @@ export function parseGigantamaxReleases(availabilityPage: string): DatedMaxRelea
  */
 export function parseMegaReleases(availabilityPage: string): DatedMegaRelease[] {
   return releasesFromSection(
-    extractSection(availabilityPage, MEGA_SECTION),
+    extractSection(stripComments(availabilityPage), MEGA_SECTION),
     'Mega',
     MIN_MEGA_SPECIES,
     toMegaRelease
@@ -430,12 +520,25 @@ function parseUnreleasedSpecies(availabilityPage: string): Set<number> {
  * Every species and form debut in the "List of Pokémon by date" table,
  * keeping each (species, form letters) pair's earliest date. Cross-checked
  * against the "Unreleased Pokémon" list: every dex number up to the highest
- * one seen must be dated, listed with a TBA/TBD date, or listed as
- * unreleased. Between them those cover the whole National Dex, so a gap
- * means a row was silently lost.
+ * one seen must be dated, listed with a TBA/TBD date, in a commented-out
+ * row, or listed as unreleased. Between them those cover the whole
+ * National Dex, so a gap means a row was silently lost.
  */
 export function parseSpeciesReleases(availabilityPage: string): DatedSpeciesRelease[] {
-  const rows = parseReleaseTable(extractSection(availabilityPage, SPECIES_SECTION));
+  const page = stripComments(availabilityPage);
+  // Species in a row Bulbapedia's editors have commented out (e.g. an
+  // announced debut not yet live) aren't dated, but they're listed — so the
+  // gap check below mustn't count them as silently lost.
+  const commentedOut = new Set(
+    [
+      ...firstTableLines(extractSection(availabilityPage, SPECIES_SECTION))
+        .join('\n')
+        .matchAll(HTML_COMMENT),
+    ]
+      .flatMap((comment) => [...comment[0].matchAll(ANY_MSP_DEX_NR)])
+      .map((match) => Number(match[1]))
+  );
+  const rows = parseReleaseTable(extractSection(page, SPECIES_SECTION));
   const releases = new Map<string, DatedSpeciesRelease>();
   for (const row of rows.filter(isDated)) {
     for (const { dexNr, formCode } of row.pokemon) {
@@ -457,10 +560,14 @@ export function parseSpeciesReleases(availabilityPage: string): DatedSpeciesRele
     );
   }
 
-  const unreleased = parseUnreleasedSpecies(availabilityPage);
+  const unreleased = parseUnreleasedSpecies(page);
   const highestDexNr = Math.max(...dated, ...unscheduled, ...unreleased);
   const missing = Array.from({ length: highestDexNr }, (_, index) => index + 1).filter(
-    (dexNr) => !dated.has(dexNr) && !unscheduled.has(dexNr) && !unreleased.has(dexNr)
+    (dexNr) =>
+      !dated.has(dexNr) &&
+      !unscheduled.has(dexNr) &&
+      !unreleased.has(dexNr) &&
+      !commentedOut.has(dexNr)
   );
   if (missing.length > 0) {
     throw new Error(
@@ -468,6 +575,60 @@ export function parseSpeciesReleases(availabilityPage: string): DatedSpeciesRele
     );
   }
 
+  return [...releases.values()];
+}
+
+/**
+ * Every Pokemon code in Bulbapedia's shiny list, with its family row's
+ * shiny debut date. Each `{{lop/shiny/GO|…}}` row is one evolution (or
+ * regional) family; its positional arguments are dex, family, the
+ * Encounter cell, the Evolution-only cell, the date cell, then event and
+ * rates. Codes in either cell have a released shiny. The date cell is free
+ * text whose first date is the family's shiny debut; the later segments
+ * (Megas, Dynamax, "by encounter", …) aren't parsed — release-dates.ts
+ * combines the debut with each entry's own release date instead.
+ */
+export function parseShinyReleases(shinyPage: string): DatedShinyRelease[] {
+  const rows = templateCalls(stripComments(shinyPage), SHINY_ROW_TEMPLATE);
+  if (rows.length < MIN_SHINY_FAMILIES) {
+    throw new Error(
+      `Bulbapedia: only ${String(rows.length)} shiny families parsed (expected at least ${String(MIN_SHINY_FAMILIES)}) — page layout may have changed.`
+    );
+  }
+
+  const releases = new Map<string, DatedShinyRelease>();
+  for (const args of rows) {
+    const positional = args.filter((arg) => !NAMED_ARGUMENT.test(arg)).map((arg) => arg.trim());
+    if (positional.length < 5) {
+      throw new Error(`Bulbapedia: unexpected shiny row layout: ${args.join('|').slice(0, 120)}`);
+    }
+    const [, family, encounter, evolutionOnly, dateCell] = positional;
+    const releasedOn = parseReleaseDate(dateCell);
+    if (!releasedOn) {
+      if (!UNSCHEDULED_DATE.test(dateCell)) {
+        throw new Error(`Bulbapedia: unreadable shiny date "${dateCell.slice(0, 60)}" (${family})`);
+      }
+      console.warn(
+        `Bulbapedia: shiny ${family} has an unscheduled date "${dateCell}" — not listed yet.`
+      );
+      continue;
+    }
+
+    const cells = `${encounter}${evolutionOnly}`;
+    const pokemon = parseMspGoCodes(cells);
+    if (pokemon.length === 0) {
+      throw new Error(`Bulbapedia: no MSP/GO Pokemon in shiny row for ${family}`);
+    }
+    const dynamax = SHINY_DYNAMAX_FLAG.test(cells);
+    for (const { dexNr, formCode } of pokemon) {
+      keepEarliest(releases, `${String(dexNr)}|${formCode}|${String(dynamax)}`, {
+        dexNr,
+        formCode,
+        dynamax,
+        releasedOn,
+      });
+    }
+  }
   return [...releases.values()];
 }
 
@@ -486,6 +647,7 @@ export const AVAILABILITY_DATASETS: {
   { dataset: 'gigantamax', page: AVAILABILITY_PAGE, parse: parseGigantamaxReleases },
   { dataset: 'species', page: AVAILABILITY_PAGE, parse: parseSpeciesReleases },
   { dataset: 'mega', page: AVAILABILITY_PAGE, parse: parseMegaReleases },
+  { dataset: 'shiny', page: SHINY_PAGE, parse: parseShinyReleases },
 ];
 
 export async function fetchWikitext(page: string): Promise<string> {

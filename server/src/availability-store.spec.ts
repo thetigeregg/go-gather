@@ -9,11 +9,14 @@ import {
   dynamaxPage,
   megaSection,
   row,
+  shinyPage,
+  shinyRow,
   speciesSections,
 } from './bulbapedia.test-helpers';
 
 const DYNAMAX_PAGE = 'Dynamax (GO)';
 const AVAILABILITY_PAGE = 'List of Pokémon by availability in Pokémon GO';
+const SHINY_PAGE = 'List of Shiny Pokémon in Pokémon GO';
 const FIRST_SYNC = new Date('2026-10-01T08:00:00Z');
 const SECOND_SYNC = new Date('2026-10-02T08:00:00Z');
 
@@ -50,6 +53,9 @@ const goodPages = {
     15,
     speciesSections({ rows: [row('Nov 14, 2026', '{{MSP/GO|0902|Basculegion}}')] })
   ),
+  [SHINY_PAGE]: shinyPage([
+    shinyRow({ dex: 971, family: 'Greavard', encounter: ['0971 s'], date: 'November 1, 2026' }),
+  ]),
 };
 
 beforeEach(() => {
@@ -70,8 +76,8 @@ describe('syncAvailability', () => {
 
     await expect(syncAvailability(database, fetchPage, FIRST_SYNC)).resolves.toEqual([]);
 
-    expect(fetchPage).toHaveBeenCalledTimes(2);
-    for (const dataset of ['dynamax', 'gigantamax', 'species', 'mega']) {
+    expect(fetchPage).toHaveBeenCalledTimes(3);
+    for (const dataset of ['dynamax', 'gigantamax', 'species', 'mega', 'shiny']) {
       expect(source(dataset)).toMatchObject({
         fetched_at: FIRST_SYNC.toISOString(),
         last_attempt_at: FIRST_SYNC.toISOString(),
@@ -94,6 +100,7 @@ describe('syncAvailability', () => {
       pageFetcher({
         [DYNAMAX_PAGE]: dynamaxPage([row('Jun 1, 2025', '{{MSP/GO|0416|Vespiquen}}')]),
         [AVAILABILITY_PAGE]: availabilityPage([row('Mar 28, 2026', '{{MSP/GO|0025|Pikachu}}')]),
+        [SHINY_PAGE]: goodPages[SHINY_PAGE],
       }),
       SECOND_SYNC
     );
@@ -139,6 +146,47 @@ describe('syncAvailability', () => {
     });
   });
 
+  it('requests every page before any of them has loaded', () => {
+    const fetchPage = vi.fn(() => new Promise<string>(() => undefined));
+
+    void syncAvailability(database, fetchPage, FIRST_SYNC);
+
+    expect(fetchPage.mock.calls).toEqual([[DYNAMAX_PAGE], [AVAILABILITY_PAGE], [SHINY_PAGE]]);
+  });
+
+  it('records a page that fails before its datasets are reached, without crashing', async () => {
+    let releaseDynamax: (wikitext: string) => void = () => undefined;
+    const fetchPage = vi.fn((page: string) =>
+      page === DYNAMAX_PAGE
+        ? new Promise<string>((resolve) => {
+            releaseDynamax = resolve;
+          })
+        : Promise.reject(new Error(`Bulbapedia: ${page} unavailable`))
+    );
+
+    const syncing = syncAvailability(database, fetchPage, FIRST_SYNC);
+    // Let the other pages reject while the first dataset is still waiting.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    releaseDynamax(goodPages[DYNAMAX_PAGE]);
+
+    await expect(syncing).resolves.toEqual(['gigantamax', 'species', 'mega', 'shiny']);
+    expect(source('dynamax').last_error).toBeNull();
+    expect(source('shiny').last_error).toBe(`Bulbapedia: ${SHINY_PAGE} unavailable`);
+  });
+
+  it('records a fetcher that throws synchronously, without throwing', async () => {
+    const fetchPage = vi.fn((page: string) => {
+      if (page === SHINY_PAGE) {
+        throw new Error('Bulbapedia: bad URL');
+      }
+      return Promise.resolve(goodPages[page as keyof typeof goodPages]);
+    });
+
+    await expect(syncAvailability(database, fetchPage, FIRST_SYNC)).resolves.toEqual(['shiny']);
+    expect(source('shiny').last_error).toBe('Bulbapedia: bad URL');
+    expect(source('dynamax').last_error).toBeNull();
+  });
+
   it('records a non-Error rejection as its string value', async () => {
     // eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors -- the non-Error rejection is what's under test
     const fetchPage = vi.fn(() => Promise.reject('rate limited'));
@@ -148,6 +196,7 @@ describe('syncAvailability', () => {
       'gigantamax',
       'species',
       'mega',
+      'shiny',
     ]);
 
     expect(source('dynamax').last_error).toBe('rate limited');
@@ -268,6 +317,33 @@ describe('loadAvailability', () => {
   it('throws on corrupt Mega data rather than falling back', () => {
     database
       .prepare("UPDATE availability_sources SET payload = '{not json' WHERE dataset = 'mega'")
+      .run();
+
+    expect(() => loadAvailability(database, SECOND_SYNC)).toThrow(SyntaxError);
+  });
+
+  it('returns null shiny data, without throwing, when shiny data has never been saved', async () => {
+    const fresh = new BetterSqlite3(':memory:');
+    fresh.exec(AVAILABILITY_SOURCES_SCHEMA);
+    await syncAvailability(
+      fresh,
+      pageFetcher({ ...goodPages, [SHINY_PAGE]: new Error('Bulbapedia: 503') }),
+      FIRST_SYNC
+    );
+
+    const availability = loadAvailability(fresh, SECOND_SYNC);
+
+    expect(availability.shiny).toBeNull();
+    expect(availability.mega).not.toBeNull();
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringMatching(/No saved shiny availability yet .*Treating shinies as released/)
+    );
+    fresh.close();
+  });
+
+  it('throws on corrupt shiny data rather than falling back', () => {
+    database
+      .prepare("UPDATE availability_sources SET payload = '{not json' WHERE dataset = 'shiny'")
       .run();
 
     expect(() => loadAvailability(database, SECOND_SYNC)).toThrow(SyntaxError);

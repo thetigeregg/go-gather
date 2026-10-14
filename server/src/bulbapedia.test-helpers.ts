@@ -116,3 +116,72 @@ export function availabilityPage(
     ...table([row('Jul 6, 2016', '{{MSP/GO|0083|Farfetchd}}')]),
   ].join('\n');
 }
+
+export interface ShinyRowOptions {
+  dex: number;
+  family: string;
+  /** Codes for the Encounter cell, e.g. `0001 s` or, with extra template
+   * arguments, `0001 s|Bulbasaur|dynamax=yes`. */
+  encounter: string[];
+  /** Codes for the Evolution-only cell. */
+  evolution?: string[];
+  /** The date cell's first date, or e.g. `TBA`. */
+  date: string;
+  /** Also write the date as a `datesort=` argument, as most real rows do. */
+  dateSort?: boolean;
+  /** A `form=` argument, as on regional family rows. */
+  form?: string;
+}
+
+function shinyCells(codes: string[]): string {
+  return codes
+    .map((code) => `{{MSP/GO|size=80|${code.includes('|') ? code : `${code}|Shiny`}}}`)
+    .join('');
+}
+
+/** One `{{lop/shiny/GO|…}}` family row, shaped like the real page's. */
+export function shinyRow({
+  dex,
+  family,
+  encounter,
+  evolution = [],
+  date,
+  dateSort = true,
+  form,
+}: ShinyRowOptions): string {
+  return [
+    `{{lop/shiny/GO|${String(dex).padStart(4, '0')}|${family}`,
+    ...(form ? [`form=${form}`] : []),
+    shinyCells(encounter),
+    shinyCells(evolution),
+    ...(dateSort ? [`datesort=${date}`] : []),
+    `${date} <small>(${family})</small><br>March 3, 2026 <small>(Shadow)</small>`,
+    `[[Community Day|${family} Community Day]]`,
+    `{{tt|0.2%|${family}}}}}`,
+  ].join('|');
+}
+
+/** Bulbapedia's shiny list: `fillerCount` filler families (dex 1000 up)
+ * with shinies released Jul 6, 2016, a commented-out placeholder row that
+ * must be ignored (as the real page has for unreleased shinies), and
+ * `rows`. */
+export function shinyPage(rows: string[], fillerCount = 400): string {
+  const filler = Array.from({ length: fillerCount }, (_, index) =>
+    shinyRow({
+      dex: 1000 + index,
+      family: 'Filler',
+      encounter: [`${String(1000 + index).padStart(4, '0')} s`],
+      date: 'July 6, 2016',
+    })
+  );
+  return [
+    'The following lists the Pokémon whose Shiny forms are available.',
+    '===Kanto families===',
+    '{| class="roundy sortable collapsible"',
+    '! # !! Family !! Pokémon',
+    ...filler,
+    `<!--${shinyRow({ dex: 570, family: 'Zorua', encounter: ['0570 s'], date: 'January 1, 2020' })}-->`,
+    ...rows,
+    '|}',
+  ].join('\n');
+}

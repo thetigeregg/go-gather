@@ -40,8 +40,8 @@ interface AvailabilitySourceRow {
 }
 
 /** A dataset has never been fetched successfully, so there's nothing saved
- * to load — the one load failure loadAvailability tolerates for species
- * and Mega data. */
+ * to load — the one load failure loadAvailability tolerates for species,
+ * Mega and shiny data. */
 class NoSavedAvailabilityError extends Error {}
 
 /**
@@ -57,7 +57,24 @@ export async function syncAvailability(
 ): Promise<AvailabilityDataset[]> {
   const attemptedAt = now.toISOString();
   const failed: AvailabilityDataset[] = [];
+  // Every distinct page is fetched at once, before any dataset is parsed,
+  // so the requests run in parallel. Each fetch gets a no-op handler right
+  // away: a page that fails before the loop reaches it would otherwise be
+  // an unhandled rejection, which crashes the server. The loop still awaits
+  // each one and records its failure. A fetcher that throws instead of
+  // rejecting is turned into a rejection the same way.
   const pages = new Map<string, Promise<string>>();
+  const sources = AVAILABILITY_DATASETS.map((source) => {
+    let wikitext = pages.get(source.page);
+    if (!wikitext) {
+      wikitext = new Promise<string>((resolve) => {
+        resolve(fetchPage(source.page));
+      });
+      wikitext.catch(() => undefined);
+      pages.set(source.page, wikitext);
+    }
+    return { ...source, wikitext };
+  });
   const saveSuccess = database.prepare(`
     INSERT INTO availability_sources (dataset, payload, fetched_at, last_attempt_at, last_error)
     VALUES (@dataset, @payload, @attemptedAt, @attemptedAt, NULL)
@@ -75,13 +92,8 @@ export async function syncAvailability(
       last_error = excluded.last_error
   `);
 
-  for (const { dataset, page, parse } of AVAILABILITY_DATASETS) {
+  for (const { dataset, parse, wikitext } of sources) {
     try {
-      let wikitext = pages.get(page);
-      if (!wikitext) {
-        wikitext = fetchPage(page);
-        pages.set(page, wikitext);
-      }
       const releases = parse(await wikitext);
       saveSuccess.run({ dataset, payload: JSON.stringify(releases), attemptedAt });
       console.log(`Availability ${dataset}: ${String(releases.length)} entries saved.`);
@@ -128,10 +140,10 @@ function loadDataset<K extends AvailabilityDataset>(
 
 /** Datasets that may not have been saved yet without stopping the catalog
  * sync — see loadAvailability. */
-type OptionalDataset = 'species' | 'mega';
+type OptionalDataset = 'species' | 'mega' | 'shiny';
 
-/** `AvailabilityData`, except species and Mega data may not exist yet —
- * see loadAvailability. */
+/** `AvailabilityData`, except species, Mega and shiny data may not exist
+ * yet — see loadAvailability. */
 export type LoadedAvailability = Omit<AvailabilityData, OptionalDataset> & {
   [K in OptionalDataset]: AvailabilityData[K] | null;
 };
@@ -164,7 +176,7 @@ function loadOptionalDataset<K extends OptionalDataset>(
  *
  * Throws if the Dynamax or Gigantamax data has never been fetched
  * successfully, since the DMax/GMax dexes can't be built without it.
- * Species and Mega data that has never been fetched comes back as null
+ * Species, Mega and shiny data that has never been fetched comes back as null
  * instead, and release-dates.ts falls back to how those entries were dated
  * before that dataset existed, rather than holding up the whole catalog
  * sync (e.g. on the first sync after upgrading) until Bulbapedia parses.
@@ -184,6 +196,12 @@ export function loadAvailability(database: Database, now: Date = new Date()): Lo
       'mega',
       now,
       "Dating Megas by their species' debut until it is."
+    ),
+    shiny: loadOptionalDataset(
+      database,
+      'shiny',
+      now,
+      'Treating shinies as released along with their Pokemon until it is.'
     ),
   };
 }
