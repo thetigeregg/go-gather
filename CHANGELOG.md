@@ -319,3 +319,7 @@
 ## v0.18.1 - 2026-10-14
 
 - 0692979 build(deps): bump Angular, Capacitor, Fastify, and tooling (#84)
+
+## v0.18.2 - 2026-10-14
+
+- 2876d40 build(deps): add missing TS7 platform binaries to lockfile (#86)
