@@ -303,3 +303,7 @@
 ## v0.15.7 - 2026-09-29
 
 - d1893db chore(deps): bump npm, gem, and node image dependencies (#73)
+
+## v0.16.0 - 2026-10-14
+
+- 439687e feat(settings): list exclusions in accordion and resolve dex names (#79)
