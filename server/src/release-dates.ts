@@ -10,16 +10,21 @@
  *   Bulbapedia lists the form separately (Urshifu's styles), otherwise the
  *   species-level Max release. A Max entry Bulbapedia doesn't list as a Max
  *   release at all isn't released: null.
+ * - Mega / Primal entries: that Mega's release date, matched by its form
+ *   suffix (`MEGA_X`, `PRIMAL`, …), else a species-level Mega release from
+ *   an unmapped Bulbapedia code, else null (not released).
  * - Regional-form entries: the earliest debut of that species' regional
  *   code (`0019A` = Alolan Rattata), falling back to the species' own date
  *   when Bulbapedia has no separate regional row.
- * - Everything else (base, gender, other forms, costumes, Mega, XXL/XXS):
- *   the species' earliest debut, under any form.
+ * - Everything else (base, gender, other forms, costumes, XXL/XXS): the
+ *   species' earliest debut, under any form.
  * - A species Bulbapedia doesn't date at all isn't released: null.
  *
  * Without any saved species data yet (see availability-store.ts's
  * loadAvailability), every species counts as released since Pokemon GO's
- * launch — the behaviour from before species dates existed.
+ * launch — the behaviour from before species dates existed. Without saved
+ * Mega data, Megas fall back to the species rule, as before Mega dates
+ * existed.
  */
 import { Region, type CatalogEntry } from '@go-gather/shared';
 import type { LoadedAvailability } from './availability-store.js';
@@ -45,6 +50,11 @@ export const REGION_CODES: Partial<Record<string, Region>> = {
 interface Dated {
   releasedOn: string;
 }
+
+/** A Mega entry's `form` is pokemon-go-api's `megaEvolutions` key
+ * (`VENUSAUR_MEGA`, `CHARIZARD_MEGA_X`, `KYOGRE_PRIMAL`); this reads the
+ * suffix Bulbapedia's codes are mapped to. */
+const MEGA_FORM_SUFFIX = /_(MEGA(?:_[A-Z])?|PRIMAL)$/;
 
 /** Keyed by `dexNr|assetForm form`, matching the catalog entry's own
  * `form`: `${FORM}_${suffix}` for a form-level release, the bare suffix for
@@ -72,6 +82,11 @@ export function stampReleaseDates(
   }
   const gigantamaxDates = maxReleaseDates(availability.gigantamax, GIGANTAMAX_FORM);
   const dynamaxDates = maxReleaseDates(availability.dynamax, DYNAMAX_FORM);
+  // Keyed `dexNr|suffix`, or `dexNr|` for a species-level release.
+  const megaDates = new Map<string, Dated>();
+  for (const { dexNr, form, releasedOn } of availability.mega ?? []) {
+    keepEarliest(megaDates, `${String(dexNr)}|${form ?? ''}`, { releasedOn });
+  }
 
   function releaseDateFor(entry: UnstampedCatalogEntry): string | null {
     const dexNr = String(entry.dexNr);
@@ -88,6 +103,13 @@ export function stampReleaseDates(
       return (
         (max.dates.get(`${dexNr}|${entry.form ?? ''}`) ?? max.dates.get(`${dexNr}|${max.suffix}`))
           ?.releasedOn ?? null
+      );
+    }
+
+    if (entry.pokedexType === 'mega' && availability.mega) {
+      const suffix = MEGA_FORM_SUFFIX.exec(entry.form ?? '')?.[1] ?? '';
+      return (
+        (megaDates.get(`${dexNr}|${suffix}`) ?? megaDates.get(`${dexNr}|`))?.releasedOn ?? null
       );
     }
 

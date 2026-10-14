@@ -578,6 +578,17 @@ export async function main(): Promise<void> {
   console.log(`Fetched ${pokedex.length} species entries.`);
 
   const entries = stampReleaseDates(pokedexToEntries(pokedex), availability);
+  // An undated Mega is hidden as unreleased. That's right for one Niantic
+  // hasn't released yet, but it's also what a Bulbapedia row the parser
+  // missed looks like, so name them rather than hide them silently.
+  const undatedMegas = entries.filter(
+    (e) => e.pokedexType === 'mega' && !e.isShiny && e.releasedOn === null
+  );
+  if (undatedMegas.length > 0) {
+    console.log(
+      `Megas with no Bulbapedia release (hidden as unreleased): ${undatedMegas.map((e) => e.name).join(', ')}`
+    );
+  }
 
   const uniqueImgUrls = [...new Set(entries.map((e) => e.imgUrl))];
   console.log(`Downloading ${uniqueImgUrls.length} unique sprites...`);

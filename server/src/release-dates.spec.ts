@@ -51,6 +51,13 @@ const availability: AvailabilityData = {
     { dexNr: 849, form: 'AMPED', releasedOn: '2024-11-17' },
     { dexNr: 892, form: null, releasedOn: '2025-03-01' },
   ],
+  mega: [
+    { dexNr: 6, form: 'MEGA_X', releasedOn: '2020-08-27' },
+    { dexNr: 6, form: 'MEGA_Y', releasedOn: '2020-09-01' },
+    { dexNr: 382, form: 'PRIMAL', releasedOn: '2023-02-18' },
+    // From a Bulbapedia code with no mapping: every Mega of the species.
+    { dexNr: 445, form: null, releasedOn: '2027-03-01' },
+  ],
 };
 
 function releasedOn(unstamped: UnstampedCatalogEntry): string | null {
@@ -58,12 +65,11 @@ function releasedOn(unstamped: UnstampedCatalogEntry): string | null {
 }
 
 describe('stampReleaseDates', () => {
-  it("gives regular, costume, Mega and size-tier entries the species' earliest debut", () => {
+  it("gives regular, costume and size-tier entries the species' earliest debut", () => {
     expect(releasedOn(entry(386))).toBe('2018-11-01');
     expect(releasedOn(entry(386, { costume: 'HOLIDAY', pokedexType: 'costume' }))).toBe(
       '2018-11-01'
     );
-    expect(releasedOn(entry(386, { form: 'DEOXYS_MEGA', pokedexType: 'mega' }))).toBe('2018-11-01');
     expect(releasedOn(entry(386, { pokedexType: 'xxl' }))).toBe('2018-11-01');
   });
 
@@ -97,6 +103,37 @@ describe('stampReleaseDates', () => {
   it('marks a Max entry with no Max release as not released', () => {
     expect(releasedOn(entry(19, { form: 'DYNAMAX', pokedexType: 'dmax' }))).toBeNull();
     expect(releasedOn(entry(19, { form: 'GIGANTAMAX', pokedexType: 'max' }))).toBeNull();
+  });
+
+  it('dates a Mega or Primal entry by its own form suffix', () => {
+    expect(releasedOn(entry(6, { form: 'CHARIZARD_MEGA_X', pokedexType: 'mega' }))).toBe(
+      '2020-08-27'
+    );
+    expect(releasedOn(entry(6, { form: 'CHARIZARD_MEGA_Y', pokedexType: 'mega' }))).toBe(
+      '2020-09-01'
+    );
+    expect(releasedOn(entry(382, { form: 'KYOGRE_PRIMAL', pokedexType: 'mega' }))).toBe(
+      '2023-02-18'
+    );
+  });
+
+  it('falls back to a species-level Mega release for a Mega with no exact match', () => {
+    expect(releasedOn(entry(445, { form: 'GARCHOMP_MEGA_Z', pokedexType: 'mega' }))).toBe(
+      '2027-03-01'
+    );
+  });
+
+  it('marks a Mega with no Mega release as not released', () => {
+    expect(releasedOn(entry(386, { form: 'DEOXYS_MEGA', pokedexType: 'mega' }))).toBeNull();
+  });
+
+  it("dates Megas by their species' debut when no Mega data is saved yet", () => {
+    const [mega] = stampReleaseDates([entry(386, { form: 'DEOXYS_MEGA', pokedexType: 'mega' })], {
+      ...availability,
+      mega: null,
+    });
+
+    expect(mega.releasedOn).toBe('2018-11-01');
   });
 
   it('treats every species as released when no species data is saved yet', () => {
