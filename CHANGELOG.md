@@ -343,3 +343,7 @@
 ## v0.22.1 - 2026-10-14
 
 - 8d7d0de fix(sync): date shiny Max/Mega forms by notes, retire dex exclusions (#90)
+
+## v0.23.0 - 2026-10-15
+
+- 293f416 feat(app): show popup when Pokemon availability changes (#91)
