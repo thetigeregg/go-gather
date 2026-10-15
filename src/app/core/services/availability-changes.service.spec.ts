@@ -102,7 +102,50 @@ describe('AvailabilityChangesService', () => {
     });
   });
 
+  it("drops a change that's undone before it's seen", async () => {
+    await setCheckDate(YESTERDAY);
+    await service.recordCatalogReplacement([entry('a', '2016-07-06')], [entry('a', null)], TODAY);
+
+    await service.recordCatalogReplacement([entry('a', null)], [entry('a', '2016-07-06')], TODAY);
+
+    expect(await service.getPending()).toEqual([]);
+  });
+
+  it('ignores a device date that moved backwards', async () => {
+    await setCheckDate(TODAY);
+
+    await service.recordCatalogReplacement(
+      [entry('a', TODAY)],
+      [entry('a', TODAY), entry('b', '2016-07-06')],
+      YESTERDAY
+    );
+
+    expect(await pendingIds()).toEqual(['b:available']);
+    expect((await engine.getSyncMeta('availabilityCheckDate'))?.value).toBe(TODAY);
+  });
+
   describe('checkForDateChanges', () => {
+    it("skips reading the catalog when it's already been checked today or later", async () => {
+      await engine.bulkPutCatalog([entry('a', TODAY)]);
+      const listCatalog = vi.spyOn(engine, 'listCatalog');
+
+      await setCheckDate(TODAY);
+      await service.checkForDateChanges(TODAY);
+      await service.checkForDateChanges(YESTERDAY);
+
+      expect(listCatalog).not.toHaveBeenCalled();
+      expect(await service.getPending()).toEqual([]);
+    });
+
+    it('starts from today on the first check', async () => {
+      await engine.bulkPutCatalog([entry('a', TODAY)]);
+
+      await service.checkForDateChanges(TODAY);
+
+      expect(await service.getPending()).toEqual([]);
+      expect((await engine.getSyncMeta('availabilityCheckDate'))?.value).toBe(TODAY);
+    });
+
     it('records announced releases whose day arrived and publishes them', async () => {
       await engine.bulkPutCatalog([entry('a', TODAY), entry('b', '2026-11-06')]);
       await setCheckDate(YESTERDAY);
@@ -169,19 +212,32 @@ describe('AvailabilityChangesService', () => {
       // A newer change to `a` arrives while the popup is open.
       await service.recordCatalogReplacement(
         [entry('a', '2016-07-06'), entry('b', '2016-07-06')],
-        [entry('a', null), entry('b', '2016-07-06')],
+        [entry('a', '2026-11-06'), entry('b', '2016-07-06')],
         TODAY
       );
 
       await service.acknowledge(shown);
 
-      expect(await pendingIds()).toEqual(['a:unavailable']);
+      expect(await pendingIds()).toEqual(['a:announced']);
     });
   });
 
   it('treats unreadable pending data as nothing pending', async () => {
-    await engine.putSyncMeta({ key: 'pendingAvailabilityChanges', value: '{not json' });
+    for (const value of ['{not json', 'null', '{"id":"a"}']) {
+      await engine.putSyncMeta({ key: 'pendingAvailabilityChanges', value });
 
-    expect(await service.getPending()).toEqual([]);
+      expect(await service.getPending()).toEqual([]);
+    }
+  });
+
+  it('records over pending data that is valid JSON but not a list', async () => {
+    await engine.putSyncMeta({ key: 'pendingAvailabilityChanges', value: 'null' });
+    await setCheckDate(YESTERDAY);
+
+    await service.recordCatalogReplacement([entry('a', null)], [entry('a', '2016-07-06')], TODAY);
+    await service.publishPending();
+    await service.acknowledge([]);
+
+    expect(await pendingIds()).toEqual(['a:available']);
   });
 });

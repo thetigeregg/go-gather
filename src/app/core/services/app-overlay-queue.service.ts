@@ -18,11 +18,15 @@ export class AppOverlayQueueService {
   /**
    * Queues `run`, which presents an overlay and resolves once it's dismissed
    * (or straight away if it decides there's nothing to show). A key already
-   * waiting isn't queued twice; one that's currently showing is, so a
-   * trigger that fires while it's open gets its own turn afterwards.
+   * waiting isn't queued twice: the newer `run` takes its place in line, so
+   * e.g. the OTA alert names the latest staged version. One that's currently
+   * showing is queued again, so a trigger that fires while it's open gets
+   * its own turn afterwards.
    */
   enqueue(key: string, run: () => Promise<void>): void {
-    if (this.waiting.some((overlay) => overlay.key === key)) {
+    const waiting = this.waiting.find((overlay) => overlay.key === key);
+    if (waiting) {
+      waiting.run = run;
       return;
     }
     this.waiting.push({ key, run });

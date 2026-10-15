@@ -45,21 +45,27 @@ describe('AppOverlayQueueService', () => {
     expect(log).toEqual(['show first', 'dismiss first', 'show second']);
   });
 
-  it("doesn't queue a key that's already waiting", async () => {
+  it('replaces a waiting key with the newer overlay, keeping its place', async () => {
     const log: string[] = [];
     const first = controlledOverlay(log, 'first');
-    const second = controlledOverlay(log, 'second');
-    const duplicate = vi.fn(() => Promise.resolve());
+    const stale = vi.fn(() => Promise.resolve());
+    const later = controlledOverlay(log, 'later');
+    const newer = vi.fn(() => {
+      log.push('show newer');
+      return Promise.resolve();
+    });
 
     queue.enqueue('first', first.run);
-    queue.enqueue('second', second.run);
-    queue.enqueue('second', duplicate);
+    queue.enqueue('live-update', stale);
+    queue.enqueue('later', later.run);
+    queue.enqueue('live-update', newer);
     await flush();
     first.dismiss();
     await flush();
 
-    expect(second.run).toHaveBeenCalledTimes(1);
-    expect(duplicate).not.toHaveBeenCalled();
+    expect(stale).not.toHaveBeenCalled();
+    expect(newer).toHaveBeenCalledTimes(1);
+    expect(log).toEqual(['show first', 'dismiss first', 'show newer', 'show later']);
   });
 
   it('runs a key again when it was queued while showing', async () => {

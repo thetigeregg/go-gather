@@ -49,6 +49,8 @@ const CHANGE: AvailabilityChange = {
   order: 1,
   kind: 'available',
   releasedOn: '2026-10-19',
+  seenState: 'announced',
+  seenReleasedOn: '2026-10-19',
 };
 
 describe('AppComponent', () => {

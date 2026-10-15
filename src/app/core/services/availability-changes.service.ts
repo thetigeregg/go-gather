@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { Observable, Subject } from 'rxjs';
 import type { CatalogEntry } from '@go-gather/shared';
 import { StorageEngineFactory } from '../data/storage-engine.factory';
-import { localDateString } from './catalog-release.util';
+import { hasReleaseDate, localDateString } from './catalog-release.util';
 import {
   AvailabilityChange,
   availabilityChangeKey,
@@ -55,10 +55,15 @@ export class AvailabilityChangesService {
    * releases whose day arrived — then publishes anything pending, including
    * changes left unseen by an earlier session. */
   async checkForDateChanges(today: string = localDateString()): Promise<void> {
-    await this.engine.runInTransaction(['catalog', 'syncMeta'], async () => {
-      const catalog = await this.engine.listCatalog();
-      await this.record(catalog, catalog, today);
-    });
+    // Already checked today (or later, see record): nothing can have changed
+    // by date, so skip reading the whole catalog.
+    const checked = await this.engine.getSyncMeta(CHECK_DATE_KEY);
+    if (checked === undefined || checked.value < today) {
+      await this.engine.runInTransaction(['catalog', 'syncMeta'], async () => {
+        const catalog = await this.engine.listCatalog();
+        await this.record(catalog, catalog, today);
+      });
+    }
     await this.publishPending();
   }
 
@@ -74,7 +79,8 @@ export class AvailabilityChangesService {
       return [];
     }
     try {
-      return JSON.parse(meta.value) as AvailabilityChange[];
+      const parsed: unknown = JSON.parse(meta.value);
+      return Array.isArray(parsed) ? (parsed as AvailabilityChange[]) : [];
     } catch {
       return [];
     }
@@ -98,22 +104,25 @@ export class AvailabilityChangesService {
     today: string
   ): Promise<void> {
     const checked = await this.engine.getSyncMeta(CHECK_DATE_KEY);
+    // The app goes by the device date, but one that moves backwards
+    // (crossing time zones westward, a clock change) is ignored here:
+    // listing released entries as announced, then as available again once
+    // the date catches up, would only be noise.
+    const date = checked !== undefined && checked.value > today ? checked.value : today;
     // Without a previous check, or a previous catalog to compare (a fresh
     // install, or one cached before release dates existed, which shows every
     // entry), there's no "last seen" state: comparing would list most of the
     // catalog. Start from today instead.
     const hasBaseline =
-      checked !== undefined &&
-      previous.length > 0 &&
-      previous.every((entry) => (entry as { releasedOn?: string | null }).releasedOn !== undefined);
+      checked !== undefined && previous.length > 0 && previous.every(hasReleaseDate);
     if (hasBaseline) {
-      const changes = diffAvailability(previous, checked.value, next, today);
+      const changes = diffAvailability(previous, checked.value, next, date);
       if (changes.length > 0) {
         await this.putPending(mergeAvailabilityChanges(await this.getPending(), changes));
       }
     }
-    if (checked?.value !== today) {
-      await this.engine.putSyncMeta({ key: CHECK_DATE_KEY, value: today });
+    if (checked?.value !== date) {
+      await this.engine.putSyncMeta({ key: CHECK_DATE_KEY, value: date });
     }
   }
 

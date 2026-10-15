@@ -19,6 +19,11 @@ export interface AvailabilityChange {
   /** The entry's new `releasedOn`: its release (or announced) date, or null
    * once it's no longer available. */
   releasedOn: string | null;
+  /** What the user last saw for the entry, before this change and any
+   * earlier one not yet seen — so a change that's undone before it's shown
+   * can be dropped (see mergeAvailabilityChanges). */
+  seenState: AvailabilityState;
+  seenReleasedOn: string | null;
 }
 
 export interface AvailabilityItem {
@@ -61,13 +66,31 @@ export function availabilityState(
   return entry.releasedOn === null ? 'hidden' : 'announced';
 }
 
+const STATE_AFTER: Record<AvailabilityChangeKind, AvailabilityState> = {
+  available: 'released',
+  announced: 'announced',
+  unavailable: 'hidden',
+};
+
 function toChange(
   entry: CatalogEntry,
   kind: AvailabilityChangeKind,
-  releasedOn: string | null
+  releasedOn: string | null,
+  before: CatalogEntry | undefined,
+  seenState: AvailabilityState
 ): AvailabilityChange {
   const { id, name, pokedexType, isShiny, order } = entry;
-  return { id, name, pokedexType, isShiny, order, kind, releasedOn };
+  return {
+    id,
+    name,
+    pokedexType,
+    isShiny,
+    order,
+    kind,
+    releasedOn,
+    seenState,
+    seenReleasedOn: before?.releasedOn ?? null,
+  };
 }
 
 /**
@@ -91,20 +114,21 @@ export function diffAvailability(
     const was = availabilityState(before, previousDate);
     const now = availabilityState(entry, nextDate);
     if (now === 'released' && was !== 'released') {
-      changes.push(toChange(entry, 'available', entry.releasedOn));
+      changes.push(toChange(entry, 'available', entry.releasedOn, before, was));
     } else if (
       now === 'announced' &&
       (was !== 'announced' || before?.releasedOn !== entry.releasedOn)
     ) {
-      changes.push(toChange(entry, 'announced', entry.releasedOn));
+      changes.push(toChange(entry, 'announced', entry.releasedOn, before, was));
     } else if (now === 'hidden' && was !== 'hidden') {
-      changes.push(toChange(entry, 'unavailable', null));
+      changes.push(toChange(entry, 'unavailable', null, before, was));
     }
   }
 
   for (const entry of previous) {
-    if (!nextIds.has(entry.id) && availabilityState(entry, previousDate) !== 'hidden') {
-      changes.push(toChange(entry, 'unavailable', null));
+    const was = availabilityState(entry, previousDate);
+    if (!nextIds.has(entry.id) && was !== 'hidden') {
+      changes.push(toChange(entry, 'unavailable', null, entry, was));
     }
   }
   return changes;
@@ -116,16 +140,34 @@ export function availabilityChangeKey({ id, kind, releasedOn }: AvailabilityChan
   return `${id}|${kind}|${releasedOn ?? ''}`;
 }
 
-/** Adds `incoming` to the changes not yet seen, keeping one per entry: the
- * newer one, since it's what the app now shows. */
+/** Whether a change leaves the entry as the user last saw it. */
+function isBackToSeen(change: AvailabilityChange): boolean {
+  return (
+    STATE_AFTER[change.kind] === change.seenState &&
+    (change.kind !== 'announced' || change.releasedOn === change.seenReleasedOn)
+  );
+}
+
+/**
+ * Adds `incoming` to the changes not yet seen, keeping one per entry: the
+ * newer one, since it's what the app now shows, but measured from what the
+ * user last saw. A change that only undoes an unseen one (Bulbapedia hid an
+ * entry for one sync, then restored it) is dropped rather than shown.
+ */
 export function mergeAvailabilityChanges(
   existing: readonly AvailabilityChange[],
   incoming: readonly AvailabilityChange[]
 ): AvailabilityChange[] {
   const byId = new Map(existing.map((change) => [change.id, change]));
   for (const change of incoming) {
+    const earlier = byId.get(change.id);
     byId.delete(change.id);
-    byId.set(change.id, change);
+    const merged = earlier
+      ? { ...change, seenState: earlier.seenState, seenReleasedOn: earlier.seenReleasedOn }
+      : change;
+    if (!isBackToSeen(merged)) {
+      byId.set(change.id, merged);
+    }
   }
   return [...byId.values()];
 }

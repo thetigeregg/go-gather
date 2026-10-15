@@ -25,6 +25,8 @@ function change(id: string, overrides: Partial<AvailabilityChange> = {}): Availa
     order: 0,
     kind: 'available',
     releasedOn: '2016-07-06',
+    seenState: 'hidden',
+    seenReleasedOn: null,
     ...overrides,
   };
 }
@@ -141,7 +143,20 @@ describe('diffAvailability', () => {
       order: 7,
       kind: 'available',
       releasedOn: '2016-07-06',
+      seenState: 'hidden',
+      seenReleasedOn: null,
     });
+  });
+
+  it('records what the user saw before the change', () => {
+    const [found] = diffAvailability(
+      [entry('a', '2026-11-06')],
+      YESTERDAY,
+      [entry('a', null)],
+      TODAY
+    );
+
+    expect(found).toMatchObject({ seenState: 'announced', seenReleasedOn: '2026-11-06' });
   });
 });
 
@@ -157,6 +172,63 @@ describe('mergeAvailabilityChanges', () => {
       { id: 'a', kind: 'available' },
       { id: 'c', kind: 'available' },
     ]);
+  });
+
+  it('measures the newer change from what the user last saw', () => {
+    const [merged] = mergeAvailabilityChanges(
+      [change('a', { kind: 'announced', releasedOn: TODAY, seenState: 'hidden' })],
+      [
+        change('a', {
+          kind: 'available',
+          releasedOn: TODAY,
+          seenState: 'announced',
+          seenReleasedOn: TODAY,
+        }),
+      ]
+    );
+
+    expect(merged).toMatchObject({ kind: 'available', seenState: 'hidden', seenReleasedOn: null });
+  });
+
+  it('drops a change that only undoes one not yet seen', () => {
+    const released = { seenState: 'released' as const, seenReleasedOn: '2016-07-06' };
+    const hiddenThenBack = mergeAvailabilityChanges(
+      [change('a', { kind: 'unavailable', releasedOn: null, ...released })],
+      [change('a', { kind: 'available', releasedOn: '2016-07-06', seenState: 'hidden' })]
+    );
+    const announced = { seenState: 'announced' as const, seenReleasedOn: '2026-11-06' };
+    const movedThenBack = mergeAvailabilityChanges(
+      [change('b', { kind: 'announced', releasedOn: '2026-11-08', ...announced })],
+      [
+        change('b', {
+          kind: 'announced',
+          releasedOn: '2026-11-06',
+          seenState: 'announced',
+          seenReleasedOn: '2026-11-08',
+        }),
+      ]
+    );
+
+    expect(hiddenThenBack).toEqual([]);
+    expect(movedThenBack).toEqual([]);
+  });
+
+  it('keeps an announced date that moved again rather than back', () => {
+    const merged = mergeAvailabilityChanges(
+      [
+        change('b', {
+          kind: 'announced',
+          releasedOn: '2026-11-08',
+          seenState: 'announced',
+          seenReleasedOn: '2026-11-06',
+        }),
+      ],
+      [change('b', { kind: 'announced', releasedOn: '2026-11-10', seenState: 'announced' })]
+    );
+
+    expect(
+      merged.map(({ releasedOn, seenReleasedOn }) => ({ releasedOn, seenReleasedOn }))
+    ).toEqual([{ releasedOn: '2026-11-10', seenReleasedOn: '2026-11-06' }]);
   });
 });
 

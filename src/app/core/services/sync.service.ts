@@ -240,7 +240,16 @@ export class SyncService implements SyncOutboxWriter {
       const previous = await this.engine.listCatalog();
       await this.engine.clearCatalog();
       await this.engine.bulkPutCatalog(response.entries);
-      await this.availabilityChanges.recordCatalogReplacement(previous, response.entries);
+      // Recorded in the same transaction so the changes commit with the
+      // catalog they describe, but a failure here only loses the popup:
+      // it must never block catalog updates.
+      try {
+        await this.availabilityChanges.recordCatalogReplacement(previous, response.entries);
+      } catch (error: unknown) {
+        console.error('availability_changes.record_failed', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
       if (response.syncedAt) {
         await this.engine.putSyncMeta({ key: CATALOG_VERSION_KEY, value: response.syncedAt });
       }
