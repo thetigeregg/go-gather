@@ -91,11 +91,11 @@ export class AppComponent implements OnInit {
     await alert.onDidDismiss();
   }
 
-  /** Reads what's pending when its turn comes, so changes picked up while it
+  /** Takes what's pending when its turn comes, so changes picked up while it
    * waited behind another popup are included. Changes the user's exclusion
    * patterns hide are acknowledged without a popup. */
   private async presentAvailabilityChanges(): Promise<void> {
-    const changes = await this.availabilityChanges.getPending();
+    const changes = await this.availabilityChanges.takePending();
     const sections = groupAvailabilityChanges(changes, this.userDataService.getUserSettings());
     if (sections.length > 0) {
       const modal = await this.modalController.create({

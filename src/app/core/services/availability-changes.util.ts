@@ -148,23 +148,37 @@ function isBackToSeen(change: AvailabilityChange): boolean {
   );
 }
 
+/** What the user last saw for the entry once `change` has been shown. */
+function seenAfter(
+  change: AvailabilityChange
+): Pick<AvailabilityChange, 'seenState' | 'seenReleasedOn'> {
+  return { seenState: STATE_AFTER[change.kind], seenReleasedOn: change.releasedOn };
+}
+
 /**
  * Adds `incoming` to the changes not yet seen, keeping one per entry: the
  * newer one, since it's what the app now shows, but measured from what the
- * user last saw. A change that only undoes an unseen one (Bulbapedia hid an
- * entry for one sync, then restored it) is dropped rather than shown.
+ * user last saw — including a change in `shown`, the snapshot currently (or
+ * last) on screen. A change that only undoes an unseen one (Bulbapedia hid an
+ * entry for one sync, then restored it) is dropped rather than shown; one
+ * that undoes a shown change is kept, so the sheet's notice gets corrected.
  */
 export function mergeAvailabilityChanges(
   existing: readonly AvailabilityChange[],
-  incoming: readonly AvailabilityChange[]
+  incoming: readonly AvailabilityChange[],
+  shown: readonly AvailabilityChange[] = []
 ): AvailabilityChange[] {
   const byId = new Map(existing.map((change) => [change.id, change]));
+  const shownById = new Map(shown.map((change) => [change.id, change]));
   for (const change of incoming) {
     const earlier = byId.get(change.id);
+    const displayed = shownById.get(change.id);
     byId.delete(change.id);
     const merged = earlier
       ? { ...change, seenState: earlier.seenState, seenReleasedOn: earlier.seenReleasedOn }
-      : change;
+      : displayed
+        ? { ...change, ...seenAfter(displayed) }
+        : change;
     if (!isBackToSeen(merged)) {
       byId.set(change.id, merged);
     }
@@ -172,8 +186,14 @@ export function mergeAvailabilityChanges(
   return [...byId.values()];
 }
 
+/** Kind first, so the comparator stays consistent when announced entries
+ * (ordered by date) are sorted alongside the others (ordered by catalog). */
 function compareChanges(a: AvailabilityChange, b: AvailabilityChange): number {
-  if (a.kind === 'announced' && b.kind === 'announced') {
+  const byKind = SECTION_ORDER.indexOf(a.kind) - SECTION_ORDER.indexOf(b.kind);
+  if (byKind !== 0) {
+    return byKind;
+  }
+  if (a.kind === 'announced') {
     const byDate = (a.releasedOn ?? '').localeCompare(b.releasedOn ?? '');
     if (byDate !== 0) {
       return byDate;

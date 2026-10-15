@@ -64,7 +64,7 @@ describe('AppComponent', () => {
   let availabilityChanges: {
     pending$: Subject<void>;
     checkForDateChanges: ReturnType<typeof vi.fn>;
-    getPending: () => Promise<AvailabilityChange[]>;
+    takePending: () => Promise<AvailabilityChange[]>;
     acknowledge: ReturnType<typeof vi.fn>;
   };
 
@@ -79,7 +79,7 @@ describe('AppComponent', () => {
     availabilityChanges = {
       pending$,
       checkForDateChanges: vi.fn(() => Promise.resolve()),
-      getPending: () => Promise.resolve(pending),
+      takePending: () => Promise.resolve(pending),
       acknowledge: vi.fn((shown: AvailabilityChange[]) => {
         log.push(`acknowledge ${String(shown.length)}`);
         return Promise.resolve();

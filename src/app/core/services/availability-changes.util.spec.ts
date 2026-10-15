@@ -230,6 +230,27 @@ describe('mergeAvailabilityChanges', () => {
       merged.map(({ releasedOn, seenReleasedOn }) => ({ releasedOn, seenReleasedOn }))
     ).toEqual([{ releasedOn: '2026-11-10', seenReleasedOn: '2026-11-06' }]);
   });
+
+  it('measures a change to a shown entry from what the sheet shows', () => {
+    const shown = [
+      change('a', {
+        kind: 'unavailable',
+        releasedOn: null,
+        seenState: 'released',
+        seenReleasedOn: '2016-07-06',
+      }),
+    ];
+
+    const merged = mergeAvailabilityChanges(
+      [],
+      [change('a', { kind: 'available', releasedOn: '2016-07-06', seenState: 'hidden' })],
+      shown
+    );
+
+    expect(merged).toEqual([
+      change('a', { kind: 'available', releasedOn: '2016-07-06', seenState: 'hidden' }),
+    ]);
+  });
 });
 
 describe('availabilityChangeKey', () => {
@@ -319,6 +340,22 @@ describe('groupAvailabilityChanges', () => {
     expect(sections.map((section) => section.groups[0].items.map((item) => item.name))).toEqual([
       ['a', 'b'],
       ['same-day', 'early', 'late'],
+    ]);
+  });
+
+  it('sorts announced entries by date with an available entry between them', () => {
+    const sections = groupAvailabilityChanges(
+      [
+        change('late', { kind: 'announced', releasedOn: '2026-11-09', order: 1 }),
+        change('now', { order: 2 }),
+        change('early', { kind: 'announced', releasedOn: '2026-10-19', order: 3 }),
+      ],
+      settings
+    );
+
+    expect(sections.map((section) => section.groups[0].items.map((item) => item.name))).toEqual([
+      ['now'],
+      ['early', 'late'],
     ]);
   });
 

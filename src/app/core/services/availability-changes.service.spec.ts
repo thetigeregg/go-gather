@@ -200,7 +200,7 @@ describe('AvailabilityChangesService', () => {
     });
   });
 
-  describe('acknowledge', () => {
+  describe('takePending and acknowledge', () => {
     it('drops only the changes that were shown', async () => {
       await setCheckDate(YESTERDAY);
       await service.recordCatalogReplacement(
@@ -208,7 +208,8 @@ describe('AvailabilityChangesService', () => {
         [entry('a', '2016-07-06'), entry('b', '2016-07-06')],
         TODAY
       );
-      const shown = await service.getPending();
+      const shown = await service.takePending();
+      expect(await service.getPending()).toEqual([]);
       // A newer change to `a` arrives while the popup is open.
       await service.recordCatalogReplacement(
         [entry('a', '2016-07-06'), entry('b', '2016-07-06')],
@@ -219,6 +220,64 @@ describe('AvailabilityChangesService', () => {
       await service.acknowledge(shown);
 
       expect(await pendingIds()).toEqual(['a:announced']);
+      expect(await service.takePending()).toMatchObject([
+        { id: 'a', kind: 'announced', seenState: 'released' },
+      ]);
+    });
+
+    it('reports a change that reverses one the open sheet shows', async () => {
+      await setCheckDate(YESTERDAY);
+      await service.recordCatalogReplacement([entry('a', '2016-07-06')], [entry('a', null)], TODAY);
+      const shown = await service.takePending();
+      expect(shown).toMatchObject([{ id: 'a', kind: 'unavailable' }]);
+
+      // Restored before the "No longer available" sheet is dismissed.
+      await service.recordCatalogReplacement([entry('a', null)], [entry('a', '2016-07-06')], TODAY);
+      await service.acknowledge(shown);
+
+      expect(await service.takePending()).toMatchObject([
+        { id: 'a', kind: 'available', seenState: 'hidden' },
+      ]);
+    });
+
+    it('shows changes again after a reload with the sheet open, folding in newer ones', async () => {
+      await setCheckDate(YESTERDAY);
+      await service.recordCatalogReplacement(
+        [entry('a', '2016-07-06'), entry('b', null)],
+        [entry('a', null), entry('b', '2016-07-06')],
+        TODAY
+      );
+      await service.takePending();
+      // `a` is restored, then the app restarts before the sheet is dismissed.
+      await service.recordCatalogReplacement(
+        [entry('a', null), entry('b', '2016-07-06')],
+        [entry('a', '2016-07-06'), entry('b', '2016-07-06')],
+        TODAY
+      );
+      const published = vi.fn();
+      service.pending$.subscribe(published);
+
+      await service.publishPending();
+
+      expect(published).toHaveBeenCalledTimes(1);
+      expect((await service.takePending()).map(({ id, kind }) => `${id}:${kind}`)).toEqual([
+        'b:available',
+      ]);
+    });
+
+    it('publishes a snapshot shown but never dismissed', async () => {
+      await setCheckDate(YESTERDAY);
+      await service.recordCatalogReplacement([entry('a', null)], [entry('a', '2016-07-06')], TODAY);
+      const shown = await service.takePending();
+      const published = vi.fn();
+      service.pending$.subscribe(published);
+
+      await service.publishPending();
+      await service.acknowledge(shown);
+      await service.publishPending();
+
+      expect(published).toHaveBeenCalledTimes(1);
+      expect(await service.takePending()).toEqual([]);
     });
   });
 

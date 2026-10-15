@@ -14,14 +14,19 @@ import {
  * the catalog in storage it's the "last seen" state, so no copy of the
  * catalog is kept. */
 const CHECK_DATE_KEY = 'availabilityCheckDate';
+/** Changes not yet shown. */
 const PENDING_KEY = 'pendingAvailabilityChanges';
+/** The changes on screen (see takePending) until acknowledged. Changes
+ * recorded meanwhile are measured from it, so one that reverses what the
+ * sheet shows is reported rather than dropped. */
+const SHOWN_KEY = 'shownAvailabilityChanges';
 
 /**
  * Tracks which catalog entries became available, were announced or stopped
  * being available since the user last saw a summary — whether from a
  * catalog pull (Bulbapedia data changed) or an announced date arriving — and
  * keeps them in storage until acknowledged, so they survive an OTA reload or
- * the app being closed before they're shown.
+ * the app being closed before they're shown or dismissed.
  */
 @Injectable({ providedIn: 'root' })
 export class AvailabilityChangesService {
@@ -67,14 +72,51 @@ export class AvailabilityChangesService {
     await this.publishPending();
   }
 
+  /** Emits if changes are pending, or were shown but never dismissed (the
+   * app closed with the sheet open). */
   async publishPending(): Promise<void> {
-    if ((await this.getPending()).length > 0) {
+    if ((await this.getPending()).length > 0 || (await this.getShown()).length > 0) {
       this._pending$.next();
     }
   }
 
-  async getPending(): Promise<AvailabilityChange[]> {
-    const meta = await this.engine.getSyncMeta(PENDING_KEY);
+  /** Changes recorded and not yet shown. */
+  getPending(): Promise<AvailabilityChange[]> {
+    return this.readChanges(PENDING_KEY);
+  }
+
+  /**
+   * Returns the changes to show, folding the pending ones into any shown
+   * before but never dismissed, and keeps them as the shown snapshot until
+   * acknowledged.
+   */
+  takePending(): Promise<AvailabilityChange[]> {
+    return this.engine.runInTransaction(['syncMeta'], async () => {
+      const shown = mergeAvailabilityChanges(await this.getShown(), await this.getPending());
+      await this.putChanges(SHOWN_KEY, shown);
+      await this.putChanges(PENDING_KEY, []);
+      return shown;
+    });
+  }
+
+  /** Drops the changes the user has seen. Any recorded while they were being
+   * shown stay pending. */
+  acknowledge(shown: readonly AvailabilityChange[]): Promise<void> {
+    const shownKeys = new Set(shown.map(availabilityChangeKey));
+    return this.engine.runInTransaction(['syncMeta'], async () => {
+      const remaining = (await this.getShown()).filter(
+        (change) => !shownKeys.has(availabilityChangeKey(change))
+      );
+      await this.putChanges(SHOWN_KEY, remaining);
+    });
+  }
+
+  private getShown(): Promise<AvailabilityChange[]> {
+    return this.readChanges(SHOWN_KEY);
+  }
+
+  private async readChanges(key: string): Promise<AvailabilityChange[]> {
+    const meta = await this.engine.getSyncMeta(key);
     if (!meta) {
       return [];
     }
@@ -84,18 +126,6 @@ export class AvailabilityChangesService {
     } catch {
       return [];
     }
-  }
-
-  /** Drops the changes the user has seen. Any that arrived while they were
-   * being shown stay pending. */
-  acknowledge(shown: readonly AvailabilityChange[]): Promise<void> {
-    const shownKeys = new Set(shown.map(availabilityChangeKey));
-    return this.engine.runInTransaction(['syncMeta'], async () => {
-      const remaining = (await this.getPending()).filter(
-        (change) => !shownKeys.has(availabilityChangeKey(change))
-      );
-      await this.putPending(remaining);
-    });
   }
 
   private async record(
@@ -118,7 +148,12 @@ export class AvailabilityChangesService {
     if (hasBaseline) {
       const changes = diffAvailability(previous, checked.value, next, date);
       if (changes.length > 0) {
-        await this.putPending(mergeAvailabilityChanges(await this.getPending(), changes));
+        const pending = mergeAvailabilityChanges(
+          await this.getPending(),
+          changes,
+          await this.getShown()
+        );
+        await this.putChanges(PENDING_KEY, pending);
       }
     }
     if (checked?.value !== date) {
@@ -126,7 +161,7 @@ export class AvailabilityChangesService {
     }
   }
 
-  private putPending(changes: readonly AvailabilityChange[]): Promise<void> {
-    return this.engine.putSyncMeta({ key: PENDING_KEY, value: JSON.stringify(changes) });
+  private putChanges(key: string, changes: readonly AvailabilityChange[]): Promise<void> {
+    return this.engine.putSyncMeta({ key, value: JSON.stringify(changes) });
   }
 }
