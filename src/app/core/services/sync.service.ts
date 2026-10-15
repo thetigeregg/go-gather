@@ -12,6 +12,7 @@ import { OutboxEntry } from '../data/storage-engine';
 import { StorageEngineFactory } from '../data/storage-engine.factory';
 import { SyncOutboxWriteRequest, SyncOutboxWriter } from '../data/sync-outbox-writer';
 import { environment } from '../../../environments/environment';
+import { AvailabilityChangesService } from './availability-changes.service';
 
 const SYNC_INTERVAL_MS = 30_000;
 const CATALOG_VERSION_KEY = 'catalogVersion';
@@ -69,6 +70,7 @@ interface SyncPullResponse {
 export class SyncService implements SyncOutboxWriter {
   private readonly http = inject(HttpClient);
   private readonly storageEngineFactory = inject(StorageEngineFactory);
+  private readonly availabilityChanges = inject(AvailabilityChangesService);
   private syncInFlight = false;
   private readonly _catalogSync$ = new Subject<void>();
   private readonly _calendarEventsSync$ = new Subject<void>();
@@ -235,14 +237,26 @@ export class SyncService implements SyncOutboxWriter {
     }
 
     await this.engine.runInTransaction(['catalog', 'syncMeta'], async () => {
+      const previous = await this.engine.listCatalog();
       await this.engine.clearCatalog();
       await this.engine.bulkPutCatalog(response.entries);
+      // Recorded in the same transaction so the changes commit with the
+      // catalog they describe, but a failure here only loses the popup:
+      // it must never block catalog updates.
+      try {
+        await this.availabilityChanges.recordCatalogReplacement(previous, response.entries);
+      } catch (error: unknown) {
+        console.error('availability_changes.record_failed', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
       if (response.syncedAt) {
         await this.engine.putSyncMeta({ key: CATALOG_VERSION_KEY, value: response.syncedAt });
       }
     });
 
     this._catalogSync$.next();
+    await this.availabilityChanges.publishPending();
   }
 
   private async pullCalendarEvents(): Promise<void> {

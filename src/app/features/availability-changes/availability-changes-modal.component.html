@@ -1,0 +1,44 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>Availability changes</ion-title>
+    <ion-buttons slot="end">
+      <ion-button aria-label="Close" (click)="dismiss()">
+        <ion-icon slot="icon-only" name="close"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  @for (section of sections; track section.kind) {
+    <ion-list>
+      <ion-list-header>
+        <ion-label>{{ sectionTitle(section.kind) }}</ion-label>
+      </ion-list-header>
+      @for (group of section.groups; track group.pokedexType) {
+        <ion-item-divider>
+          <ion-label>{{ pokedexLabel(group.pokedexType) }}</ion-label>
+        </ion-item-divider>
+        @for (item of group.items; track item.name + item.isShiny) {
+          <ion-item lines="none" class="availability-item">
+            <ion-label>
+              {{ item.name }}
+              @if (item.isShiny) {
+                <span class="shiny-marker" aria-label="shiny">✨</span>
+              }
+            </ion-label>
+            @if (section.kind === 'announced' && item.releasedOn) {
+              <ion-note slot="end">{{ formatDate(item.releasedOn) }}</ion-note>
+            }
+          </ion-item>
+        }
+      }
+    </ion-list>
+  }
+</ion-content>
+
+<ion-footer>
+  <ion-toolbar>
+    <ion-button expand="block" (click)="dismiss()">OK</ion-button>
+  </ion-toolbar>
+</ion-footer>

@@ -12,20 +12,27 @@ export function localDateString(date: Date = new Date()): string {
 }
 
 /**
+ * Whether a catalog entry carries release data. One from a catalog cached
+ * on-device before release dates existed has no `releasedOn` at all (not
+ * `null`) until the next catalog pull.
+ */
+export function hasReleaseDate(entry: CatalogEntry): boolean {
+  return (entry as { releasedOn?: string | null }).releasedOn !== undefined;
+}
+
+/**
  * Whether a catalog entry is out in Pokemon GO as of `today` (see
  * `localDateString`). Announced releases carry a future `releasedOn` and
  * become visible on that date without a re-sync; `null` means not released.
  */
 export function isReleased(entry: CatalogEntry, today: string): boolean {
-  // A catalog cached on-device before release dates existed has no
-  // `releasedOn` at all (not `null`) until the next catalog pull. Treating
-  // it as released keeps an app update that lands before the server's next
-  // sync from hiding every entry.
-  const { releasedOn } = entry as { releasedOn?: string | null };
-  if (releasedOn === undefined) {
+  // An entry without release data (see hasReleaseDate) counts as released,
+  // so an app update that lands before the server's next sync doesn't hide
+  // every entry.
+  if (!hasReleaseDate(entry)) {
     return true;
   }
-  return releasedOn !== null && releasedOn <= today;
+  return entry.releasedOn !== null && entry.releasedOn <= today;
 }
 
 /**

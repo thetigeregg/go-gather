@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { CatalogEntry, UserSettings } from '@go-gather/shared';
 import { isReleased, localDateString } from './catalog-release.util';
+import { compileExcludedPatterns, isExcludedByName } from './excluded-name.util';
 import { PokeDataService } from './poke-data.service';
 import { SearchConfigService } from './search-config.service';
 import { REGION_BY_GENERATION, UserDataService } from './user-data.service';
@@ -26,10 +27,8 @@ export class FilterService {
   private readonly searchConfigService = inject(SearchConfigService);
 
   groupPokemonByGeneration(userSettings: UserSettings): Generation[] {
-    const excludedPatterns = this.compileExcludedPatterns(userSettings.excludedNamePatterns);
-    const excludedShinyPatterns = this.compileExcludedPatterns(
-      userSettings.excludedShinyNamePatterns
-    );
+    const excludedPatterns = compileExcludedPatterns(userSettings.excludedNamePatterns);
+    const excludedShinyPatterns = compileExcludedPatterns(userSettings.excludedShinyNamePatterns);
 
     const today = localDateString();
 
@@ -37,8 +36,8 @@ export class FilterService {
       (entry) =>
         entry.pokedexType === userSettings.pokedexType &&
         isReleased(entry, today) &&
-        !(entry.isShiny && this.isExcludedByName(entry, excludedShinyPatterns)) &&
-        !this.isExcludedByName(entry, excludedPatterns)
+        !(entry.isShiny && isExcludedByName(entry.name, excludedShinyPatterns)) &&
+        !isExcludedByName(entry.name, excludedPatterns)
     );
 
     // Some species (e.g. Burmy, Cherrim) have no "plain" entry at all — every
@@ -128,25 +127,6 @@ export class FilterService {
     }
 
     return true;
-  }
-
-  /**
-   * Invalid regex patterns (e.g. a user mid-typing an unclosed group) are
-   * dropped rather than thrown, so a malformed pattern can't blank out the
-   * whole catalog while it's being edited.
-   */
-  private compileExcludedPatterns(patterns: string[]): RegExp[] {
-    return patterns.flatMap((pattern) => {
-      try {
-        return [new RegExp(pattern, 'i')];
-      } catch {
-        return [];
-      }
-    });
-  }
-
-  private isExcludedByName(entry: CatalogEntry, excludedPatterns: RegExp[]): boolean {
-    return excludedPatterns.some((pattern) => pattern.test(entry.name));
   }
 
   private groupBySpecies(entries: CatalogEntry[]): SpeciesGroup[] {

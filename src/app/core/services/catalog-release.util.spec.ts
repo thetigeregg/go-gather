@@ -1,5 +1,10 @@
 import { CatalogEntry } from '@go-gather/shared';
-import { isReleased, localDateChanges, localDateString } from './catalog-release.util';
+import {
+  hasReleaseDate,
+  isReleased,
+  localDateChanges,
+  localDateString,
+} from './catalog-release.util';
 
 function entryReleasedOn(releasedOn: string | null): CatalogEntry {
   return { releasedOn } as CatalogEntry;
@@ -19,6 +24,14 @@ describe('localDateString', () => {
     vi.useFakeTimers({ toFake: ['Date'], now: new Date(2026, 9, 14, 8) });
 
     expect(localDateString()).toBe('2026-10-14');
+  });
+});
+
+describe('hasReleaseDate', () => {
+  it('is true for a date or null, false for an entry cached before release dates existed', () => {
+    expect(hasReleaseDate(entryReleasedOn('2016-07-06'))).toBe(true);
+    expect(hasReleaseDate(entryReleasedOn(null))).toBe(true);
+    expect(hasReleaseDate({} as CatalogEntry)).toBe(false);
   });
 });
 
