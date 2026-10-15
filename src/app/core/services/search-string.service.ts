@@ -6,6 +6,7 @@ import {
   Region as RegionEnum,
 } from '@go-gather/shared';
 import { serializeQuery } from '../search-engine/search-query.builder';
+import { compileExcludedPatterns, isExcludedByName } from './excluded-name.util';
 import {
   Region as SearchRegion,
   SearchTerm,
@@ -118,8 +119,8 @@ export class SearchStringService {
     this.pokedexType = pokedexType;
     this.excludedSearchTerms = excludedSearchTermsByPokedex[pokedexType];
 
-    const excludedPatterns = this.compileExcludedPatterns(excludedNamePatterns);
-    const excludedShinyPatterns = this.compileExcludedPatterns(excludedShinyNamePatterns);
+    const excludedPatterns = compileExcludedPatterns(excludedNamePatterns);
+    const excludedShinyPatterns = compileExcludedPatterns(excludedShinyNamePatterns);
     const today = localDateString();
 
     // Without this, Mega/Gigantamax entries (which share the same speciesName
@@ -134,8 +135,8 @@ export class SearchStringService {
         entry.pokedexType === pokedexType &&
         isReleased(entry, today) &&
         !entryStates.get(entry.id) &&
-        !(entry.isShiny && this.isExcludedByName(entry, excludedShinyPatterns)) &&
-        !this.isExcludedByName(entry, excludedPatterns)
+        !(entry.isShiny && isExcludedByName(entry.name, excludedShinyPatterns)) &&
+        !isExcludedByName(entry.name, excludedPatterns)
     );
   }
 
@@ -181,25 +182,6 @@ export class SearchStringService {
     }
 
     return searchStrings;
-  }
-
-  /**
-   * Invalid regex patterns (e.g. a user mid-typing an unclosed group) are
-   * dropped rather than thrown, matching FilterService's equivalent guard,
-   * so a malformed Excluded Patterns entry can't break search strings.
-   */
-  private compileExcludedPatterns(patterns: string[]): RegExp[] {
-    return patterns.flatMap((pattern) => {
-      try {
-        return [new RegExp(pattern, 'i')];
-      } catch {
-        return [];
-      }
-    });
-  }
-
-  private isExcludedByName(entry: CatalogEntry, excludedPatterns: RegExp[]): boolean {
-    return excludedPatterns.some((pattern) => pattern.test(entry.name));
   }
 
   /**

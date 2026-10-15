@@ -7,6 +7,9 @@ import { DEFAULT_SETTINGS } from '@go-gather/shared';
 import { AppDb } from '../data/app-db';
 import { DexieStorageEngine } from '../data/dexie-storage-engine';
 import { StorageEngineFactory } from '../data/storage-engine.factory';
+import { makeContractCatalogEntry } from '../data/storage-engine.contract';
+import { AvailabilityChangesService } from './availability-changes.service';
+import { localDateString } from './catalog-release.util';
 import { SyncService } from './sync.service';
 
 vi.mock(
@@ -210,6 +213,41 @@ describe('SyncService', () => {
     await syncPromise;
 
     expect((await engine.listCatalog()).length).toBe(1);
+  });
+
+  it('records availability changes when it replaces the catalog, and publishes them', async () => {
+    const entry = (id: string, releasedOn: string | null) =>
+      makeContractCatalogEntry({ id, name: id, releasedOn });
+    await engine.bulkPutCatalog([entry('a', '2016-07-06'), entry('b', null)]);
+    await engine.putSyncMeta({ key: 'availabilityCheckDate', value: localDateString() });
+    const published = vi.fn();
+    TestBed.inject(AvailabilityChangesService).pending$.subscribe(published);
+
+    const syncPromise = syncService.syncNow();
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/sync/pull')).flush({
+      cursor: '0',
+      changes: [],
+    });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/catalog')).flush({
+      syncedAt: '2026-01-01T00:00:00.000Z',
+      entries: [entry('a', null), entry('b', '2016-07-06')],
+    });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/calendar-events')).flush({
+      syncedAt: null,
+      entries: [],
+    });
+    (await waitForRequest(httpMock, 'http://localhost:3000/api/calendar-season')).flush({
+      syncedAt: null,
+      season: null,
+    });
+    await syncPromise;
+
+    const pending = await TestBed.inject(AvailabilityChangesService).getPending();
+    expect(pending.map(({ id, kind }) => `${id}:${kind}`)).toEqual([
+      'a:unavailable',
+      'b:available',
+    ]);
+    expect(published).toHaveBeenCalledTimes(1);
   });
 
   it('replaces the local calendar events when the server syncedAt changes, and skips when unchanged', async () => {
