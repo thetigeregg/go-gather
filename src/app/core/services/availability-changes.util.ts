@@ -194,9 +194,9 @@ export function mergeAvailabilityChanges(
 }
 
 /**
- * Adds `changes` to the log (newest first) under `date`, folding them into
- * the latest entry when it's for the same date, and keeps at most
- * `maxEntries` dates.
+ * Adds `changes` to the log (newest date first) under `date`, folding them
+ * into that date's entry if there is one — the device-local date can move
+ * backwards, e.g. across time zones — and keeps at most `maxEntries` dates.
  */
 export function appendToAvailabilityLog(
   log: readonly AvailabilityLogEntry[],
@@ -207,11 +207,13 @@ export function appendToAvailabilityLog(
   if (changes.length === 0) {
     return [...log];
   }
-  const updated =
-    log.length > 0 && log[0].loggedOn === date
-      ? [{ loggedOn: date, changes: [...log[0].changes, ...changes] }, ...log.slice(1)]
-      : [{ loggedOn: date, changes: [...changes] }, ...log];
-  return updated.slice(0, maxEntries);
+  const existing = log.find((entry) => entry.loggedOn === date);
+  return [
+    { loggedOn: date, changes: [...(existing?.changes ?? []), ...changes] },
+    ...log.filter((entry) => entry.loggedOn !== date),
+  ]
+    .sort((a, b) => b.loggedOn.localeCompare(a.loggedOn))
+    .slice(0, maxEntries);
 }
 
 /** Kind first, so the comparator stays consistent when announced entries
@@ -234,7 +236,9 @@ function compareChanges(a: AvailabilityChange, b: AvailabilityChange): number {
  * Changes as the popup lists them: sections in a fixed order (now available,
  * announced, no longer available), each grouped by pokedex, without entries
  * the user's name-exclusion patterns hide from Gather. Entries that only
- * differ by size or gender list once. Empty sections and groups are left out.
+ * differ by size or gender list once, except announced ones for different
+ * dates (a day's history can hold an announcement and its rescheduling).
+ * Empty sections and groups are left out.
  */
 export function groupAvailabilityChanges(
   changes: readonly AvailabilityChange[],
@@ -257,8 +261,8 @@ export function groupAvailabilityChanges(
         .filter(
           (change) => change.kind === kind && displayPokedex(change.pokedexType) === pokedexType
         )
-        .filter(({ name, isShiny }) => {
-          const key = `${name}|${String(isShiny)}`;
+        .filter(({ name, isShiny, releasedOn }) => {
+          const key = `${name}|${String(isShiny)}|${kind === 'announced' ? (releasedOn ?? '') : ''}`;
           if (seen.has(key)) {
             return false;
           }

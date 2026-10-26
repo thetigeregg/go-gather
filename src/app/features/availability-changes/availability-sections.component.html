@@ -7,7 +7,7 @@
       <ion-item-divider>
         <ion-label>{{ pokedexLabel(group.pokedexType) }}</ion-label>
       </ion-item-divider>
-      @for (item of group.items; track item.name + item.isShiny) {
+      @for (item of group.items; track item.name + item.isShiny + item.releasedOn) {
         <ion-item lines="none" class="availability-item">
           <ion-label>
             {{ item.name }}

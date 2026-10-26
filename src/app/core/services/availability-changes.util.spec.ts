@@ -290,6 +290,20 @@ describe('appendToAvailabilityLog', () => {
     ]);
   });
 
+  it('adds to an older date and keeps dates newest first when the date moves back', () => {
+    let log: AvailabilityLogEntry[] = [];
+    for (const [id, date] of [
+      ['a', TODAY],
+      ['b', '2026-10-16'],
+      ['c', TODAY],
+    ]) {
+      log = appendToAvailabilityLog(log, [change(id)], date, 10);
+    }
+    log = appendToAvailabilityLog(log, [change('d')], YESTERDAY, 10);
+
+    expect(dates(log)).toEqual(['2026-10-16:b', `${TODAY}:a,c`, `${YESTERDAY}:d`]);
+  });
+
   it('drops the oldest dates past the limit', () => {
     let log: AvailabilityLogEntry[] = [];
     for (const date of ['2026-10-13', YESTERDAY, TODAY]) {
@@ -367,6 +381,27 @@ describe('groupAvailabilityChanges', () => {
           { name: 'Applin', isShiny: true, releasedOn: '2016-07-06' },
         ],
       },
+    ]);
+  });
+
+  it('lists an announced name once per date', () => {
+    const [section] = groupAvailabilityChanges(
+      [
+        change('a', { name: 'Applin', kind: 'announced', releasedOn: '2026-11-09' }),
+        change('a', { name: 'Applin', kind: 'announced', releasedOn: '2026-11-06' }),
+        change('a-xxl', {
+          name: 'Applin',
+          pokedexType: 'xxl',
+          kind: 'announced',
+          releasedOn: '2026-11-06',
+        }),
+      ],
+      settings
+    );
+
+    expect(section.groups[0].items.map(({ releasedOn }) => releasedOn)).toEqual([
+      '2026-11-06',
+      '2026-11-09',
     ]);
   });
 
