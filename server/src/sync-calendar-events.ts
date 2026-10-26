@@ -10,7 +10,21 @@ import { db, initSchema } from './db.js';
 const EVENTS_URL =
   'https://raw.githubusercontent.com/Drumstix42/ScrapedDuck/refs/heads/data/events.min.json';
 
-async function fetchEvents(): Promise<PogoEvent[]> {
+// The feed can list an announced event before its dates are known (start/end
+// null, e.g. minior-showers-orionids-2026). Such rows can't be placed on the
+// calendar or scheduled for a notification, and one of them fails the NOT NULL
+// insert and rolls back the whole sync — so they're dropped until the feed
+// fills the dates in.
+type FeedEvent = Omit<PogoEvent, 'start' | 'end'> & {
+  start: string | null;
+  end: string | null;
+};
+
+export function withDates(events: readonly FeedEvent[]): PogoEvent[] {
+  return events.filter((event): event is PogoEvent => Boolean(event.start && event.end));
+}
+
+async function fetchEvents(): Promise<FeedEvent[]> {
   const response = await fetch(EVENTS_URL);
   if (!response.ok) {
     throw new Error(
@@ -19,8 +33,8 @@ async function fetchEvents(): Promise<PogoEvent[]> {
   }
   // The feed's shape already matches PogoEvent field-for-field (confirmed
   // against a live fetch) — unlike the Pokemon catalog, there's no flattening/
-  // backfill transform needed here.
-  return (await response.json()) as PogoEvent[];
+  // backfill transform needed here, beyond dropping undated events (withDates).
+  return (await response.json()) as FeedEvent[];
 }
 
 function upsertCalendarEvents(events: readonly PogoEvent[]): void {
@@ -56,8 +70,18 @@ export async function main(): Promise<void> {
   initSchema();
 
   console.log('Fetching events.min.json from ScrapedDuck...');
-  const events = await fetchEvents();
-  console.log(`Fetched ${String(events.length)} events.`);
+  const fetched = await fetchEvents();
+  console.log(`Fetched ${String(fetched.length)} events.`);
+
+  const events = withDates(fetched);
+  const undated = fetched.filter((event) => !event.start || !event.end);
+  if (undated.length > 0) {
+    console.log(
+      `Skipping ${String(undated.length)} events without start/end dates: ${undated
+        .map((event) => event.eventID)
+        .join(', ')}`
+    );
+  }
 
   upsertCalendarEvents(events);
   markCalendarEventsSynced();
