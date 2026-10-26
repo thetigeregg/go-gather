@@ -10,6 +10,13 @@ export const routes: Routes = [
     loadComponent: () => import('./settings/settings.page').then((m) => m.SettingsPage),
   },
   {
+    path: 'availability-history',
+    loadComponent: () =>
+      import('./availability-history/availability-history.page').then(
+        (m) => m.AvailabilityHistoryPage
+      ),
+  },
+  {
     path: 'search-strings',
     loadComponent: () =>
       import('./search-strings/search-strings.page').then((m) => m.SearchStringsPage),

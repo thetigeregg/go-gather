@@ -2,6 +2,8 @@ import { CatalogEntry, DEFAULT_SETTINGS } from '@go-gather/shared';
 import { makeContractCatalogEntry } from '../data/storage-engine.contract';
 import {
   AvailabilityChange,
+  AvailabilityLogEntry,
+  appendToAvailabilityLog,
   availabilityChangeKey,
   availabilityState,
   diffAvailability,
@@ -261,6 +263,63 @@ describe('availabilityChangeKey', () => {
   });
 });
 
+describe('appendToAvailabilityLog', () => {
+  const dates = (log: AvailabilityLogEntry[]) =>
+    log.map(({ loggedOn, changes }) => `${loggedOn}:${changes.map(({ id }) => id).join(',')}`);
+
+  it('starts an empty log', () => {
+    expect(dates(appendToAvailabilityLog([], [change('a')], TODAY, 10))).toEqual([`${TODAY}:a`]);
+  });
+
+  it('puts a new date first', () => {
+    const log = appendToAvailabilityLog([], [change('a')], YESTERDAY, 10);
+
+    expect(dates(appendToAvailabilityLog(log, [change('b')], TODAY, 10))).toEqual([
+      `${TODAY}:b`,
+      `${YESTERDAY}:a`,
+    ]);
+  });
+
+  it('adds to the latest entry when it has the same date', () => {
+    const log = appendToAvailabilityLog([], [change('a')], YESTERDAY, 10);
+    const sameDay = appendToAvailabilityLog(log, [change('b')], TODAY, 10);
+
+    expect(dates(appendToAvailabilityLog(sameDay, [change('c')], TODAY, 10))).toEqual([
+      `${TODAY}:b,c`,
+      `${YESTERDAY}:a`,
+    ]);
+  });
+
+  it('adds to an older date and keeps dates newest first when the date moves back', () => {
+    let log: AvailabilityLogEntry[] = [];
+    for (const [id, date] of [
+      ['a', TODAY],
+      ['b', '2026-10-16'],
+      ['c', TODAY],
+    ]) {
+      log = appendToAvailabilityLog(log, [change(id)], date, 10);
+    }
+    log = appendToAvailabilityLog(log, [change('d')], YESTERDAY, 10);
+
+    expect(dates(log)).toEqual(['2026-10-16:b', `${TODAY}:a,c`, `${YESTERDAY}:d`]);
+  });
+
+  it('drops the oldest dates past the limit', () => {
+    let log: AvailabilityLogEntry[] = [];
+    for (const date of ['2026-10-13', YESTERDAY, TODAY]) {
+      log = appendToAvailabilityLog(log, [change(date)], date, 2);
+    }
+
+    expect(log.map(({ loggedOn }) => loggedOn)).toEqual([TODAY, YESTERDAY]);
+  });
+
+  it('leaves the log as it is without changes', () => {
+    const log = appendToAvailabilityLog([], [change('a')], YESTERDAY, 10);
+
+    expect(appendToAvailabilityLog(log, [], TODAY, 10)).toEqual(log);
+  });
+});
+
 describe('groupAvailabilityChanges', () => {
   const settings = {
     excludedNamePatterns: [],
@@ -322,6 +381,27 @@ describe('groupAvailabilityChanges', () => {
           { name: 'Applin', isShiny: true, releasedOn: '2016-07-06' },
         ],
       },
+    ]);
+  });
+
+  it('lists an announced name once per date', () => {
+    const [section] = groupAvailabilityChanges(
+      [
+        change('a', { name: 'Applin', kind: 'announced', releasedOn: '2026-11-09' }),
+        change('a', { name: 'Applin', kind: 'announced', releasedOn: '2026-11-06' }),
+        change('a-xxl', {
+          name: 'Applin',
+          pokedexType: 'xxl',
+          kind: 'announced',
+          releasedOn: '2026-11-06',
+        }),
+      ],
+      settings
+    );
+
+    expect(section.groups[0].items.map(({ releasedOn }) => releasedOn)).toEqual([
+      '2026-11-06',
+      '2026-11-09',
     ]);
   });
 
