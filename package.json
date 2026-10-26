@@ -99,7 +99,7 @@
     "npm-check-updates": "23.1.1",
     "plist": "^5.0.0",
     "prettier": "3.9.10",
-    "sql.js": "^1.14.2",
+    "sql.js": "^1.15.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.71.2",
     "vitest": "^4.1.11"
