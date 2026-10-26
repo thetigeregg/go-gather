@@ -359,3 +359,7 @@
 ## v0.24.2 - 2026-10-26
 
 - c0a4c06 chore(docker): bump node from 24.21.0-slim to 24.22.1-slim in /server (#99)
+
+## v0.25.0 - 2026-10-26
+
+- b4cae4b feat(app): add availability history page (#104)
