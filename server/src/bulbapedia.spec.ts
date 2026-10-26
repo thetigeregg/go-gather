@@ -860,12 +860,18 @@ describe('parseShinyReleases', () => {
 });
 
 describe('fetchWikitext', () => {
-  function stubFetch(response: { ok: boolean; status: number; body: unknown }) {
+  function stubFetch(response: {
+    ok: boolean;
+    status: number;
+    body: unknown;
+    headers?: Record<string, string>;
+  }) {
     const fetchMock = vi.fn((_input: URL, _init?: RequestInit) =>
       Promise.resolve({
         ok: response.ok,
         status: response.status,
         statusText: response.ok ? 'OK' : 'Error',
+        headers: new Headers(response.headers),
         json: () => Promise.resolve(response.body),
       })
     );
@@ -890,7 +896,15 @@ describe('fetchWikitext', () => {
     stubFetch({ ok: false, status: 503, body: {} });
 
     await expect(fetchWikitext('Dynamax (GO)')).rejects.toThrow(
-      /failed to fetch "Dynamax \(GO\)": 503/
+      /failed to fetch "Dynamax \(GO\)": 503 Error$/
+    );
+  });
+
+  it('names a Cloudflare block when the response is mitigated', async () => {
+    stubFetch({ ok: false, status: 403, body: {}, headers: { 'cf-mitigated': 'challenge' } });
+
+    await expect(fetchWikitext('Dynamax (GO)')).rejects.toThrow(
+      /failed to fetch "Dynamax \(GO\)": 403 Error \(blocked by Cloudflare: challenge\)$/
     );
   });
 
