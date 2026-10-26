@@ -2,7 +2,11 @@
   @if (!timelineData.hasAnyEvents) {
     <p class="no-events">No upcoming events found</p>
   } @else {
-    <ion-accordion-group [multiple]="true" [value]="defaultExpandedCategories">
+    <ion-accordion-group
+      [multiple]="true"
+      [value]="expandedCategories"
+      (ionChange)="onExpandedCategoriesChange($event.detail.value)"
+    >
       @for (category of categories; track category.key) {
         <app-timeline-category-section
           [categoryKey]="category.key"

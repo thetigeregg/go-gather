@@ -16,6 +16,7 @@ import { TimelineCollapsedScheduleComponent } from './timeline-collapsed-schedul
 import { TimelineEventComponent } from './timeline-event.component';
 import { TimelineRaidScheduleComponent } from './timeline-raid-schedule.component';
 import { SyncService } from '../../core/services/sync.service';
+import { EventFocusService } from '../../core/services/event-focus.service';
 
 function makeEvent(overrides: Partial<PogoEvent> = {}): PogoEvent {
   return {
@@ -352,5 +353,112 @@ describe('TimelineViewComponent', () => {
     expect(() => vi.advanceTimersByTime(200)).not.toThrow();
 
     vi.useRealTimers();
+  });
+
+  describe('focusing an event requested via EventFocusService', () => {
+    let eventFocusService: EventFocusService;
+    let scrollIntoViewSpy: ReturnType<typeof vi.fn>;
+
+    function seedHappeningNowEvent(): void {
+      // Whole of today, so it always lands in the 'today' category.
+      const start = dayjs().startOf('day');
+      const end = dayjs().endOf('day');
+      events = [makeEvent({ start: start.toISOString(), end: end.toISOString() })];
+      eventMetadata = {
+        'event-1': {
+          startDate: start,
+          endDate: end,
+          isMultiDayEvent: false,
+          isSingleDayEvent: true,
+          isPastEvent: false,
+          isFutureEvent: false,
+          typeInfo: { name: 'Test', priority: 50, category: 'events-and-misc' },
+          color: '#123456',
+          formattedStartTime: '10am',
+          displayName: 'Test Event',
+        },
+      };
+    }
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      eventFocusService = TestBed.inject(EventFocusService);
+      scrollIntoViewSpy = vi.fn();
+      document.body.innerHTML = '<div data-timeline-event-id="event-1"></div>';
+      const card = document.querySelector('[data-timeline-event-id="event-1"]');
+      if (card) {
+        (card as HTMLElement).scrollIntoView = scrollIntoViewSpy;
+      }
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      document.body.innerHTML = '';
+    });
+
+    it('expands a pending event on mount and scrolls it to the top', () => {
+      seedHappeningNowEvent();
+      eventFocusService.requestFocus('event-1');
+
+      fixture.detectChanges();
+
+      expect(component.activeEventId).toBe('event-1');
+      expect(eventFocusService.getPendingEventId()).toBeNull();
+      vi.advanceTimersByTime(200);
+      expect(scrollIntoViewSpy).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+    });
+
+    it('reloads and focuses when a request arrives while already mounted', () => {
+      fixture.detectChanges();
+      expect(component.timelineData.hasAnyEvents).toBe(false);
+
+      seedHappeningNowEvent();
+      eventFocusService.requestFocus('event-1');
+
+      expect(component.timelineData.hasAnyEvents).toBe(true);
+      expect(component.activeEventId).toBe('event-1');
+      vi.advanceTimersByTime(200);
+      expect(scrollIntoViewSpy).toHaveBeenCalledWith({ behavior: 'smooth', block: 'start' });
+    });
+
+    it('keeps an already-active event expanded rather than toggling it closed', () => {
+      seedHappeningNowEvent();
+      fixture.detectChanges();
+      component.activeEventId = 'event-1';
+
+      eventFocusService.requestFocus('event-1');
+
+      expect(component.activeEventId).toBe('event-1');
+    });
+
+    it('re-opens a category section the user had collapsed', () => {
+      seedHappeningNowEvent();
+      fixture.detectChanges();
+      component.onExpandedCategoriesChange(['upcoming', 'future']);
+      expect(component.expandedCategories).toEqual(['upcoming', 'future']);
+
+      eventFocusService.requestFocus('event-1');
+
+      expect(component.expandedCategories).toEqual(['upcoming', 'future', 'today']);
+    });
+
+    it('consumes the request without expanding anything when the event is not in the timeline', () => {
+      eventFocusService.requestFocus('missing-event');
+
+      fixture.detectChanges();
+
+      expect(component.activeEventId).toBeNull();
+      expect(eventFocusService.getPendingEventId()).toBeNull();
+      expect(() => vi.advanceTimersByTime(200)).not.toThrow();
+      expect(scrollIntoViewSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  it('tracks expanded categories from the accordion group, normalizing a single value', () => {
+    component.onExpandedCategoriesChange('ongoing');
+    expect(component.expandedCategories).toEqual(['ongoing']);
+
+    component.onExpandedCategoriesChange(['future', 'today', 'bogus']);
+    expect(component.expandedCategories).toEqual(['today', 'future']);
   });
 });

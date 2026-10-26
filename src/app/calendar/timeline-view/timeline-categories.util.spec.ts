@@ -1,6 +1,10 @@
 import dayjs from 'dayjs';
 import { EventMetadata, EventTypeInfoWithoutColor, PogoEvent } from '@go-gather/shared';
-import { buildTimelineData, sortEventsByTimingAndPriority } from './timeline-categories.util';
+import {
+  buildTimelineData,
+  findTimelineCategoryForEvent,
+  sortEventsByTimingAndPriority,
+} from './timeline-categories.util';
 
 const NOW = dayjs('2026-07-08T12:00:00.000'); // Wednesday noon
 
@@ -408,5 +412,30 @@ describe('buildTimelineData hasAnyEvents', () => {
     const result = buildTimelineData([], {}, NOW, alwaysVisible, false);
 
     expect(result.hasAnyEvents).toBe(false);
+  });
+});
+
+describe('findTimelineCategoryForEvent', () => {
+  const emptyCounts = { today: 0, ongoing: 0, upcoming: 0, future: 0 };
+  const timelineData = {
+    categorizedEvents: {
+      today: [],
+      ongoing: [makeEvent({ eventID: 'ongoing-1' })],
+      upcoming: [makeEvent({ eventID: 'upcoming-1' })],
+      future: [],
+    },
+    totalEventsCounts: emptyCounts,
+    hiddenEventsCounts: emptyCounts,
+    groupedByDate: {},
+    hasAnyEvents: true,
+  };
+
+  it('returns the category the event is rendered under', () => {
+    expect(findTimelineCategoryForEvent(timelineData, 'ongoing-1')).toBe('ongoing');
+    expect(findTimelineCategoryForEvent(timelineData, 'upcoming-1')).toBe('upcoming');
+  });
+
+  it('returns null when the event is not in the timeline', () => {
+    expect(findTimelineCategoryForEvent(timelineData, 'missing')).toBeNull();
   });
 });

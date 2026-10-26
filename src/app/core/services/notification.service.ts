@@ -8,6 +8,7 @@ import type { FirebaseNotificationListenerEvent } from './firebase-messaging.typ
 import { environment } from '../../../environments/environment';
 import { getNativePlatform, isNativePlatform } from '../utils/native-platform.util';
 import { PreferenceStorageService } from '../storage/preference-storage.service';
+import { EventFocusService } from './event-focus.service';
 import { UserDataService } from './user-data.service';
 
 const FCM_DEVICE_TOKEN_STORAGE_KEY = 'go-gather:notifications:fcm-token';
@@ -26,6 +27,7 @@ export class NotificationService {
   private readonly router = inject(Router);
   private readonly preferenceStorage = inject(PreferenceStorageService);
   private readonly userDataService = inject(UserDataService);
+  private readonly eventFocusService = inject(EventFocusService);
   private initialized = false;
   private initializing: Promise<void> | null = null;
   private nativeListenersAttached = false;
@@ -197,6 +199,11 @@ export class NotificationService {
     await FirebaseMessaging.addListener(
       'notificationActionPerformed',
       (event: FirebaseNotificationListenerEvent) => {
+        const eventId = this.extractEventId(event.notification.data);
+        if (eventId !== null) {
+          this.eventFocusService.requestFocus(eventId);
+        }
+
         const route = this.extractRoute(event.notification.data);
         if (route !== null) {
           void this.router.navigateByUrl(route).catch(() => {
@@ -207,6 +214,15 @@ export class NotificationService {
     ).catch((error: unknown) => {
       console.error('Failed to attach notificationActionPerformed listener', error);
     });
+  }
+
+  private extractEventId(data: unknown): string | null {
+    if (!data || typeof data !== 'object') {
+      return null;
+    }
+
+    const eventId = (data as Record<string, unknown>)['eventId'];
+    return typeof eventId === 'string' && eventId.trim().length > 0 ? eventId : null;
   }
 
   private extractRoute(data: unknown): string | null {

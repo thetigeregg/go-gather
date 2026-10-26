@@ -27,6 +27,18 @@ export interface TimelineData {
   hasAnyEvents: boolean;
 }
 
+/** Which category section `eventId` is rendered under, or null if it isn't
+ * in the timeline at all (ended, or hidden by filters). */
+export function findTimelineCategoryForEvent(
+  timelineData: TimelineData,
+  eventId: string
+): TimelineCategoryKey | null {
+  const match = TIMELINE_CATEGORIES.find(({ key }) =>
+    timelineData.categorizedEvents[key].some((event) => event.eventID === eventId)
+  );
+  return match?.key ?? null;
+}
+
 function emptyCategoryRecord<T>(fill: () => T): Record<TimelineCategoryKey, T> {
   return {
     today: fill(),
