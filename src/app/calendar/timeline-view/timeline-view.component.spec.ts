@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Subject, of } from 'rxjs';
+import { Observable, Subject, of } from 'rxjs';
 import dayjs from 'dayjs';
 import { EventMetadata, PogoEvent } from '@go-gather/shared';
 import { TimelineViewComponent } from './timeline-view.component';
@@ -40,6 +40,7 @@ describe('TimelineViewComponent', () => {
   let filterState: CalendarFilterState;
   let filterChange$: Subject<void>;
   let calendarEventsSync$: Subject<void>;
+  let loadCalendarEvents: ReturnType<typeof vi.fn<() => Observable<PogoEvent[]>>>;
 
   beforeEach(async () => {
     events = [];
@@ -52,13 +53,14 @@ describe('TimelineViewComponent', () => {
     };
     filterChange$ = new Subject<void>();
     calendarEventsSync$ = new Subject<void>();
+    loadCalendarEvents = vi.fn(() => of(events));
 
     TestBed.configureTestingModule({
       providers: [
         {
           provide: CalendarEventsService,
           useValue: {
-            loadCalendarEvents: () => of(events),
+            loadCalendarEvents: () => loadCalendarEvents(),
             get events() {
               return events;
             },
@@ -452,6 +454,30 @@ describe('TimelineViewComponent', () => {
       expect(() => vi.advanceTimersByTime(200)).not.toThrow();
       expect(scrollIntoViewSpy).not.toHaveBeenCalled();
     });
+
+    it('leaves the request pending when a load resolves after the view is destroyed', () => {
+      seedHappeningNowEvent();
+      const inFlightLoad$ = new Subject<PogoEvent[]>();
+      loadCalendarEvents.mockReturnValue(inFlightLoad$.asObservable());
+      fixture.detectChanges();
+
+      fixture.destroy();
+      eventFocusService.requestFocus('event-1');
+      inFlightLoad$.next(events);
+
+      expect(component.activeEventId).toBeNull();
+      expect(eventFocusService.getPendingEventId()).toBe('event-1');
+    });
+  });
+
+  it('stops re-loading on SyncService pulls once the view is destroyed', () => {
+    fixture.detectChanges();
+    expect(loadCalendarEvents).toHaveBeenCalledTimes(1);
+
+    fixture.destroy();
+    calendarEventsSync$.next();
+
+    expect(loadCalendarEvents).toHaveBeenCalledTimes(1);
   });
 
   it('tracks expanded categories from the accordion group, normalizing a single value', () => {

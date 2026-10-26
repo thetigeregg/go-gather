@@ -86,9 +86,12 @@ export class TimelineViewComponent implements OnInit {
     this.refresh();
     this.loadAndRefresh();
 
-    this.syncService.listenForCalendarEventsSync().subscribe(() => {
-      this.loadAndRefresh();
-    });
+    this.syncService
+      .listenForCalendarEventsSync()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.loadAndRefresh();
+      });
 
     this.calendarFilterService.listenForFilterChanges().subscribe(() => {
       this.refresh();
@@ -124,11 +127,17 @@ export class TimelineViewComponent implements OnInit {
     }
   }
 
+  /** Torn down with the view, so a destroyed Timeline (e.g. swapped out for
+   * the Calendar) can't consume a pending focus request meant for its
+   * replacement once a shared in-flight load resolves. */
   private loadAndRefresh(): void {
-    this.calendarEventsService.loadCalendarEvents().subscribe(() => {
-      this.refresh();
-      this.focusPendingEvent();
-    });
+    this.calendarEventsService
+      .loadCalendarEvents()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.refresh();
+        this.focusPendingEvent();
+      });
   }
 
   /** One-shot: the pending request is consumed even if the event isn't in
