@@ -355,3 +355,7 @@
 ## v0.24.1 - 2026-10-26
 
 - 01fd163 chore: update dependencies in package.json and server/package.json (#103)
+
+## v0.24.2 - 2026-10-26
+
+- c0a4c06 chore(docker): bump node from 24.21.0-slim to 24.22.1-slim in /server (#99)
