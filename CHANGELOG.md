@@ -363,3 +363,7 @@
 ## v0.25.0 - 2026-10-26
 
 - b4cae4b feat(app): add availability history page (#104)
+
+## v0.26.0 - 2026-10-26
+
+- 63bc470 feat(notifications): focus tapped event in timeline (#105)
