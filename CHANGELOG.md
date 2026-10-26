@@ -351,3 +351,7 @@
 ## v0.24.0 - 2026-10-26
 
 - 480c58e feat(sync): flag Cloudflare blocks in Bulbapedia fetch errors (#100)
+
+## v0.24.1 - 2026-10-26
+
+- 01fd163 chore: update dependencies in package.json and server/package.json (#103)
