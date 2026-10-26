@@ -367,3 +367,7 @@
 ## v0.26.0 - 2026-10-26
 
 - 63bc470 feat(notifications): focus tapped event in timeline (#105)
+
+## v0.26.1 - 2026-10-26
+
+- d15b634 fix(server): skip undated events in calendar sync (#106)
