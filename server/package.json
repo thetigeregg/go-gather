@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@fastify/cors": "^11.3.1",
-    "@fastify/static": "^10.1.6",
+    "@fastify/static": "^10.1.7",
     "@go-gather/shared": "*",
     "better-sqlite3": "^13.0.3",
     "dayjs": "1.11.23",
