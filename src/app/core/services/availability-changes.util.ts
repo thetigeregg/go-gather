@@ -26,6 +26,13 @@ export interface AvailabilityChange {
   seenReleasedOn: string | null;
 }
 
+/** The changes first shown to the user on one device-local date
+ * (`YYYY-MM-DD`). */
+export interface AvailabilityLogEntry {
+  loggedOn: string;
+  changes: AvailabilityChange[];
+}
+
 export interface AvailabilityItem {
   name: string;
   isShiny: boolean;
@@ -184,6 +191,27 @@ export function mergeAvailabilityChanges(
     }
   }
   return [...byId.values()];
+}
+
+/**
+ * Adds `changes` to the log (newest first) under `date`, folding them into
+ * the latest entry when it's for the same date, and keeps at most
+ * `maxEntries` dates.
+ */
+export function appendToAvailabilityLog(
+  log: readonly AvailabilityLogEntry[],
+  changes: readonly AvailabilityChange[],
+  date: string,
+  maxEntries: number
+): AvailabilityLogEntry[] {
+  if (changes.length === 0) {
+    return [...log];
+  }
+  const updated =
+    log.length > 0 && log[0].loggedOn === date
+      ? [{ loggedOn: date, changes: [...log[0].changes, ...changes] }, ...log.slice(1)]
+      : [{ loggedOn: date, changes: [...changes] }, ...log];
+  return updated.slice(0, maxEntries);
 }
 
 /** Kind first, so the comparator stays consistent when announced entries

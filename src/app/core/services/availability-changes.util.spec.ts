@@ -2,6 +2,8 @@ import { CatalogEntry, DEFAULT_SETTINGS } from '@go-gather/shared';
 import { makeContractCatalogEntry } from '../data/storage-engine.contract';
 import {
   AvailabilityChange,
+  AvailabilityLogEntry,
+  appendToAvailabilityLog,
   availabilityChangeKey,
   availabilityState,
   diffAvailability,
@@ -258,6 +260,49 @@ describe('availabilityChangeKey', () => {
     expect(availabilityChangeKey(change('a'))).not.toBe(
       availabilityChangeKey(change('a', { kind: 'unavailable', releasedOn: null }))
     );
+  });
+});
+
+describe('appendToAvailabilityLog', () => {
+  const dates = (log: AvailabilityLogEntry[]) =>
+    log.map(({ loggedOn, changes }) => `${loggedOn}:${changes.map(({ id }) => id).join(',')}`);
+
+  it('starts an empty log', () => {
+    expect(dates(appendToAvailabilityLog([], [change('a')], TODAY, 10))).toEqual([`${TODAY}:a`]);
+  });
+
+  it('puts a new date first', () => {
+    const log = appendToAvailabilityLog([], [change('a')], YESTERDAY, 10);
+
+    expect(dates(appendToAvailabilityLog(log, [change('b')], TODAY, 10))).toEqual([
+      `${TODAY}:b`,
+      `${YESTERDAY}:a`,
+    ]);
+  });
+
+  it('adds to the latest entry when it has the same date', () => {
+    const log = appendToAvailabilityLog([], [change('a')], YESTERDAY, 10);
+    const sameDay = appendToAvailabilityLog(log, [change('b')], TODAY, 10);
+
+    expect(dates(appendToAvailabilityLog(sameDay, [change('c')], TODAY, 10))).toEqual([
+      `${TODAY}:b,c`,
+      `${YESTERDAY}:a`,
+    ]);
+  });
+
+  it('drops the oldest dates past the limit', () => {
+    let log: AvailabilityLogEntry[] = [];
+    for (const date of ['2026-10-13', YESTERDAY, TODAY]) {
+      log = appendToAvailabilityLog(log, [change(date)], date, 2);
+    }
+
+    expect(log.map(({ loggedOn }) => loggedOn)).toEqual([TODAY, YESTERDAY]);
+  });
+
+  it('leaves the log as it is without changes', () => {
+    const log = appendToAvailabilityLog([], [change('a')], YESTERDAY, 10);
+
+    expect(appendToAvailabilityLog(log, [], TODAY, 10)).toEqual(log);
   });
 });
 

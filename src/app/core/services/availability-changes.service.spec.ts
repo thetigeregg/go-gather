@@ -15,6 +15,7 @@ vi.mock(
 
 const YESTERDAY = '2026-10-14';
 const TODAY = '2026-10-15';
+const TOMORROW = '2026-10-16';
 
 function entry(id: string, releasedOn: string | null): CatalogEntry {
   return makeContractCatalogEntry({ id, name: id, releasedOn });
@@ -278,6 +279,94 @@ describe('AvailabilityChangesService', () => {
 
       expect(published).toHaveBeenCalledTimes(1);
       expect(await service.takePending()).toEqual([]);
+    });
+  });
+
+  describe('log', () => {
+    const logged = async () =>
+      (await service.getLog()).map(
+        ({ loggedOn, changes }) =>
+          `${loggedOn} ${changes.map(({ id, kind }) => `${id}:${kind}`).join(',')}`
+      );
+
+    it('logs changes when shown, before they are dismissed', async () => {
+      await setCheckDate(YESTERDAY);
+      await service.recordCatalogReplacement(
+        [entry('a', null), entry('b', '2016-07-06')],
+        [entry('a', '2016-07-06'), entry('b', null)],
+        TODAY
+      );
+      expect(await service.getLog()).toEqual([]);
+
+      await service.takePending(TODAY);
+
+      expect(await logged()).toEqual([`${TODAY} a:available,b:unavailable`]);
+    });
+
+    it("doesn't log a snapshot again when shown after a reload with the sheet open", async () => {
+      await setCheckDate(YESTERDAY);
+      await service.recordCatalogReplacement([entry('a', null)], [entry('a', '2016-07-06')], TODAY);
+      await service.takePending(TODAY);
+      // Picked up the next day, before the sheet from yesterday is dismissed.
+      await service.recordCatalogReplacement(
+        [entry('a', '2016-07-06'), entry('b', null)],
+        [entry('a', '2016-07-06'), entry('b', '2016-07-06')],
+        TOMORROW
+      );
+
+      await service.takePending(TOMORROW);
+
+      expect(await logged()).toEqual([`${TOMORROW} b:available`, `${TODAY} a:available`]);
+    });
+
+    it('logs a change reversing one the open sheet shows', async () => {
+      await setCheckDate(YESTERDAY);
+      await service.recordCatalogReplacement([entry('a', '2016-07-06')], [entry('a', null)], TODAY);
+      const shown = await service.takePending(TODAY);
+      await service.recordCatalogReplacement([entry('a', null)], [entry('a', '2016-07-06')], TODAY);
+      await service.acknowledge(shown);
+
+      await service.takePending(TODAY);
+
+      expect(await logged()).toEqual([`${TODAY} a:unavailable,a:available`]);
+    });
+
+    it('logs the same change again once the earlier one was dismissed', async () => {
+      await setCheckDate(YESTERDAY);
+      await service.recordCatalogReplacement([entry('a', null)], [entry('a', '2016-07-06')], TODAY);
+      await service.acknowledge(await service.takePending(TODAY));
+      await service.recordCatalogReplacement([entry('a', '2016-07-06')], [entry('a', null)], TODAY);
+      await service.acknowledge(await service.takePending(TODAY));
+      await service.recordCatalogReplacement([entry('a', null)], [entry('a', '2016-07-06')], TODAY);
+
+      await service.takePending(TOMORROW);
+
+      expect(await logged()).toEqual([
+        `${TOMORROW} a:available`,
+        `${TODAY} a:available,a:unavailable`,
+      ]);
+    });
+
+    it('emits logged$ only when something was logged', async () => {
+      const emitted = vi.fn();
+      service.logged$.subscribe(emitted);
+      await service.takePending(TODAY);
+      expect(emitted).not.toHaveBeenCalled();
+
+      await setCheckDate(YESTERDAY);
+      await service.recordCatalogReplacement([entry('a', null)], [entry('a', '2016-07-06')], TODAY);
+      await service.takePending(TODAY);
+      await service.takePending(TODAY);
+
+      expect(emitted).toHaveBeenCalledTimes(1);
+    });
+
+    it('treats unreadable log data as an empty log', async () => {
+      for (const value of ['{not json', 'null', '{"loggedOn":"2026-10-15"}']) {
+        await engine.putSyncMeta({ key: 'availabilityChangeLog', value });
+
+        expect(await service.getLog()).toEqual([]);
+      }
     });
   });
 

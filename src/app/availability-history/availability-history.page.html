@@ -1,0 +1,25 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/gather"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Availability History</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  @if (loaded && days.length === 0) {
+    <p class="availability-history-empty">
+      No availability changes yet. Changes appear here after the availability popup has been shown.
+    </p>
+  }
+
+  @for (day of days; track day.date) {
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>{{ formatDay(day.date) }}</ion-card-title>
+      </ion-card-header>
+      <app-availability-sections [sections]="day.sections"></app-availability-sections>
+    </ion-card>
+  }
+</ion-content>
