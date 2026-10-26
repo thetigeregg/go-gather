@@ -347,3 +347,7 @@
 ## v0.23.0 - 2026-10-15
 
 - 293f416 feat(app): show popup when Pokemon availability changes (#91)
+
+## v0.24.0 - 2026-10-26
+
+- 480c58e feat(sync): flag Cloudflare blocks in Bulbapedia fetch errors (#100)
