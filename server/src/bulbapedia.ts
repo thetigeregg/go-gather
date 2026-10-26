@@ -885,8 +885,13 @@ export async function fetchWikitext(page: string): Promise<string> {
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!response.ok) {
+    // Cloudflare in front of Bulbapedia marks its bot-protection responses
+    // with `cf-mitigated` — naming it tells a passing block apart from a
+    // MediaWiki error without digging into the HTML body.
+    const mitigated = response.headers.get('cf-mitigated');
     throw new Error(
-      `Bulbapedia: failed to fetch "${page}": ${String(response.status)} ${response.statusText}`
+      `Bulbapedia: failed to fetch "${page}": ${String(response.status)} ${response.statusText}` +
+        (mitigated ? ` (blocked by Cloudflare: ${mitigated})` : '')
     );
   }
 
