@@ -1,4 +1,5 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   IonButtons,
   IonContent,
@@ -13,6 +14,7 @@ import {
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { filter, menu } from 'ionicons/icons';
+import { EventFocusService } from '../core/services/event-focus.service';
 import { PreferenceStorageService } from '../core/storage/preference-storage.service';
 import { CalendarViewComponent } from './calendar-view/calendar-view.component';
 import { TimelineViewComponent } from './timeline-view/timeline-view.component';
@@ -57,6 +59,8 @@ function isCalendarSelectedView(value: unknown): value is CalendarSelectedView {
 })
 export class CalendarPage implements OnInit {
   private readonly preferenceStorage = inject(PreferenceStorageService);
+  private readonly eventFocusService = inject(EventFocusService);
+  private readonly destroyRef = inject(DestroyRef);
 
   selectedView: CalendarSelectedView = 'calendar';
 
@@ -64,10 +68,35 @@ export class CalendarPage implements OnInit {
     addIcons({ menu, filter });
   }
 
+  /**
+   * A focus request (tapped event push notification) always lands on the
+   * Timeline — only it has an expandable per-event card to focus. That
+   * switch is in-memory only, never persisted over the user's saved view
+   * preference, and must also win over that preference's async load on a
+   * cold start (where the request is already pending before this runs).
+   */
   ngOnInit(): void {
+    // Tracked locally rather than re-checking the pending ID once the
+    // preference resolves — the Timeline may already have consumed it by then.
+    let focusRequested = this.eventFocusService.getPendingEventId() !== null;
+    if (focusRequested) {
+      this.selectedView = 'timeline';
+    }
+
+    this.eventFocusService
+      .listenForFocusRequests()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        focusRequested = true;
+        this.selectedView = 'timeline';
+      });
+
     this.preferenceStorage
       .getItem(SELECTED_VIEW_KEY)
       .then((stored) => {
+        if (focusRequested) {
+          return;
+        }
         if (isCalendarSelectedView(stored)) {
           this.selectedView = stored;
         }

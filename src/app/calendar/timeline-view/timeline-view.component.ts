@@ -1,12 +1,20 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import dayjs, { Dayjs } from 'dayjs';
 import { IonAccordionGroup } from '@ionic/angular/standalone';
 import { EventMetadata, PogoEvent } from '@go-gather/shared';
 import { CalendarEventsService } from '../../core/services/calendar-events.service';
 import { CalendarFilterService } from '../../core/services/calendar-filter.service';
+import { EventFocusService } from '../../core/services/event-focus.service';
 import { buildEventMetadata } from '../../core/services/calendar-event-metadata.util';
 import { SyncService } from '../../core/services/sync.service';
-import { buildTimelineData, TIMELINE_CATEGORIES, TimelineData } from './timeline-categories.util';
+import {
+  buildTimelineData,
+  findTimelineCategoryForEvent,
+  TIMELINE_CATEGORIES,
+  TimelineCategoryKey,
+  TimelineData,
+} from './timeline-categories.util';
 import { TimelineCategorySectionComponent } from './timeline-category-section.component';
 import { generateSeasonDailyBonusEvents } from './timeline-season-daily-bonus-events.util';
 
@@ -45,6 +53,11 @@ function emptyTimelineData(): TimelineData {
  * just unlucky timing) would show "No upcoming events found" forever, since
  * the initial `loadCalendarEvents()` call only ever resolves once and never
  * re-fires on its own once newer data lands moments later.
+ *
+ * Focuses (expands + scrolls to the top) an event requested via
+ * `EventFocusService` — i.e. a tapped push notification — once its data
+ * has loaded: on mount for a cold start, or after a reload for a request
+ * arriving while this view is already mounted.
  */
 @Component({
   selector: 'app-timeline-view',
@@ -56,9 +69,11 @@ export class TimelineViewComponent implements OnInit {
   private readonly calendarEventsService = inject(CalendarEventsService);
   private readonly calendarFilterService = inject(CalendarFilterService);
   private readonly syncService = inject(SyncService);
+  private readonly eventFocusService = inject(EventFocusService);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly categories = TIMELINE_CATEGORIES;
-  readonly defaultExpandedCategories = TIMELINE_CATEGORIES.map((category) => category.key);
+  expandedCategories: TimelineCategoryKey[] = TIMELINE_CATEGORIES.map((category) => category.key);
 
   now: Dayjs = dayjs();
   activeEventId: string | null = null;
@@ -71,17 +86,36 @@ export class TimelineViewComponent implements OnInit {
     this.refresh();
     this.loadAndRefresh();
 
-    this.syncService.listenForCalendarEventsSync().subscribe(() => {
-      this.loadAndRefresh();
-    });
+    this.syncService
+      .listenForCalendarEventsSync()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.loadAndRefresh();
+      });
 
     this.calendarFilterService.listenForFilterChanges().subscribe(() => {
       this.refresh();
     });
+
+    this.eventFocusService
+      .listenForFocusRequests()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.loadAndRefresh();
+      });
   }
 
   get eventMetadata(): Readonly<Record<string, EventMetadata>> {
     return { ...this.calendarEventsService.eventMetadata, ...this.seasonDailyBonusEventMetadata };
+  }
+
+  /** Keeps `expandedCategories` in step with sections the user collapses or
+   * re-opens, so focusPendingEvent() knows when it has to re-open one. */
+  onExpandedCategoriesChange(value: unknown): void {
+    const keys = Array.isArray(value) ? value : [value];
+    this.expandedCategories = this.categories
+      .map((category) => category.key)
+      .filter((key) => keys.includes(key));
   }
 
   setActiveEvent(eventId: string): void {
@@ -89,19 +123,51 @@ export class TimelineViewComponent implements OnInit {
     this.activeEventId = this.activeEventId === eventId ? null : eventId;
 
     if (this.activeEventId && this.activeEventId !== previousActiveId) {
-      setTimeout(() => {
-        const eventCard = document.querySelector(`[data-timeline-event-id="${eventId}"]`);
-        if (eventCard instanceof HTMLElement) {
-          eventCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-      }, SCROLL_INTO_VIEW_DELAY_MS);
+      this.scrollEventCardIntoView(eventId, 'nearest');
     }
   }
 
+  /** Torn down with the view, so a destroyed Timeline (e.g. swapped out for
+   * the Calendar) can't consume a pending focus request meant for its
+   * replacement once a shared in-flight load resolves. */
   private loadAndRefresh(): void {
-    this.calendarEventsService.loadCalendarEvents().subscribe(() => {
-      this.refresh();
-    });
+    this.calendarEventsService
+      .loadCalendarEvents()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(() => {
+        this.refresh();
+        this.focusPendingEvent();
+      });
+  }
+
+  /** One-shot: the pending request is consumed even if the event isn't in
+   * the timeline (ended, or hidden by filters) — the view just stays as-is. */
+  private focusPendingEvent(): void {
+    const eventId = this.eventFocusService.getPendingEventId();
+    if (eventId === null) {
+      return;
+    }
+    this.eventFocusService.clearPendingEventId();
+
+    const categoryKey = findTimelineCategoryForEvent(this.timelineData, eventId);
+    if (categoryKey === null) {
+      return;
+    }
+
+    if (!this.expandedCategories.includes(categoryKey)) {
+      this.expandedCategories = [...this.expandedCategories, categoryKey];
+    }
+    this.activeEventId = eventId;
+    this.scrollEventCardIntoView(eventId, 'start');
+  }
+
+  private scrollEventCardIntoView(eventId: string, block: ScrollLogicalPosition): void {
+    setTimeout(() => {
+      const eventCard = document.querySelector(`[data-timeline-event-id="${eventId}"]`);
+      if (eventCard instanceof HTMLElement) {
+        eventCard.scrollIntoView({ behavior: 'smooth', block });
+      }
+    }, SCROLL_INTO_VIEW_DELAY_MS);
   }
 
   private refresh(): void {

@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { CalendarPage } from './calendar.page';
+import { EventFocusService } from '../core/services/event-focus.service';
 import { PreferenceStorageService } from '../core/storage/preference-storage.service';
 
 describe('CalendarPage', () => {
@@ -110,5 +111,43 @@ describe('CalendarPage', () => {
       expect.any(Error)
     );
     errorSpy.mockRestore();
+  });
+
+  describe('event focus requests', () => {
+    let eventFocusService: EventFocusService;
+
+    beforeEach(() => {
+      eventFocusService = TestBed.inject(EventFocusService);
+    });
+
+    it('forces the timeline over a stored calendar preference when a focus is pending on init', async () => {
+      storedValue = 'calendar';
+      eventFocusService.requestFocus('event-1');
+
+      component.ngOnInit();
+      expect(component.selectedView).toBe('timeline');
+
+      // The timeline view may consume the pending request before the
+      // stored preference resolves — it must still not win.
+      eventFocusService.clearPendingEventId();
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(component.selectedView).toBe('timeline');
+      expect(setItemSpy).not.toHaveBeenCalled();
+    });
+
+    it('switches to the timeline when a focus request arrives after init', async () => {
+      storedValue = 'calendar';
+      component.ngOnInit();
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(component.selectedView).toBe('calendar');
+
+      eventFocusService.requestFocus('event-1');
+
+      expect(component.selectedView).toBe('timeline');
+      expect(setItemSpy).not.toHaveBeenCalled();
+    });
   });
 });
