@@ -285,7 +285,7 @@ describe('parseUnreleasedForms', () => {
     return parseUnreleasedForms(availabilityPage([], 15, speciesSections(options)));
   }
 
-  it('reads MSP/GO and plain MSP codes, including form= arguments', () => {
+  it('reads MSP/GO, plain MSP and MS codes, including form= arguments', () => {
     expect(
       parse({
         unreleasedForms: [
@@ -293,6 +293,8 @@ describe('parseUnreleasedForms', () => {
           '{{MSP/GO|0666Fan|Vivillon}}',
           '{{MSP|0658|form=A|Greninja}}',
           '{{MSP|0999|Gimmighoul}}',
+          '{{MS|0800|form=U|Necrozma (GO)}}',
+          '{{MS|0893|form=D|Zarude (GO)}}',
         ],
       })
     ).toEqual([
@@ -300,6 +302,8 @@ describe('parseUnreleasedForms', () => {
       { dexNr: 666, formCode: 'Fan' },
       { dexNr: 658, formCode: 'A' },
       { dexNr: 999, formCode: '' },
+      { dexNr: 800, formCode: 'U' },
+      { dexNr: 893, formCode: 'D' },
     ]);
   });
 
@@ -404,8 +408,30 @@ describe('parseSpeciesReleases', () => {
     expect(releases).toContainEqual({ dexNr: 222, formCode: 'G', releasedOn: '2022-03-01' });
   });
 
-  it('accepts both MSP and MSP/GO templates in the unreleased list', () => {
-    expect(() => parse({ unreleased: [901, 902, 903] })).not.toThrow();
+  it('accepts MSP, MSP/GO and MS templates in the unreleased list', () => {
+    expect(() => parse({ unreleased: [901, 902, 903, 904] })).not.toThrow();
+  });
+
+  it('accepts a commented-out MS row as listed', () => {
+    expect(() =>
+      parse({
+        rows: [
+          row('Jan 1, 2020', '{{MSP/GO|0903|Sneasler}}'),
+          '<!--' + row('TBA', '{{MS|0902|Basculegion (GO)}}') + '-->',
+        ],
+      })
+    ).not.toThrow();
+  });
+
+  it('counts an MS sprite in a live TBA row as listed without dating it', () => {
+    const releases = parse({
+      rows: [
+        row('Jan 1, 2020', '{{MSP/GO|0903|Sneasler}}'),
+        row('TBA', '{{MS|0902|Basculegion (GO)}}'),
+      ],
+    });
+
+    expect(releases.some((r) => r.dexNr === 902)).toBe(false);
   });
 
   it('throws when a species is neither dated nor listed as unreleased', () => {

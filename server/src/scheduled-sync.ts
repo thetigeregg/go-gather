@@ -1,8 +1,12 @@
 import type { FastifyBaseLogger } from 'fastify';
+import { availabilityStatus } from './availability-store.js';
+import { db } from './db.js';
+import { hasConfiguredFcm, sendFcmMulticast } from './fcm.js';
 import { main as syncCatalog } from './sync.js';
 import { main as syncCalendarEvents } from './sync-calendar-events.js';
 import { main as syncSeason } from './sync-season.js';
 import { main as syncPokemonStats } from './sync-pokemon-stats.js';
+import { availabilityHealth, updateSyncHealth, type HealthCheck } from './sync-health.js';
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -15,10 +19,13 @@ function readPositiveIntegerEnv(name: string, fallback: number): number {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-interface ScheduledJob {
+export interface ScheduledJob {
   name: string;
   run: () => Promise<void>;
   intervalHours: number;
+  /** Health of the sources the job updates beyond itself — checked after
+   * every run, even a failed one, since some may have updated first. */
+  checkHealth?: () => HealthCheck[];
 }
 
 /**
@@ -53,21 +60,67 @@ function buildJobs(): ScheduledJob[] {
       name: 'catalog',
       run: syncCatalog,
       intervalHours: readPositiveIntegerEnv('SYNC_CATALOG_INTERVAL_HOURS', 24),
+      // The catalog sync records Bulbapedia failures per dataset and carries
+      // on with the saved data, so they never fail the job itself.
+      checkHealth: () => availabilityStatus(db).map(availabilityHealth),
     },
   ];
 }
 
-async function runJob(job: ScheduledJob, logger: FastifyBaseLogger): Promise<void> {
+/**
+ * Runs one job, then records its health and that of the sources it updates
+ * (see sync-health.ts). A run that succeeded while one of those sources
+ * failed logs at `warn`, so it can't pass for a clean run.
+ */
+export async function runJob(job: ScheduledJob, logger: FastifyBaseLogger): Promise<void> {
   const startedAt = Date.now();
   logger.info({ job: job.name }, 'scheduled sync starting');
+  const source = `job:${job.name}`;
+  let jobHealth: HealthCheck = { source, state: 'ok' };
   try {
     await job.run();
-    logger.info({ job: job.name, durationMs: Date.now() - startedAt }, 'scheduled sync completed');
   } catch (err: unknown) {
     logger.error(
       { job: job.name, durationMs: Date.now() - startedAt, err },
       'scheduled sync failed'
     );
+    jobHealth = {
+      source,
+      state: 'failing',
+      detail: err instanceof Error ? err.message : String(err),
+    };
+  }
+  const durationMs = Date.now() - startedAt;
+
+  // Checked apart from saving, so a failing check can't keep the job's own
+  // health from being saved and alerted.
+  let checks: HealthCheck[] = [];
+  try {
+    checks = job.checkHealth?.() ?? [];
+  } catch (err: unknown) {
+    logger.error({ job: job.name, err }, 'sync health check failed');
+  }
+  let unhealthy: HealthCheck[] = [];
+  try {
+    unhealthy = await updateSyncHealth(db, [jobHealth, ...checks], {
+      logger,
+      send: sendFcmMulticast,
+      isFcmConfigured: hasConfiguredFcm,
+    });
+  } catch (err: unknown) {
+    logger.error({ job: job.name, err }, 'sync health update failed');
+  }
+
+  if (jobHealth.state !== 'ok') {
+    return;
+  }
+  if (unhealthy.length > 0) {
+    logger.warn(
+      { job: job.name, durationMs, unhealthy: unhealthy.map((check) => check.source) },
+      'scheduled sync completed with failures'
+    );
+  } else {
+    logger.info({ job: job.name, durationMs }, 'scheduled sync completed');
   }
 }
 

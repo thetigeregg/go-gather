@@ -164,13 +164,14 @@ const RELEASE_DATE = /^([A-Za-z]{3})[A-Za-z]*\.? (\d{1,2}), (\d{4})/;
 // A date cell for a release that's announced but not yet scheduled.
 const UNSCHEDULED_DATE = /^(?:TBA|TBD)\b/i;
 const MSP_GO_TEMPLATE = /\{\{MSP\/GO\|([^}]*)\}\}/g;
-// Also the plain `{{MSP|…}}` sprite template, used for Pokemon and forms
-// with no GO sprite yet — only read in the unreleased lists.
-const MSP_ANY_TEMPLATE = /\{\{MSP(?:\/GO)?\|([^}]*)\}\}/g;
+// Also the plain `{{MSP|…}}` and `{{MS|…}}` sprite templates, used for
+// Pokemon and forms with no GO sprite yet — only read in the unreleased lists
+// and TBA/TBD release rows, never where a release gets dated.
+const MSP_ANY_TEMPLATE = /\{\{MS(?:P(?:\/GO)?)?\|([^}]*)\}\}/g;
 const UNRELEASED_FORMS_INTRO = 'yet to be made available';
-// Dex numbers alone, from either sprite template — for scanning commented-out
+// Dex numbers alone, from any sprite template — for scanning commented-out
 // rows, whose content needn't be well-formed enough for parseMspGoCodes.
-const ANY_MSP_DEX_NR = /\{\{MSP(?:\/GO)?\|(?:size=\d+\|)?(\d{4})/g;
+const ANY_MSP_DEX_NR = /\{\{MS(?:P(?:\/GO)?)?\|(?:size=\d+\|)?(\d{4})/g;
 // `0892R`, `0003GMax s`, `0521 f`: a 4-digit dex number, optional form
 // letters, then optional space-separated modifiers (shiny/female) that don't
 // matter for Max availability.
@@ -308,8 +309,8 @@ export function templateCalls(wikitext: string, name: string): string[][] {
 }
 
 /** Reads every sprite template in a wikitext fragment, in order — just
- * `{{MSP/GO|...}}` by default, or both `{{MSP/GO|...}}` and plain
- * `{{MSP|...}}` with `MSP_ANY_TEMPLATE`. */
+ * `{{MSP/GO|...}}` by default, or `{{MSP/GO|...}}` plus plain `{{MSP|...}}`
+ * and `{{MS|...}}` with `MSP_ANY_TEMPLATE`. */
 export function parseMspGoCodes(wikitext: string, template = MSP_GO_TEMPLATE): PokemonCode[] {
   return [...wikitext.matchAll(template)].map((match) => {
     const params = match[1].split('|').map((param) => param.trim());
@@ -436,7 +437,9 @@ function parseTableRows(tableLines: string[]): TableRow[] {
  * missing release — the species-count check alone wouldn't notice one lost
  * row. Only an explicit TBA/TBD date is accepted without a date: that row
  * comes back with `releasedOn: null`, so it isn't treated as released but
- * still counts as listed (see parseSpeciesReleases' cross-check).
+ * still counts as listed (see parseSpeciesReleases' cross-check) — read
+ * with every sprite template, since an announced Pokemon may have no GO
+ * sprite yet.
  */
 export function parseReleaseTable(section: string): ReleaseRow[] {
   return parseTableRows(firstTableLines(section)).flatMap(({ cells, isHeader }): ReleaseRow[] => {
@@ -453,7 +456,7 @@ export function parseReleaseTable(section: string): ReleaseRow[] {
         throw new Error(`Bulbapedia: unreadable release date "${cells[0]}"`);
       }
       console.warn(`Bulbapedia: release row with unscheduled date "${cells[0]}" has no date yet.`);
-      return [{ releasedOn: null, pokemon: parseMspGoCodes(cells[1]) }];
+      return [{ releasedOn: null, pokemon: parseMspGoCodes(cells[1], MSP_ANY_TEMPLATE) }];
     }
     const pokemon = parseMspGoCodes(cells[1]);
     if (pokemon.length === 0) {

@@ -39,11 +39,13 @@ export function dynamaxPage(rows: string[], fillerCount = 100): string {
   ].join('\n');
 }
 
+const UNRELEASED_TEMPLATES = ['MSP', 'MSP/GO', 'MS'];
+
 export interface SpeciesSectionOptions {
   /** Extra rows for the species date table. */
   rows?: string[];
-  /** Dex numbers in the Unreleased Pokémon list, alternating the plain
-   * `{{MSP|…}}` and `{{MSP/GO|…}}` templates as the real page does. */
+  /** Dex numbers in the Unreleased Pokémon list, cycling the plain
+   * `{{MSP|…}}`, `{{MSP/GO|…}}` and `{{MS|…}}` templates the real page mixes. */
   unreleased?: number[];
   /** Filler species dex 1…fillerCount, all dated Jul 6, 2016. */
   fillerCount?: number;
@@ -66,7 +68,7 @@ export function speciesSections({
   const unreleasedCodes = unreleased
     .map(
       (dexNr, index) =>
-        `{{${index % 2 === 0 ? 'MSP' : 'MSP/GO'}|${String(dexNr).padStart(4, '0')}|Unreleased}}`
+        `{{${UNRELEASED_TEMPLATES[index % UNRELEASED_TEMPLATES.length]}|${String(dexNr).padStart(4, '0')}|Unreleased}}`
     )
     .join('');
   return [

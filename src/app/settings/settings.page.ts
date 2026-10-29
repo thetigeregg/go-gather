@@ -27,7 +27,12 @@ import {
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import { download, share } from 'ionicons/icons';
-import { AvailabilityStatus, DEFAULT_SETTINGS, ExportBundle } from '@go-gather/shared';
+import {
+  AVAILABILITY_DATASET_LABELS,
+  AvailabilityStatus,
+  DEFAULT_SETTINGS,
+  ExportBundle,
+} from '@go-gather/shared';
 import { AvailabilityStatusService } from '../core/services/availability-status.service';
 import { NotificationService } from '../core/services/notification.service';
 import { UserDataService } from '../core/services/user-data.service';
@@ -39,18 +44,6 @@ import { pickJsonTextFile } from '../core/utils/pick-file.util';
  * arbitrary fixed date is only ever used as a wrapper so the time picker has
  * a full ISO value to bind to; only the "HH:mm" substring is ever persisted. */
 const ALL_DAY_TIME_PICKER_DATE = '2000-01-01';
-
-/** Display names for the server's Bulbapedia datasets (see
- * server/src/bulbapedia.ts's AVAILABILITY_DATASETS). A dataset added later
- * that isn't listed here is shown by its raw name. */
-const DATASET_LABELS: Partial<Record<string, string>> = {
-  dynamax: 'Dynamax',
-  gigantamax: 'Gigantamax',
-  species: 'Released Pokémon',
-  mega: 'Mega & Primal forms',
-  shiny: 'Shinies',
-  unreleasedForms: 'Unreleased forms',
-};
 
 @Component({
   selector: 'app-settings',
@@ -116,7 +109,7 @@ export class SettingsPage implements ViewWillEnter {
 
   /** Display name for a Bulbapedia dataset in the status card. */
   datasetLabel(dataset: string): string {
-    return DATASET_LABELS[dataset] ?? dataset;
+    return AVAILABILITY_DATASET_LABELS[dataset] ?? dataset;
   }
 
   /** Re-read on every visit, since it reflects the server's latest syncs.

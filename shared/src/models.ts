@@ -98,6 +98,19 @@ export interface AvailabilityStatus {
   stale: boolean;
 }
 
+/** Display names for the server's Bulbapedia datasets (see
+ * server/src/bulbapedia.ts's AVAILABILITY_DATASETS), shared by the Settings
+ * status card and the server's sync-health pushes so the two match. A
+ * dataset added later that isn't listed here is shown by its raw name. */
+export const AVAILABILITY_DATASET_LABELS: Partial<Record<string, string>> = {
+  dynamax: 'Dynamax',
+  gigantamax: 'Gigantamax',
+  species: 'Released Pokémon',
+  mega: 'Mega & Primal forms',
+  shiny: 'Shinies',
+  unreleasedForms: 'Unreleased forms',
+};
+
 export interface ProgressEntry {
   catalogEntryId: string;
   caught: boolean;
