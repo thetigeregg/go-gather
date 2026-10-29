@@ -144,6 +144,12 @@ describe('alertMessage', () => {
     );
   });
 
+  it('falls back to the whole source for an unknown kind', () => {
+    expect(alertMessage('recovered', [{ source: 'other', state: 'ok' }]).title).toBe(
+      'Sync recovered: other'
+    );
+  });
+
   it.each([
     ['stale', 'Over a week old: Released Pokémon data'],
     ['recovered', 'Sync recovered: Released Pokémon data'],

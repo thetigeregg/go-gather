@@ -2,7 +2,7 @@ import type { FastifyBaseLogger } from 'fastify';
 import { AVAILABILITY_SOURCES_SCHEMA } from './availability-store';
 import { db } from './db';
 import { sendFcmMulticast } from './fcm';
-import { runJob, type ScheduledJob } from './scheduled-sync';
+import { runJob, startScheduledSync, type ScheduledJob } from './scheduled-sync';
 import { SYNC_HEALTH_SCHEMA } from './sync-health';
 
 vi.mock('./db', async () => {
@@ -146,5 +146,42 @@ describe('runJob', () => {
 
     expect(logMessages('error')).toEqual(['sync health check failed']);
     expect(logMessages('info')).toEqual(['scheduled sync starting', 'scheduled sync completed']);
+  });
+
+  it('logs a health update error without letting it escape', async () => {
+    db.exec('DROP TABLE sync_health');
+    try {
+      await run(job({ checkHealth: () => [{ source: 'availability:species', state: 'failing' }] }));
+    } finally {
+      db.exec(SYNC_HEALTH_SCHEMA);
+    }
+
+    expect(logMessages('error')).toEqual(['sync health update failed']);
+    expect(logMessages('info')).toEqual(['scheduled sync starting', 'scheduled sync completed']);
+  });
+});
+
+describe('startScheduledSync', () => {
+  afterEach(() => {
+    db.exec('DELETE FROM availability_sources');
+  });
+
+  it("checks the catalog job's availability datasets", async () => {
+    db.prepare(
+      `INSERT INTO availability_sources (dataset, fetched_at, last_attempt_at, last_error)
+       VALUES ('species', ?, ?, 'boom')`
+    ).run(new Date().toISOString(), new Date().toISOString());
+
+    const stop = startScheduledSync(logger as unknown as FastifyBaseLogger);
+    try {
+      await vi.waitFor(() => {
+        expect(send).toHaveBeenCalledWith(
+          ['device-a'],
+          expect.objectContaining({ title: 'Sync failing: Released Pokémon data', body: 'boom' })
+        );
+      });
+    } finally {
+      stop();
+    }
   });
 });
