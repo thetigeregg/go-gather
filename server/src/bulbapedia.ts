@@ -164,13 +164,13 @@ const RELEASE_DATE = /^([A-Za-z]{3})[A-Za-z]*\.? (\d{1,2}), (\d{4})/;
 // A date cell for a release that's announced but not yet scheduled.
 const UNSCHEDULED_DATE = /^(?:TBA|TBD)\b/i;
 const MSP_GO_TEMPLATE = /\{\{MSP\/GO\|([^}]*)\}\}/g;
-// Also the plain `{{MSP|…}}` sprite template, used for Pokemon and forms
-// with no GO sprite yet — only read in the unreleased lists.
-const MSP_ANY_TEMPLATE = /\{\{MSP(?:\/GO)?\|([^}]*)\}\}/g;
+// Also the plain `{{MSP|…}}` and `{{MS|…}}` sprite templates, used for
+// Pokemon and forms with no GO sprite yet — only read in the unreleased lists.
+const MSP_ANY_TEMPLATE = /\{\{MS(?:P(?:\/GO)?)?\|([^}]*)\}\}/g;
 const UNRELEASED_FORMS_INTRO = 'yet to be made available';
-// Dex numbers alone, from either sprite template — for scanning commented-out
+// Dex numbers alone, from any sprite template — for scanning commented-out
 // rows, whose content needn't be well-formed enough for parseMspGoCodes.
-const ANY_MSP_DEX_NR = /\{\{MSP(?:\/GO)?\|(?:size=\d+\|)?(\d{4})/g;
+const ANY_MSP_DEX_NR = /\{\{MS(?:P(?:\/GO)?)?\|(?:size=\d+\|)?(\d{4})/g;
 // `0892R`, `0003GMax s`, `0521 f`: a 4-digit dex number, optional form
 // letters, then optional space-separated modifiers (shiny/female) that don't
 // matter for Max availability.
@@ -308,8 +308,8 @@ export function templateCalls(wikitext: string, name: string): string[][] {
 }
 
 /** Reads every sprite template in a wikitext fragment, in order — just
- * `{{MSP/GO|...}}` by default, or both `{{MSP/GO|...}}` and plain
- * `{{MSP|...}}` with `MSP_ANY_TEMPLATE`. */
+ * `{{MSP/GO|...}}` by default, or `{{MSP/GO|...}}` plus plain `{{MSP|...}}`
+ * and `{{MS|...}}` with `MSP_ANY_TEMPLATE`. */
 export function parseMspGoCodes(wikitext: string, template = MSP_GO_TEMPLATE): PokemonCode[] {
   return [...wikitext.matchAll(template)].map((match) => {
     const params = match[1].split('|').map((param) => param.trim());
