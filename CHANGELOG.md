@@ -371,3 +371,7 @@
 ## v0.26.1 - 2026-10-26
 
 - d15b634 fix(server): skip undated events in calendar sync (#106)
+
+## v0.27.0 - 2026-10-29
+
+- 9e24573 feat(sync): push alerts for failing syncs; parse {{MS|…}} sprites (#107)
