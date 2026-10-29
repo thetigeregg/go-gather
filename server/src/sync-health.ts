@@ -10,15 +10,16 @@
  * one per run. The states live in SQLite, so a restart doesn't re-alert.
  *
  * Takes the database handle as a parameter (like availability-store.ts), so
- * tests can run against an in-memory database.
+ * tests can run against an in-memory database. FCM is passed in too, so
+ * db.ts (which includes this module's schema) doesn't load firebase-admin.
  */
-import type { AvailabilityStatus } from '@go-gather/shared';
+import { AVAILABILITY_DATASET_LABELS, type AvailabilityStatus } from '@go-gather/shared';
 import type { Database } from 'better-sqlite3';
 import type { FastifyBaseLogger } from 'fastify';
-import { hasConfiguredFcm, sendFcmMulticast } from './fcm.js';
+import type { sendFcmMulticast } from './fcm.js';
 
 /** Included in db.ts's initSchema(). `changed_at` is when `state` last
- * changed, i.e. when its alert was sent. */
+ * changed, i.e. when its alert was sent; `detail` is the latest run's. */
 export const SYNC_HEALTH_SCHEMA = `
   CREATE TABLE IF NOT EXISTS sync_health (
     source TEXT PRIMARY KEY,
@@ -39,15 +40,6 @@ export interface HealthCheck {
 }
 
 export type AlertKind = 'failing' | 'stale' | 'recovered';
-
-const DATASET_LABELS: Record<string, string> = {
-  dynamax: 'Dynamax',
-  gigantamax: 'Gigantamax',
-  species: 'Species',
-  mega: 'Mega',
-  shiny: 'Shiny',
-  unreleasedForms: 'Unreleased forms',
-};
 
 const JOB_LABELS: Record<string, string> = {
   'calendar-events': 'Calendar events',
@@ -91,7 +83,7 @@ export function transition(
 function sourceLabel(source: string): string {
   const [kind, name = source] = source.split(':', 2);
   if (kind === 'availability') {
-    return `${DATASET_LABELS[name] ?? name} data`;
+    return `${AVAILABILITY_DATASET_LABELS[name] ?? name} data`;
   }
   if (kind === 'job') {
     return `${JOB_LABELS[name] ?? name} sync`;
@@ -132,8 +124,8 @@ export function alertMessage(
 
 export interface UpdateSyncHealthOptions {
   logger: Pick<FastifyBaseLogger, 'warn' | 'error'>;
-  send?: typeof sendFcmMulticast;
-  isFcmConfigured?: () => boolean;
+  send: typeof sendFcmMulticast;
+  isFcmConfigured: () => boolean;
   now?: Date;
 }
 
@@ -148,12 +140,7 @@ export interface UpdateSyncHealthOptions {
 export async function updateSyncHealth(
   database: Database,
   checks: HealthCheck[],
-  {
-    logger,
-    send = sendFcmMulticast,
-    isFcmConfigured = hasConfiguredFcm,
-    now = new Date(),
-  }: UpdateSyncHealthOptions
+  { logger, send, isFcmConfigured, now = new Date() }: UpdateSyncHealthOptions
 ): Promise<HealthCheck[]> {
   const unhealthy = checks.filter((check) => check.state !== 'ok');
   for (const { source, state, detail } of unhealthy) {
@@ -162,12 +149,21 @@ export async function updateSyncHealth(
 
   const readState = database.prepare('SELECT state FROM sync_health WHERE source = ?');
   const changes = new Map<AlertKind, HealthCheck[]>();
+  const unchanged: HealthCheck[] = [];
   for (const check of checks) {
     const previous = readState.get(check.source) as { state: HealthState } | undefined;
     const kind = transition(previous?.state, check.state);
     if (kind) {
       changes.set(kind, [...(changes.get(kind) ?? []), check]);
+    } else {
+      unchanged.push(check);
     }
+  }
+
+  // A source failing for days can fail for a different reason each run.
+  const saveDetail = database.prepare('UPDATE sync_health SET detail = ? WHERE source = ?');
+  for (const { source, detail } of unchanged) {
+    saveDetail.run(detail ?? null, source);
   }
 
   const saveState = database.prepare(`

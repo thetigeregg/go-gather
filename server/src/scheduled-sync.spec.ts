@@ -82,7 +82,7 @@ describe('runJob', () => {
     );
     expect(send).toHaveBeenCalledWith(
       ['device-a'],
-      expect.objectContaining({ title: 'Sync failing: Species data', body: 'boom' })
+      expect.objectContaining({ title: 'Sync failing: Released Pokémon data', body: 'boom' })
     );
   });
 
@@ -112,6 +112,27 @@ describe('runJob', () => {
     ).toEqual({
       state: 'failing',
     });
+  });
+
+  it('still records and alerts a failed job when its health check throws', async () => {
+    await run(
+      job({
+        name: 'calendar-events',
+        run: () => Promise.reject(new Error('ScrapedDuck 503')),
+        checkHealth: () => {
+          throw new Error('database locked');
+        },
+      })
+    );
+
+    expect(logMessages('error')).toEqual(['scheduled sync failed', 'sync health check failed']);
+    expect(send).toHaveBeenCalledWith(
+      ['device-a'],
+      expect.objectContaining({ title: 'Sync failing: Calendar events sync' })
+    );
+    expect(
+      db.prepare('SELECT state FROM sync_health WHERE source = ?').get('job:calendar-events')
+    ).toEqual({ state: 'failing' });
   });
 
   it('logs a health check error without letting it escape', async () => {

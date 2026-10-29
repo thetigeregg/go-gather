@@ -116,7 +116,7 @@ describe('transition', () => {
 describe('alertMessage', () => {
   it('names a single failing source and includes its error', () => {
     expect(alertMessage('failing', [speciesFailing])).toEqual({
-      title: 'Sync failing: Species data',
+      title: 'Sync failing: Released Pokémon data',
       body: speciesFailing.detail,
     });
   });
@@ -135,7 +135,7 @@ describe('alertMessage', () => {
         { source: 'availability:unreleasedForms', state: 'failing', detail: 'boom' },
         { source: 'job:calendar-events', state: 'failing' },
       ]).title
-    ).toBe('Sync failing: Species data, Unreleased forms data, Calendar events sync');
+    ).toBe('Sync failing: Released Pokémon data, Unreleased forms data, Calendar events sync');
   });
 
   it('falls back to the raw name for an unknown source', () => {
@@ -145,8 +145,8 @@ describe('alertMessage', () => {
   });
 
   it.each([
-    ['stale', 'Over a week old: Species data'],
-    ['recovered', 'Sync recovered: Species data'],
+    ['stale', 'Over a week old: Released Pokémon data'],
+    ['recovered', 'Sync recovered: Released Pokémon data'],
   ] as const)('titles a %s alert', (kind, title) => {
     expect(alertMessage(kind, [{ source: 'availability:species', state: 'ok' }]).title).toBe(title);
   });
@@ -159,10 +159,30 @@ describe('updateSyncHealth', () => {
 
     expect(send).toHaveBeenCalledTimes(1);
     expect(send).toHaveBeenCalledWith(['device-a'], {
-      title: 'Sync failing: Species data',
+      title: 'Sync failing: Released Pokémon data',
       body: speciesFailing.detail,
       data: { kind: 'sync-health', route: '/settings' },
     });
+    expect(storedState('availability:species')).toEqual({
+      state: 'failing',
+      detail: speciesFailing.detail,
+    });
+  });
+
+  it('keeps the latest detail while the state stays the same', async () => {
+    await update([speciesFailing]);
+    await update([{ ...speciesFailing, detail: 'HTTP 503' }]);
+
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(storedState('availability:species')).toEqual({ state: 'failing', detail: 'HTTP 503' });
+  });
+
+  it('keeps the previous detail while an alert awaits a retry', async () => {
+    await update([speciesFailing]);
+    send.mockResolvedValueOnce(sent(0));
+
+    await update([{ ...speciesFailing, state: 'stale', detail: 'HTTP 503' }]);
+
     expect(storedState('availability:species')).toEqual({
       state: 'failing',
       detail: speciesFailing.detail,
@@ -196,9 +216,9 @@ describe('updateSyncHealth', () => {
     await update([{ source: 'availability:species', state: 'ok' }]);
 
     expect(send.mock.calls.map(([, payload]) => payload.title)).toEqual([
-      'Sync failing: Species data',
-      'Over a week old: Species data',
-      'Sync recovered: Species data',
+      'Sync failing: Released Pokémon data',
+      'Over a week old: Released Pokémon data',
+      'Sync recovered: Released Pokémon data',
     ]);
     expect(storedState('availability:species')?.state).toBe('ok');
   });
@@ -214,8 +234,8 @@ describe('updateSyncHealth', () => {
     ]);
 
     expect(send.mock.calls.map(([, payload]) => payload.title)).toEqual([
-      'Sync failing: Species data, Mega data',
-      'Sync recovered: Shiny data',
+      'Sync failing: Released Pokémon data, Mega & Primal forms data',
+      'Sync recovered: Shinies data',
     ]);
   });
 

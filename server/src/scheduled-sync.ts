@@ -1,6 +1,7 @@
 import type { FastifyBaseLogger } from 'fastify';
 import { availabilityStatus } from './availability-store.js';
 import { db } from './db.js';
+import { hasConfiguredFcm, sendFcmMulticast } from './fcm.js';
 import { main as syncCatalog } from './sync.js';
 import { main as syncCalendarEvents } from './sync-calendar-events.js';
 import { main as syncSeason } from './sync-season.js';
@@ -91,13 +92,23 @@ export async function runJob(job: ScheduledJob, logger: FastifyBaseLogger): Prom
   }
   const durationMs = Date.now() - startedAt;
 
-  let unhealthy: HealthCheck[] = [];
+  // Checked apart from saving, so a failing check can't keep the job's own
+  // health from being saved and alerted.
+  let checks: HealthCheck[] = [];
   try {
-    unhealthy = await updateSyncHealth(db, [jobHealth, ...(job.checkHealth?.() ?? [])], {
-      logger,
-    });
+    checks = job.checkHealth?.() ?? [];
   } catch (err: unknown) {
     logger.error({ job: job.name, err }, 'sync health check failed');
+  }
+  let unhealthy: HealthCheck[] = [];
+  try {
+    unhealthy = await updateSyncHealth(db, [jobHealth, ...checks], {
+      logger,
+      send: sendFcmMulticast,
+      isFcmConfigured: hasConfiguredFcm,
+    });
+  } catch (err: unknown) {
+    logger.error({ job: job.name, err }, 'sync health update failed');
   }
 
   if (jobHealth.state !== 'ok') {
