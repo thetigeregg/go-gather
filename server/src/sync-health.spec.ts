@@ -298,6 +298,39 @@ describe('updateSyncHealth', () => {
     expect(storedState('availability:species')?.state).toBe('failing');
   });
 
+  it('alerts once when updates overlap while a send is pending', async () => {
+    let finishSend!: (result: FcmSendResult) => void;
+    send.mockReturnValueOnce(
+      new Promise((resolve) => {
+        finishSend = resolve;
+      })
+    );
+
+    const first = update([speciesFailing]);
+    const second = update([speciesFailing]);
+    await vi.waitFor(() => {
+      expect(send).toHaveBeenCalledTimes(1);
+    });
+    finishSend(sent());
+    await Promise.all([first, second]);
+
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(storedState('availability:species')?.state).toBe('failing');
+  });
+
+  it('runs a queued update after an earlier one fails', async () => {
+    logger.warn.mockImplementationOnce(() => {
+      throw new Error('logger broke');
+    });
+
+    const first = update([speciesFailing]);
+    const second = update([speciesFailing]);
+
+    await expect(first).rejects.toThrow('logger broke');
+    await expect(second).resolves.toEqual([speciesFailing]);
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
   it('saves states without sending when FCM is not configured', async () => {
     await update([speciesFailing], () => false);
 

@@ -129,6 +129,9 @@ export interface UpdateSyncHealthOptions {
   now?: Date;
 }
 
+/** The latest queued update per database; see updateSyncHealth. */
+const pendingUpdates = new WeakMap<Database, Promise<void>>();
+
 /**
  * Logs every unhealthy check, alerts on every state change, and saves the
  * new states. A change whose push reached no device (other than because
@@ -136,8 +139,31 @@ export interface UpdateSyncHealthOptions {
  * next run — the same rule as the notification scheduler's reservations.
  * With FCM not configured there's no one to alert, so the states are saved
  * without sending. Returns the unhealthy checks.
+ *
+ * Runs one at a time per database: a job's startup and interval runs can
+ * overlap, and two updates both reading a state before either saves it
+ * would both send its alert.
  */
-export async function updateSyncHealth(
+export function updateSyncHealth(
+  database: Database,
+  checks: HealthCheck[],
+  options: UpdateSyncHealthOptions
+): Promise<HealthCheck[]> {
+  const update = (pendingUpdates.get(database) ?? Promise.resolve()).then(() =>
+    applySyncHealth(database, checks, options)
+  );
+  // Settled either way, so a failed update doesn't fail the ones queued after it.
+  pendingUpdates.set(
+    database,
+    update.then(
+      () => undefined,
+      () => undefined
+    )
+  );
+  return update;
+}
+
+async function applySyncHealth(
   database: Database,
   checks: HealthCheck[],
   { logger, send, isFcmConfigured, now = new Date() }: UpdateSyncHealthOptions
