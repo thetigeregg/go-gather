@@ -5,6 +5,7 @@ import Database from 'better-sqlite3';
 import { DEFAULT_SETTINGS } from '@go-gather/shared';
 import { AVAILABILITY_SOURCES_SCHEMA } from './availability-store.js';
 import { GO_LAUNCH_DATE } from './release-dates.js';
+import { SYNC_HEALTH_SCHEMA } from './sync-health.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const dataDir = join(__dirname, '..', 'data');
@@ -167,6 +168,9 @@ export function initSchema(): void {
   // Saved Bulbapedia availability data — defined next to the code that
   // reads and writes it (see availability-store.ts).
   db.exec(AVAILABILITY_SOURCES_SCHEMA);
+
+  // Per-feed health, for sync failure alerts (see sync-health.ts).
+  db.exec(SYNC_HEALTH_SCHEMA);
 
   // `CREATE TABLE IF NOT EXISTS` above is a no-op against a pre-existing
   // gogather.db from before `pokedex_type` was introduced, so add it here
