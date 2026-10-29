@@ -294,7 +294,7 @@ describe('parseUnreleasedForms', () => {
           '{{MSP|0658|form=A|Greninja}}',
           '{{MSP|0999|Gimmighoul}}',
           '{{MS|0800|form=U|Necrozma (GO)}}',
-          '{{MS|0893|Zarude (GO)}}',
+          '{{MS|0893|form=D|Zarude (GO)}}',
         ],
       })
     ).toEqual([
@@ -303,7 +303,7 @@ describe('parseUnreleasedForms', () => {
       { dexNr: 658, formCode: 'A' },
       { dexNr: 999, formCode: '' },
       { dexNr: 800, formCode: 'U' },
-      { dexNr: 893, formCode: '' },
+      { dexNr: 893, formCode: 'D' },
     ]);
   });
 
@@ -421,6 +421,17 @@ describe('parseSpeciesReleases', () => {
         ],
       })
     ).not.toThrow();
+  });
+
+  it('counts an MS sprite in a live TBA row as listed without dating it', () => {
+    const releases = parse({
+      rows: [
+        row('Jan 1, 2020', '{{MSP/GO|0903|Sneasler}}'),
+        row('TBA', '{{MS|0902|Basculegion (GO)}}'),
+      ],
+    });
+
+    expect(releases.some((r) => r.dexNr === 902)).toBe(false);
   });
 
   it('throws when a species is neither dated nor listed as unreleased', () => {
