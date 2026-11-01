@@ -37,6 +37,14 @@ services:
       FIREBASE_SERVICE_ACCOUNT_JSON_FILE: ${FIREBASE_SERVICE_ACCOUNT_JSON_FILE:-/run/secrets/firebase_service_account_json}
       # How often (minutes) the server checks for due notifications.
       # NOTIFICATION_CHECK_INTERVAL_MINUTES: ${NOTIFICATION_CHECK_INTERVAL_MINUTES:-2}
+      # Retry Bulbapedia requests Cloudflare blocks through FlareSolverr. Off
+      # unless "true"; the URL defaults to http://flaresolverr:8191. See
+      # docs/nas-deployment.md, "Release data from Bulbapedia".
+      FLARESOLVERR_ENABLED: ${FLARESOLVERR_ENABLED:-false}
+      FLARESOLVERR_URL: ${FLARESOLVERR_URL:-}
+    networks:
+      - default
+      - flarenet
     healthcheck:
       test:
         [
@@ -60,3 +68,9 @@ services:
       - "${EDGE_PORT:-8080}:8080"
     environment:
       TZ: ${TZ:-Europe/Zurich}
+
+networks:
+  # Created by the separate FlareSolverr stack, which must exist first (even
+  # with FLARESOLVERR_ENABLED off) or this stack fails to deploy.
+  flarenet:
+    external: true

@@ -45,6 +45,7 @@ Env vars (all optional, shown with their defaults):
 - `BACKUP_AFTER_N_MODIFICATIONS` (default `0`, disabled) — see "Automatic backups" below
 - `SECRETS_HOST_DIR` (default `./nas-secrets`) — see section 1
 - `NOTIFICATION_CHECK_INTERVAL_MINUTES` (default `2`) — how often the server checks for due calendar-event push notifications
+- `FLARESOLVERR_ENABLED` (default `false`), `FLARESOLVERR_URL` (default `http://flaresolverr:8191`) — see "Release data from Bulbapedia" below
 
 ## 4. First-time data bootstrap
 
@@ -89,6 +90,17 @@ Which species, regional and alternate forms, Mega/Primal forms, Dynamax/Gigantam
 The app's Settings page has a **Bulbapedia data** card showing each dataset's last successful update, any error from the latest attempt, and a warning once data is a week old (served by `GET /api/availability-status`).
 
 `npm run sync:availability` (in `server/`) refreshes the saved data on its own, without a full catalog sync.
+
+#### FlareSolverr fallback
+
+Cloudflare can block the sync's requests to Bulbapedia with a challenge (`403 Forbidden (blocked by Cloudflare: challenge)` in the logs and Settings). With `FLARESOLVERR_ENABLED=true`, a blocked request is retried through a [FlareSolverr](https://github.com/FlareSolverr/FlareSolverr) container, which loads the page in a headless browser. Every request still tries Bulbapedia directly first, so the fallback stops being used by itself once a block lifts. This works around Bulbapedia's bot protection, and requests through it identify as Chrome rather than as this app, so it could get the NAS's IP banned.
+
+FlareSolverr runs as its own stack, which creates the `flarenet` network that `docker-compose.yml` joins. Keep its port off the LAN, since anyone who can reach it can browse the web from the NAS.
+
+- **Startup order:** `flarenet` must exist before this stack deploys, even with the flag off, or the deploy fails.
+- **Turning it on or off:** set `FLARESOLVERR_ENABLED` to `true` or `false` and redeploy the stack, since the container has to be recreated to pick it up. When off, a blocked request fails as described above and the dataset keeps its saved data.
+- **Checking whether it's in use:** a successful fallback looks healthy in Settings. The log line `blocked by Cloudflare, retrying via FlareSolverr` shows the block is still there.
+- **Removing FlareSolverr entirely:** turn the flag off, then either run `docker network create flarenet` so the network outlives its stack, or delete the `flarenet` entries from `docker-compose.yml`.
 
 Host copies of `sync-overrides.json` seeded before this change still contain `releasedDynamaxDexNumbers`, `releasedGigantamaxDexNumbers` and `formSplitDynamaxDexNumbers`. They're ignored (the sync logs a warning) and can be deleted from the host file.
 
