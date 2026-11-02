@@ -383,3 +383,7 @@
 ## v0.28.1 - 2026-11-02
 
 - f7014b0 fix(sync): hide Minior's unreleased Cores (#115)
+
+## v0.28.2 - 2026-11-02
+
+- 7a88a77 fix(sync): read look-alike shiny codes as species codes (#116)
