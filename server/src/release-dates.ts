@@ -197,19 +197,30 @@ export const REGION_CODES: Partial<Record<string, Region>> = {
   P: Region.Paldea,
 };
 
+/** `dexNr|region` for every species the catalog has a regional form of. */
+function catalogRegions(entries: UnstampedCatalogEntry[]): Set<string> {
+  return new Set(
+    entries
+      .filter((entry) => entry.region !== null)
+      .map((entry) => `${String(entry.dexNr)}|${String(entry.region)}`)
+  );
+}
+
 /**
  * The region a Bulbapedia form code belongs to: a region letter followed
- * by capital letters only. That covers the plain letters and the longer
- * regional codes (Paldean Tauros breeds are `PC`/`PB`/`PA`, Galarian Zen
- * Darmanitan `GZ`), while species-specific codes that merely start with a
- * region letter (Vivillon `Pol`, Furfrou `He`, Oricorio `Pa`) are written
- * with lowercase letters and stay non-regional. The plain letters still
- * collide with a few species-specific codes (Deoxys `A` is Attack Forme,
- * Primal `P`), but those species have no regional form in the catalog,
- * so the extra regional date is never looked up.
+ * by capital letters only, for a species the catalog has a form of in that
+ * region. The pattern covers the plain letters and the longer regional
+ * codes (Paldean Tauros breeds are `PC`/`PB`/`PA`, Galarian Zen Darmanitan
+ * `GZ`), while species-specific codes written with lowercase letters
+ * (Vivillon `Pol`, Furfrou `He`, Oricorio `Pa`) never match. Uppercase
+ * species-specific codes do match it (Deoxys `A` is Attack Forme, Primal
+ * `P`, Minior `G` its Green Core, Morpeko `H` Hangry), so the catalog check
+ * keeps them plain species codes. `regions` comes from the entries being
+ * stamped, which in production is always the whole catalog.
  */
-function regionForCode(formCode: string): Region | undefined {
-  return REGIONAL_CODE.test(formCode) ? REGION_CODES[formCode.charAt(0)] : undefined;
+function regionForCode(dexNr: number, formCode: string, regions: Set<string>): Region | undefined {
+  const region = REGIONAL_CODE.test(formCode) ? REGION_CODES[formCode.charAt(0)] : undefined;
+  return region && regions.has(`${String(dexNr)}|${region}`) ? region : undefined;
 }
 
 interface Dated {
@@ -252,7 +263,7 @@ interface ShinyListings {
   dynamax: Map<string, Dated>;
 }
 
-function shinyListings(releases: DatedShinyRelease[]): ShinyListings {
+function shinyListings(releases: DatedShinyRelease[], regions: Set<string>): ShinyListings {
   const listings: ShinyListings = {
     base: new Map(),
     region: new Map(),
@@ -277,9 +288,7 @@ function shinyListings(releases: DatedShinyRelease[]): ShinyListings {
     if (megaSuffix) {
       keepEarliest(listings.mega, `${dex}|${megaSuffix}`, dated);
     }
-    // `P` is both Primal and Paldea; harmless for the same reason as in
-    // regionForCode.
-    const region = regionForCode(formCode);
+    const region = regionForCode(dexNr, formCode, regions);
     if (region) {
       keepEarliest(listings.region, `${dex}|${region}`, dated);
     }
@@ -319,12 +328,16 @@ interface ReleaseDating {
   shiny: ShinyListings | null;
 }
 
-function releaseDating(availability: LoadedAvailability): ReleaseDating {
+function releaseDating(
+  availability: LoadedAvailability,
+  entries: UnstampedCatalogEntry[]
+): ReleaseDating {
+  const regions = catalogRegions(entries);
   const speciesDates = new Map<string, Dated>();
   const regionDates = new Map<string, Dated>();
   for (const { dexNr, formCode, releasedOn } of availability.species ?? []) {
     keepEarliest(speciesDates, String(dexNr), { releasedOn });
-    const region = regionForCode(formCode);
+    const region = regionForCode(dexNr, formCode, regions);
     if (region) {
       keepEarliest(regionDates, `${String(dexNr)}|${region}`, { releasedOn });
     }
@@ -379,7 +392,7 @@ function releaseDating(availability: LoadedAvailability): ReleaseDating {
 
   return {
     pokemonDate: releaseDateFor,
-    shiny: availability.shiny ? shinyListings(availability.shiny) : null,
+    shiny: availability.shiny ? shinyListings(availability.shiny, regions) : null,
   };
 }
 
@@ -387,7 +400,7 @@ export function stampReleaseDates(
   entries: UnstampedCatalogEntry[],
   availability: LoadedAvailability
 ): CatalogEntry[] {
-  const { pokemonDate, shiny } = releaseDating(availability);
+  const { pokemonDate, shiny } = releaseDating(availability, entries);
   return entries.map((entry) => {
     const releasedOn = pokemonDate(entry);
     return {
@@ -427,7 +440,7 @@ export function unlistedShinyCount(
   entries: UnstampedCatalogEntry[],
   availability: LoadedAvailability
 ): number {
-  const { pokemonDate, shiny } = releaseDating(availability);
+  const { pokemonDate, shiny } = releaseDating(availability, entries);
   if (!shiny) {
     return 0;
   }

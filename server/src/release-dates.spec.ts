@@ -236,7 +236,14 @@ describe('stampReleaseDates for shiny entries', () => {
   });
 
   it("hides a shiny Bulbapedia doesn't list", () => {
-    expect(releasedOn(shiny(128))).toBeNull();
+    // Paldean Tauros in the batch, as in the real catalog, so its `PC`
+    // listing stays regional rather than counting for plain Tauros.
+    const [plainTauros] = stampReleaseDates(
+      [shiny(128), shiny(128, { region: Region.Paldea })],
+      availability
+    );
+
+    expect(plainTauros.releasedOn).toBeNull();
     expect(releasedOn(shiny(1001))).toBeNull();
   });
 
@@ -254,6 +261,57 @@ describe('stampReleaseDates for shiny entries', () => {
     expect(releasedOn(shiny(19, { region: Region.Alola }))).toBe('2019-01-01');
     expect(releasedOn(shiny(128, { region: Region.Paldea }))).toBe('2024-01-01');
     expect(releasedOn(shiny(52, { region: Region.Galar }))).toBeNull();
+  });
+
+  describe('species-specific codes that look regional', () => {
+    const listed = (shinyRows: AvailabilityData['shiny']): AvailabilityData => ({
+      ...availability,
+      shiny: shinyRows,
+    });
+
+    it('files them as the base listing for a species with no form in that region', () => {
+      // Deoxys `A` is Attack Forme, not Alolan.
+      const [deoxys] = stampReleaseDates(
+        [shiny(386)],
+        listed([{ dexNr: 386, formCode: 'A', dynamax: false, releasedOn: '2020-01-01' }])
+      );
+
+      expect(deoxys.releasedOn).toBe('2020-01-01');
+    });
+
+    it('keeps a real regional code for the regional form only', () => {
+      const [plain, alolan] = stampReleaseDates(
+        [shiny(19), shiny(19, { region: Region.Alola })],
+        listed([{ dexNr: 19, formCode: 'A', dynamax: false, releasedOn: '2019-01-01' }])
+      );
+
+      expect(plain.releasedOn).toBeNull();
+      expect(alolan.releasedOn).toBe('2019-01-01');
+    });
+
+    it('releases a shiny Minior Green Core listed by its own `G` code', () => {
+      const [green] = stampReleaseDates(
+        [shiny(774, { formId: 'MINIOR_GREEN', speciesId: 'MINIOR' })],
+        {
+          ...listed([{ dexNr: 774, formCode: 'G', dynamax: false, releasedOn: '2026-12-01' }]),
+          species: [
+            ...availability.species,
+            { dexNr: 774, formCode: 'G', releasedOn: '2026-10-19' },
+          ],
+        }
+      );
+
+      expect(green.releasedOn).toBe('2026-12-01');
+    });
+
+    it('still matches a Primal shiny by its Mega listing', () => {
+      const [primal] = stampReleaseDates(
+        [shiny(382, { speciesId: 'KYOGRE', form: 'KYOGRE_PRIMAL', pokedexType: 'mega' })],
+        listed([{ dexNr: 382, formCode: 'P', dynamax: false, releasedOn: '2023-02-18' }])
+      );
+
+      expect(primal.releasedOn).toBe('2023-02-18');
+    });
   });
 
   it('matches shiny Megas by their form suffix', () => {
@@ -597,6 +655,9 @@ describe('unlistedShinyCount', () => {
     shiny(1001),
     // Not a shiny: not counted.
     entry(128),
+    // Paldean Tauros, as in the real catalog, so its `PC` listing stays
+    // regional rather than counting for plain Tauros. Not a shiny either.
+    entry(128, { region: Region.Paldea }),
   ];
 
   it("counts shinies hidden only because their shiny isn't listed", () => {
