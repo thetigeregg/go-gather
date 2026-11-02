@@ -531,6 +531,56 @@ describe('unmappedUnreleasedForms', () => {
   });
 });
 
+describe("Minior's Cores", () => {
+  const CORE_CODES = ['R', 'O', 'Y', 'B', 'I', 'V'];
+  const listing: LoadedAvailability = {
+    ...availability,
+    species: [
+      ...availability.species,
+      { dexNr: 774, formCode: '', releasedOn: '2026-10-19' },
+      { dexNr: 774, formCode: 'G', releasedOn: '2026-10-19' },
+    ],
+    unreleasedForms: CORE_CODES.map((formCode) => ({ dexNr: 774, formCode })),
+  };
+  const core = (color: string, overrides: Partial<UnstampedCatalogEntry> = {}) =>
+    entry(774, {
+      formId: `MINIOR_${color}`,
+      speciesId: 'MINIOR',
+      isBaseForm: false,
+      ...overrides,
+    });
+
+  it('hides every unreleased Core, shiny and sizes included, but not Green', () => {
+    const stamped = stampReleaseDates(
+      [
+        core('RED'),
+        core('RED', { isShiny: true }),
+        core('RED', { pokedexType: 'xxl' }),
+        core('VIOLET'),
+        core('GREEN'),
+      ],
+      listing
+    );
+
+    expect(stamped.map((stampedEntry) => stampedEntry.releasedOn)).toEqual([
+      null,
+      null,
+      null,
+      null,
+      '2026-10-19',
+    ]);
+  });
+
+  it('maps every Core Bulbapedia lists, each to a catalog form', () => {
+    const cores = ['RED', 'ORANGE', 'YELLOW', 'GREEN', 'BLUE', 'INDIGO', 'VIOLET'].map((color) =>
+      core(color)
+    );
+
+    expect(unmappedUnreleasedForms(listing)).toEqual([]);
+    expect(unmatchedUnreleasedFormIds(cores, listing)).toEqual([]);
+  });
+});
+
 describe('unlistedShinyCount', () => {
   const shiny = (dexNr: number, overrides: Partial<UnstampedCatalogEntry> = {}) =>
     entry(dexNr, { isShiny: true, ...overrides });
