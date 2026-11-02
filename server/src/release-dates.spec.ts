@@ -236,7 +236,14 @@ describe('stampReleaseDates for shiny entries', () => {
   });
 
   it("hides a shiny Bulbapedia doesn't list", () => {
-    expect(releasedOn(shiny(128))).toBeNull();
+    // Paldean Tauros in the batch, as in the real catalog, so its `PC`
+    // listing stays regional rather than counting for plain Tauros.
+    const [plainTauros] = stampReleaseDates(
+      [shiny(128), shiny(128, { region: Region.Paldea })],
+      availability
+    );
+
+    expect(plainTauros.releasedOn).toBeNull();
     expect(releasedOn(shiny(1001))).toBeNull();
   });
 
@@ -254,6 +261,97 @@ describe('stampReleaseDates for shiny entries', () => {
     expect(releasedOn(shiny(19, { region: Region.Alola }))).toBe('2019-01-01');
     expect(releasedOn(shiny(128, { region: Region.Paldea }))).toBe('2024-01-01');
     expect(releasedOn(shiny(52, { region: Region.Galar }))).toBeNull();
+  });
+
+  describe('species-specific codes that look regional', () => {
+    const listed = (shinyRows: AvailabilityData['shiny']): AvailabilityData => ({
+      ...availability,
+      shiny: shinyRows,
+    });
+
+    it('files them as the base listing for a species with no form in that region', () => {
+      // Deoxys `A` is Attack Forme, not Alolan.
+      const [deoxys] = stampReleaseDates(
+        [shiny(386)],
+        listed([{ dexNr: 386, formCode: 'A', dynamax: false, releasedOn: '2020-01-01' }])
+      );
+
+      expect(deoxys.releasedOn).toBe('2020-01-01');
+    });
+
+    it('keeps a real regional code for the regional form only', () => {
+      const [plain, alolan] = stampReleaseDates(
+        [shiny(19), shiny(19, { region: Region.Alola })],
+        listed([{ dexNr: 19, formCode: 'A', dynamax: false, releasedOn: '2019-01-01' }])
+      );
+
+      expect(plain.releasedOn).toBeNull();
+      expect(alolan.releasedOn).toBe('2019-01-01');
+    });
+
+    it('releases a shiny Minior Green Core listed by its own `G` code', () => {
+      const [green] = stampReleaseDates(
+        [shiny(774, { formId: 'MINIOR_GREEN', speciesId: 'MINIOR' })],
+        {
+          ...listed([{ dexNr: 774, formCode: 'G', dynamax: false, releasedOn: '2026-12-01' }]),
+          species: [
+            ...availability.species,
+            { dexNr: 774, formCode: 'G', releasedOn: '2026-10-19' },
+          ],
+        }
+      );
+
+      expect(green.releasedOn).toBe('2026-12-01');
+    });
+
+    it('still matches a Primal shiny by its Mega listing', () => {
+      const [primal] = stampReleaseDates(
+        [shiny(382, { speciesId: 'KYOGRE', form: 'KYOGRE_PRIMAL', pokedexType: 'mega' })],
+        listed([{ dexNr: 382, formCode: 'P', dynamax: false, releasedOn: '2023-02-18' }])
+      );
+
+      expect(primal.releasedOn).toBe('2023-02-18');
+    });
+
+    it('keeps a Mega code off the base listing for a species with that Mega', () => {
+      const [plain] = stampReleaseDates(
+        [
+          shiny(382, { speciesId: 'KYOGRE' }),
+          shiny(382, { speciesId: 'KYOGRE', form: 'KYOGRE_PRIMAL', pokedexType: 'mega' }),
+        ],
+        {
+          ...listed([{ dexNr: 382, formCode: 'P', dynamax: false, releasedOn: '2023-02-18' }]),
+          species: [
+            ...availability.species,
+            { dexNr: 382, formCode: '', releasedOn: '2017-12-01' },
+          ],
+        }
+      );
+
+      expect(plain.releasedOn).toBeNull();
+    });
+
+    it('files a Mega code as the base listing for a species with no Mega', () => {
+      // Meloetta `P` is Pirouette Forme, not Primal.
+      const [meloetta] = stampReleaseDates([shiny(648, { speciesId: 'MELOETTA' })], {
+        ...listed([{ dexNr: 648, formCode: 'P', dynamax: false, releasedOn: '2027-01-01' }]),
+        species: [...availability.species, { dexNr: 648, formCode: '', releasedOn: '2024-01-01' }],
+      });
+
+      expect(meloetta.releasedOn).toBe('2027-01-01');
+    });
+
+    it('counts a regional code as plain when the catalog lacks that regional form', () => {
+      // A known trade-off: with no Alolan Meowth in the catalog, an `A` row
+      // can't be told apart from a species-specific code, so it dates the
+      // plain shiny.
+      const [meowth] = stampReleaseDates(
+        [shiny(52)],
+        listed([{ dexNr: 52, formCode: 'A', dynamax: false, releasedOn: '2019-01-01' }])
+      );
+
+      expect(meowth.releasedOn).toBe('2019-01-01');
+    });
   });
 
   it('matches shiny Megas by their form suffix', () => {
@@ -597,6 +695,9 @@ describe('unlistedShinyCount', () => {
     shiny(1001),
     // Not a shiny: not counted.
     entry(128),
+    // Paldean Tauros, as in the real catalog, so its `PC` listing stays
+    // regional rather than counting for plain Tauros. Not a shiny either.
+    entry(128, { region: Region.Paldea }),
   ];
 
   it("counts shinies hidden only because their shiny isn't listed", () => {
@@ -605,6 +706,17 @@ describe('unlistedShinyCount', () => {
 
   it('counts nothing when no shiny data is saved', () => {
     expect(unlistedShinyCount(entries, { ...availability, shiny: null })).toBe(0);
+  });
+
+  it("doesn't count a shiny listed under a species-specific code that looks regional", () => {
+    // Deoxys `A` is Attack Forme; with no Alolan Deoxys it lists the shiny.
+    const deoxys = [shiny(386)];
+    const attackOnly: LoadedAvailability = {
+      ...availability,
+      shiny: [{ dexNr: 386, formCode: 'A', dynamax: false, releasedOn: '2020-01-01' }],
+    };
+
+    expect(unlistedShinyCount(deoxys, attackOnly)).toBe(0);
   });
 });
 
