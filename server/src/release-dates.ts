@@ -91,6 +91,15 @@ export const UNRELEASED_FORM_IDS: Partial<Record<string, FormTarget | string | n
   // `COIN_A1`) are the Roaming Form released in GO, and the same plain code
   // is dated as released.
   '0999': null,
+  // Minior's Cores other than Green. The catalog's MINIOR_<COLOR> entries are
+  // the Cores (sync-overrides.json's regionFormAssetBackfill); its Meteor
+  // Form has no catalog entry of its own.
+  '0774R': 'MINIOR_RED',
+  '0774O': 'MINIOR_ORANGE',
+  '0774Y': 'MINIOR_YELLOW',
+  '0774B': 'MINIOR_BLUE',
+  '0774I': 'MINIOR_INDIGO',
+  '0774V': 'MINIOR_VIOLET',
 };
 
 function unreleasedFormCode(dexNr: number, formCode: string): string {
