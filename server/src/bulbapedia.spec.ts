@@ -1057,6 +1057,16 @@ describe('fetchWikitext', () => {
       expect(fetchMock.mock.calls[1][0].href).toBe('http://127.0.0.1:9000/v1');
     });
 
+    it('accepts the flag in any case and uses the default for a blank URL', async () => {
+      vi.stubEnv('FLARESOLVERR_ENABLED', ' TRUE ');
+      vi.stubEnv('FLARESOLVERR_URL', '  ');
+      const fetchMock = stubBlockThen(solved(viewerPage('{"parse":{"wikitext":"text"}}')));
+
+      await expect(fetchWikitext('Dynamax (GO)')).resolves.toBe('text');
+
+      expect(fetchMock.mock.calls[1][0].href).toBe('http://flaresolverr:8191/v1');
+    });
+
     it('decodes the viewer page once, keeping text the wiki itself escaped', async () => {
       vi.stubEnv('FLARESOLVERR_ENABLED', 'true');
       stubBlockThen(
@@ -1088,6 +1098,12 @@ describe('fetchWikitext', () => {
         'Error solving the challenge.',
       ],
       ['no solution', flareSolverrReply({ status: 'ok' }), 'no solution returned'],
+      ['an error with no message', flareSolverrReply({ status: 'error' }), 'no solution returned'],
+      [
+        'a solution with no page',
+        flareSolverrReply({ status: 'ok', solution: {} }),
+        'the page it returned has no JSON',
+      ],
       [
         'a non-JSON reply, such as the wrong service',
         flareSolverrReply('<html>Bad Gateway</html>', 502),
