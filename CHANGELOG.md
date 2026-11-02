@@ -379,3 +379,7 @@
 ## v0.28.0 - 2026-11-02
 
 - dbcefe8 feat(sync): fall back to FlareSolverr on Cloudflare blocks (#114)
+
+## v0.28.1 - 2026-11-02
+
+- f7014b0 fix(sync): hide Minior's unreleased Cores (#115)
