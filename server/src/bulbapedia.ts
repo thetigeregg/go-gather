@@ -886,7 +886,7 @@ interface WikitextResponse {
 interface FlareSolverrResponse {
   status?: string;
   message?: string;
-  solution?: { status?: number; response?: string };
+  solution?: { response?: string };
 }
 
 /** A response Cloudflare's bot protection answered, not Bulbapedia itself. */
@@ -923,9 +923,10 @@ function isFlareSolverrEnabled(): boolean {
  */
 async function fetchViaFlareSolverr(url: URL): Promise<WikitextResponse> {
   const flareSolverrUrl = process.env['FLARESOLVERR_URL']?.trim() || DEFAULT_FLARESOLVERR_URL;
-  let result: FlareSolverrResponse;
+  let response: Response;
+  let text: string;
   try {
-    const response = await fetch(new URL('/v1', flareSolverrUrl), {
+    response = await fetch(new URL('/v1', flareSolverrUrl), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -935,7 +936,7 @@ async function fetchViaFlareSolverr(url: URL): Promise<WikitextResponse> {
       }),
       signal: AbortSignal.timeout(FLARESOLVERR_TIMEOUT_MS + REQUEST_TIMEOUT_MS),
     });
-    result = (await response.json()) as FlareSolverrResponse;
+    text = await response.text();
   } catch (err: unknown) {
     // Node's fetch only says "fetch failed"; the cause names the actual
     // problem, e.g. ENOTFOUND when the server isn't on FlareSolverr's network.
@@ -943,12 +944,19 @@ async function fetchViaFlareSolverr(url: URL): Promise<WikitextResponse> {
     throw new Error(cause instanceof Error ? cause.message : String(cause));
   }
 
+  let result: FlareSolverrResponse;
+  try {
+    result = JSON.parse(text) as FlareSolverrResponse;
+  } catch {
+    throw new Error(
+      `${String(response.status)} with a non-JSON reply from ${flareSolverrUrl}, check FLARESOLVERR_URL`
+    );
+  }
   if (result.status !== 'ok' || !result.solution) {
     throw new Error(result.message ?? 'no solution returned');
   }
-  if (result.solution.status !== 200) {
-    throw new Error(`${String(result.solution.status)} from Bulbapedia`);
-  }
+  // `solution.status` isn't checked: FlareSolverr v3 always reports 200,
+  // whatever the page returned. An error page fails below, having no JSON.
   const json = /<pre[^>]*>([\s\S]*?)<\/pre>/.exec(result.solution.response ?? '')?.[1];
   if (json === undefined) {
     throw new Error('the page it returned has no JSON');

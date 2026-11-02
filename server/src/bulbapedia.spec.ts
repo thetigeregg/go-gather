@@ -970,16 +970,20 @@ describe('fetchWikitext', () => {
       return fetchMock;
     }
 
-    function solved(page: string, status = 200) {
+    function flareSolverrReply(body: unknown, status = 200) {
       return () =>
         Promise.resolve({
-          json: () =>
-            Promise.resolve({
-              status: 'ok',
-              message: 'Challenge not detected!',
-              solution: { status, response: page },
-            }),
+          status,
+          text: () => Promise.resolve(typeof body === 'string' ? body : JSON.stringify(body)),
         });
+    }
+
+    function solved(page: string) {
+      return flareSolverrReply({
+        status: 'ok',
+        message: 'Challenge not detected!',
+        solution: { status: 200, response: page },
+      });
     }
 
     afterEach(() => {
@@ -1080,19 +1084,15 @@ describe('fetchWikitext', () => {
     it.each([
       [
         'its own error',
-        () =>
-          Promise.resolve({
-            json: () =>
-              Promise.resolve({ status: 'error', message: 'Error solving the challenge.' }),
-          }),
+        flareSolverrReply({ status: 'error', message: 'Error solving the challenge.' }, 500),
         'Error solving the challenge.',
       ],
+      ['no solution', flareSolverrReply({ status: 'ok' }), 'no solution returned'],
       [
-        'no solution',
-        () => Promise.resolve({ json: () => Promise.resolve({ status: 'ok' }) }),
-        'no solution returned',
+        'a non-JSON reply, such as the wrong service',
+        flareSolverrReply('<html>Bad Gateway</html>', 502),
+        '502 with a non-JSON reply from http://flaresolverr:8191, check FLARESOLVERR_URL',
       ],
-      ['a non-200 page', solved(viewerPage('{}'), 403), '403 from Bulbapedia'],
       ['a page with no JSON', solved('<html><body>Just a moment</body></html>'), 'has no JSON'],
       ['invalid JSON', solved(viewerPage('{not json')), 'has invalid JSON'],
       [

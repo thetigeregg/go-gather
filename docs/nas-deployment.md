@@ -26,6 +26,8 @@ Both images are **amd64-only**. This is fine for a Synology DS920+ (Intel Celero
 
 ## 3. Deploy
 
+`docker-compose.yml` joins an external Docker network, `flarenet`, which must exist or the deploy fails, even with the FlareSolverr fallback off. Deploy the FlareSolverr stack first (see "FlareSolverr fallback" below), or if you don't use it, run `docker network create flarenet` once.
+
 Use `docker-compose.yml` from the repo root — either upload/point Portainer at it, or run directly on the NAS:
 
 ```bash
@@ -91,22 +93,21 @@ The app's Settings page has a **Bulbapedia data** card showing each dataset's la
 
 `npm run sync:availability` (in `server/`) refreshes the saved data on its own, without a full catalog sync.
 
+Host copies of `sync-overrides.json` seeded before this change still contain `releasedDynamaxDexNumbers`, `releasedGigantamaxDexNumbers` and `formSplitDynamaxDexNumbers`. They're ignored (the sync logs a warning) and can be deleted from the host file.
+
+Host copies seeded before the `NECROZMA_ULTRA` entry was added to `regionFormNameOverrides` still label plain Necrozma "Necrozma (Ultra Necrozma)". To fix an existing NAS, copy that entry (`dexNr` 800) from the repo's `server/src/sync-overrides.json` into the host file's `regionFormNameOverrides` array, then run `docker compose exec server npm run sync` (or wait for the next scheduled catalog sync).
+
+Bulbapedia content is licensed [CC BY-NC-SA 2.5](https://creativecommons.org/licenses/by-nc-sa/2.5/).
+
 #### FlareSolverr fallback
 
 Cloudflare can block the sync's requests to Bulbapedia with a challenge (`403 Forbidden (blocked by Cloudflare: challenge)` in the logs and Settings). With `FLARESOLVERR_ENABLED=true`, a blocked request is retried through a [FlareSolverr](https://github.com/FlareSolverr/FlareSolverr) container, which loads the page in a headless browser. Every request still tries Bulbapedia directly first, so the fallback stops being used by itself once a block lifts. This works around Bulbapedia's bot protection, and requests through it identify as Chrome rather than as this app, so it could get the NAS's IP banned.
 
 FlareSolverr runs as its own stack, which creates the `flarenet` network that `docker-compose.yml` joins. Keep its port off the LAN, since anyone who can reach it can browse the web from the NAS.
 
-- **Startup order:** `flarenet` must exist before this stack deploys, even with the flag off, or the deploy fails.
-- **Turning it on or off:** set `FLARESOLVERR_ENABLED` to `true` or `false` and redeploy the stack, since the container has to be recreated to pick it up. When off, a blocked request fails as described above and the dataset keeps its saved data.
+- **Turning it on or off:** set `FLARESOLVERR_ENABLED` to `true` or `false` and redeploy the stack, since the container has to be recreated to pick it up. When off, a blocked request fails as described above and the dataset keeps its saved data. The server stays attached to `flarenet` either way.
 - **Checking whether it's in use:** a successful fallback looks healthy in Settings. The log line `blocked by Cloudflare, retrying via FlareSolverr` shows the block is still there.
-- **Removing FlareSolverr entirely:** turn the flag off, then either run `docker network create flarenet` so the network outlives its stack, or delete the `flarenet` entries from `docker-compose.yml`.
-
-Host copies of `sync-overrides.json` seeded before this change still contain `releasedDynamaxDexNumbers`, `releasedGigantamaxDexNumbers` and `formSplitDynamaxDexNumbers`. They're ignored (the sync logs a warning) and can be deleted from the host file.
-
-Host copies seeded before the `NECROZMA_ULTRA` entry was added to `regionFormNameOverrides` still label plain Necrozma "Necrozma (Ultra Necrozma)". To fix an existing NAS, copy that entry (`dexNr` 800) from the repo's `server/src/sync-overrides.json` into the host file's `regionFormNameOverrides` array, then run `docker compose exec server npm run sync` (or wait for the next scheduled catalog sync).
-
-Bulbapedia content is licensed [CC BY-NC-SA 2.5](https://creativecommons.org/licenses/by-nc-sa/2.5/).
+- **Removing FlareSolverr entirely:** Docker won't remove `flarenet` while the server is attached, so detach go-gather first. Delete the `flarenet` entries from `docker-compose.yml` and redeploy, then delete the FlareSolverr stack. To keep the compose file unchanged instead: stop this stack, delete the FlareSolverr stack, run `docker network create flarenet`, then redeploy this stack so its containers are recreated on the new network.
 
 ### Push notifications
 
