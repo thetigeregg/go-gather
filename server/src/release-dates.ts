@@ -33,6 +33,11 @@
  * `dynamax=yes` for Dynamax, the matching Mega code for Megas, a code
  * starting with the region's letter for regional forms (Paldean Tauros is
  * `PC`/`PB`/`PA`), and a plain or species-specific code for everything else.
+ * A Mega or regional code only counts as one when the catalog has a Mega of
+ * that species, or a form of it from that region; otherwise it's a
+ * species-specific code (Deoxys `A`, Meloetta `P`). Which codes count
+ * therefore depends on the entries being stamped: always the whole catalog
+ * in production.
  * Costumes and species-specific forms (Unown, Vivillon, …) aren't in the
  * shiny list, so they follow their species' shiny.
  *
@@ -206,6 +211,28 @@ function catalogRegions(entries: UnstampedCatalogEntry[]): Set<string> {
   );
 }
 
+/** Dex numbers of every species the catalog has a Mega or Primal of. */
+function catalogMegaSpecies(entries: UnstampedCatalogEntry[]): Set<string> {
+  return new Set(
+    entries.filter((entry) => entry.pokedexType === 'mega').map((entry) => String(entry.dexNr))
+  );
+}
+
+/**
+ * The Mega or Primal suffix a Bulbapedia shiny code stands for, for a
+ * species the catalog has a Mega or Primal of. Like regionForCode: the
+ * letters are shared with species-specific codes (Meloetta `P` is Pirouette
+ * Forme, Unown `M`/`P` are letters), so for a species without one they stay
+ * plain species codes.
+ */
+function megaSuffixForCode(
+  dexNr: number,
+  formCode: string,
+  megaSpecies: Set<string>
+): string | undefined {
+  return megaSpecies.has(String(dexNr)) ? MEGA_CODES[formCode] : undefined;
+}
+
 /**
  * The region a Bulbapedia form code belongs to: a region letter followed
  * by capital letters only, for a species the catalog has a form of in that
@@ -263,7 +290,11 @@ interface ShinyListings {
   dynamax: Map<string, Dated>;
 }
 
-function shinyListings(releases: DatedShinyRelease[], regions: Set<string>): ShinyListings {
+function shinyListings(
+  releases: DatedShinyRelease[],
+  regions: Set<string>,
+  megaSpecies: Set<string>
+): ShinyListings {
   const listings: ShinyListings = {
     base: new Map(),
     region: new Map(),
@@ -284,7 +315,7 @@ function shinyListings(releases: DatedShinyRelease[], regions: Set<string>): Shi
       keepEarliest(listings.gigantamax, dex, dated);
       continue;
     }
-    const megaSuffix = MEGA_CODES[formCode];
+    const megaSuffix = megaSuffixForCode(dexNr, formCode, megaSpecies);
     if (megaSuffix) {
       keepEarliest(listings.mega, `${dex}|${megaSuffix}`, dated);
     }
@@ -392,7 +423,9 @@ function releaseDating(
 
   return {
     pokemonDate: releaseDateFor,
-    shiny: availability.shiny ? shinyListings(availability.shiny, regions) : null,
+    shiny: availability.shiny
+      ? shinyListings(availability.shiny, regions, catalogMegaSpecies(entries))
+      : null,
   };
 }
 

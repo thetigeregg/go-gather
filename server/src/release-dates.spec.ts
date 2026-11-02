@@ -312,6 +312,46 @@ describe('stampReleaseDates for shiny entries', () => {
 
       expect(primal.releasedOn).toBe('2023-02-18');
     });
+
+    it('keeps a Mega code off the base listing for a species with that Mega', () => {
+      const [plain] = stampReleaseDates(
+        [
+          shiny(382, { speciesId: 'KYOGRE' }),
+          shiny(382, { speciesId: 'KYOGRE', form: 'KYOGRE_PRIMAL', pokedexType: 'mega' }),
+        ],
+        {
+          ...listed([{ dexNr: 382, formCode: 'P', dynamax: false, releasedOn: '2023-02-18' }]),
+          species: [
+            ...availability.species,
+            { dexNr: 382, formCode: '', releasedOn: '2017-12-01' },
+          ],
+        }
+      );
+
+      expect(plain.releasedOn).toBeNull();
+    });
+
+    it('files a Mega code as the base listing for a species with no Mega', () => {
+      // Meloetta `P` is Pirouette Forme, not Primal.
+      const [meloetta] = stampReleaseDates([shiny(648, { speciesId: 'MELOETTA' })], {
+        ...listed([{ dexNr: 648, formCode: 'P', dynamax: false, releasedOn: '2027-01-01' }]),
+        species: [...availability.species, { dexNr: 648, formCode: '', releasedOn: '2024-01-01' }],
+      });
+
+      expect(meloetta.releasedOn).toBe('2027-01-01');
+    });
+
+    it('counts a regional code as plain when the catalog lacks that regional form', () => {
+      // A known trade-off: with no Alolan Meowth in the catalog, an `A` row
+      // can't be told apart from a species-specific code, so it dates the
+      // plain shiny.
+      const [meowth] = stampReleaseDates(
+        [shiny(52)],
+        listed([{ dexNr: 52, formCode: 'A', dynamax: false, releasedOn: '2019-01-01' }])
+      );
+
+      expect(meowth.releasedOn).toBe('2019-01-01');
+    });
   });
 
   it('matches shiny Megas by their form suffix', () => {
@@ -666,6 +706,17 @@ describe('unlistedShinyCount', () => {
 
   it('counts nothing when no shiny data is saved', () => {
     expect(unlistedShinyCount(entries, { ...availability, shiny: null })).toBe(0);
+  });
+
+  it("doesn't count a shiny listed under a species-specific code that looks regional", () => {
+    // Deoxys `A` is Attack Forme; with no Alolan Deoxys it lists the shiny.
+    const deoxys = [shiny(386)];
+    const attackOnly: LoadedAvailability = {
+      ...availability,
+      shiny: [{ dexNr: 386, formCode: 'A', dynamax: false, releasedOn: '2020-01-01' }],
+    };
+
+    expect(unlistedShinyCount(deoxys, attackOnly)).toBe(0);
   });
 });
 
