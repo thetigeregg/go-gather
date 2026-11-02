@@ -375,3 +375,7 @@
 ## v0.27.0 - 2026-10-29
 
 - 9e24573 feat(sync): push alerts for failing syncs; parse {{MS|…}} sprites (#107)
+
+## v0.28.0 - 2026-11-02
+
+- dbcefe8 feat(sync): fall back to FlareSolverr on Cloudflare blocks (#114)
