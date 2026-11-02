@@ -540,15 +540,16 @@ describe("Minior's Cores", () => {
       { dexNr: 774, formCode: '', releasedOn: '2026-10-19' },
       { dexNr: 774, formCode: 'G', releasedOn: '2026-10-19' },
     ],
+    // Minior's shiny listed, so a shiny Core is only hidden by the mapping.
+    shiny: [
+      ...availability.shiny,
+      { dexNr: 774, formCode: '', dynamax: false, releasedOn: '2026-11-01' },
+    ],
     unreleasedForms: CORE_CODES.map((formCode) => ({ dexNr: 774, formCode })),
   };
+  // Shaped like transform.ts's region-form entries, which the Cores are.
   const core = (color: string, overrides: Partial<UnstampedCatalogEntry> = {}) =>
-    entry(774, {
-      formId: `MINIOR_${color}`,
-      speciesId: 'MINIOR',
-      isBaseForm: false,
-      ...overrides,
-    });
+    entry(774, { formId: `MINIOR_${color}`, speciesId: 'MINIOR', ...overrides });
 
   it('hides every unreleased Core, shiny and sizes included, but not Green', () => {
     const stamped = stampReleaseDates(
@@ -558,6 +559,7 @@ describe("Minior's Cores", () => {
         core('RED', { pokedexType: 'xxl' }),
         core('VIOLET'),
         core('GREEN'),
+        core('GREEN', { isShiny: true }),
       ],
       listing
     );
@@ -568,6 +570,7 @@ describe("Minior's Cores", () => {
       null,
       null,
       '2026-10-19',
+      '2026-11-01',
     ]);
   });
 
