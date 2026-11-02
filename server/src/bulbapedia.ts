@@ -12,7 +12,10 @@
  * Reads raw wikitext through the MediaWiki API (the plain `?action=raw` URL
  * sits behind a Cloudflare challenge), where every Pokemon is written as a
  * `{{MSP/GO|<code>|<name>|...}}` template — far more stable to parse than
- * rendered HTML. Any structural surprise throws rather than returning a
+ * rendered HTML. With `FLARESOLVERR_ENABLED=true`, a request Cloudflare blocks
+ * is retried through FlareSolverr; a request it allows always goes direct, so
+ * the fallback stops being used by itself once a block lifts.
+ * Any structural surprise throws rather than returning a
  * partial list — availability-store.ts records that as a failed update and
  * keeps the dataset's last good parse, so a layout change on Bulbapedia's
  * side never empties the DMax/GMax dexes.
@@ -28,6 +31,9 @@ const BULBAPEDIA_API_URL = 'https://bulbapedia.bulbagarden.net/w/api.php';
 const USER_AGENT =
   'go-gather-catalog-sync/1.0 (personal non-commercial Pokemon GO tracker; fetches once per day)';
 const REQUEST_TIMEOUT_MS = 30_000;
+const DEFAULT_FLARESOLVERR_URL = 'http://flaresolverr:8191';
+const FLARESOLVERR_TIMEOUT_MS = 60_000;
+const HTML_ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', nbsp: ' ' };
 
 const DYNAMAX_PAGE = 'Dynamax (GO)';
 const DYNAMAX_SECTION = 'List of Pokémon capable of Dynamaxing by release date';
@@ -872,6 +878,99 @@ export const AVAILABILITY_DATASETS: {
   { dataset: 'unreleasedForms', page: AVAILABILITY_PAGE, parse: parseUnreleasedForms },
 ];
 
+interface WikitextResponse {
+  parse?: { wikitext?: string };
+  error?: { info?: string };
+}
+
+interface FlareSolverrResponse {
+  status?: string;
+  message?: string;
+  solution?: { response?: string };
+}
+
+/** A response Cloudflare's bot protection answered, not Bulbapedia itself. */
+class CloudflareBlockError extends Error {}
+
+async function fetchDirect(url: URL, page: string): Promise<WikitextResponse> {
+  const response = await fetch(url, {
+    headers: { 'User-Agent': USER_AGENT },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  if (!response.ok) {
+    const failure = `Bulbapedia: failed to fetch "${page}": ${String(response.status)} ${response.statusText}`;
+    // Cloudflare in front of Bulbapedia marks its bot-protection responses
+    // with `cf-mitigated` — naming it tells a passing block apart from a
+    // MediaWiki error without digging into the HTML body.
+    const mitigated = response.headers.get('cf-mitigated');
+    if (mitigated) {
+      throw new CloudflareBlockError(`${failure} (blocked by Cloudflare: ${mitigated})`);
+    }
+    throw new Error(failure);
+  }
+  return (await response.json()) as WikitextResponse;
+}
+
+function isFlareSolverrEnabled(): boolean {
+  return process.env['FLARESOLVERR_ENABLED']?.trim().toLowerCase() === 'true';
+}
+
+/**
+ * Loads the API URL in FlareSolverr's headless browser. The browser wraps the
+ * JSON in its viewer page, as a `<pre>` with `&`, `<`, `>` and non-breaking
+ * spaces escaped. FlareSolverr reports its own failures as JSON under an error
+ * status, so its body is read whatever the status.
+ */
+async function fetchViaFlareSolverr(url: URL): Promise<WikitextResponse> {
+  const flareSolverrUrl = process.env['FLARESOLVERR_URL']?.trim() || DEFAULT_FLARESOLVERR_URL;
+  let response: Response;
+  let text: string;
+  try {
+    response = await fetch(new URL('/v1', flareSolverrUrl), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        cmd: 'request.get',
+        url: url.href,
+        maxTimeout: FLARESOLVERR_TIMEOUT_MS,
+      }),
+      signal: AbortSignal.timeout(FLARESOLVERR_TIMEOUT_MS + REQUEST_TIMEOUT_MS),
+    });
+    text = await response.text();
+  } catch (err: unknown) {
+    // Node's fetch only says "fetch failed"; the cause names the actual
+    // problem, e.g. ENOTFOUND when the server isn't on FlareSolverr's network.
+    const cause = err instanceof Error && err.cause instanceof Error ? err.cause : err;
+    throw new Error(cause instanceof Error ? cause.message : String(cause));
+  }
+
+  let result: FlareSolverrResponse;
+  try {
+    result = JSON.parse(text) as FlareSolverrResponse;
+  } catch {
+    throw new Error(
+      `${String(response.status)} with a non-JSON reply from ${flareSolverrUrl}, check FLARESOLVERR_URL`
+    );
+  }
+  if (result.status !== 'ok' || !result.solution) {
+    throw new Error(result.message ?? 'no solution returned');
+  }
+  // `solution.status` isn't checked: FlareSolverr v3 always reports 200,
+  // whatever the page returned. An error page fails below, having no JSON.
+  const json = /<pre[^>]*>([\s\S]*?)<\/pre>/.exec(result.solution.response ?? '')?.[1];
+  if (json === undefined) {
+    throw new Error('the page it returned has no JSON');
+  }
+  try {
+    // One pass, so text the wiki itself escaped (`&amp;lt;`) stays as written.
+    return JSON.parse(
+      json.replace(/&(amp|lt|gt|nbsp);/g, (_, entity: string) => HTML_ENTITIES[entity])
+    ) as WikitextResponse;
+  } catch {
+    throw new Error('the page it returned has invalid JSON');
+  }
+}
+
 export async function fetchWikitext(page: string): Promise<string> {
   const url = new URL(BULBAPEDIA_API_URL);
   url.search = new URLSearchParams({
@@ -883,25 +982,23 @@ export async function fetchWikitext(page: string): Promise<string> {
     formatversion: '2',
   }).toString();
 
-  const response = await fetch(url, {
-    headers: { 'User-Agent': USER_AGENT },
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  });
-  if (!response.ok) {
-    // Cloudflare in front of Bulbapedia marks its bot-protection responses
-    // with `cf-mitigated` — naming it tells a passing block apart from a
-    // MediaWiki error without digging into the HTML body.
-    const mitigated = response.headers.get('cf-mitigated');
-    throw new Error(
-      `Bulbapedia: failed to fetch "${page}": ${String(response.status)} ${response.statusText}` +
-        (mitigated ? ` (blocked by Cloudflare: ${mitigated})` : '')
-    );
+  let body: WikitextResponse;
+  try {
+    body = await fetchDirect(url, page);
+  } catch (err: unknown) {
+    if (!(err instanceof CloudflareBlockError) || !isFlareSolverrEnabled()) {
+      throw err;
+    }
+    // A successful fallback looks fully healthy in Settings, so this line is
+    // how to tell the block is still there.
+    console.log(`Bulbapedia: "${page}" blocked by Cloudflare, retrying via FlareSolverr.`);
+    try {
+      body = await fetchViaFlareSolverr(url);
+    } catch (fallbackErr: unknown) {
+      const reason = fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr);
+      throw new Error(`${err.message}; FlareSolverr failed: ${reason}`);
+    }
   }
-
-  const body = (await response.json()) as {
-    parse?: { wikitext?: string };
-    error?: { info?: string };
-  };
   if (!body.parse?.wikitext) {
     throw new Error(
       `Bulbapedia: no wikitext returned for "${page}": ${body.error?.info ?? 'unknown error'}`

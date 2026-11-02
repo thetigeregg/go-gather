@@ -943,4 +943,193 @@ describe('fetchWikitext', () => {
 
     await expect(fetchWikitext('Dynamax (GO)')).rejects.toThrow(/doesn't exist/);
   });
+
+  describe('FlareSolverr fallback', () => {
+    const BLOCK_MESSAGE =
+      'Bulbapedia: failed to fetch "Dynamax (GO)": 403 Error (blocked by Cloudflare: challenge)';
+
+    /** The page Chromium's JSON viewer produces, as seen from FlareSolverr. */
+    function viewerPage(escapedJson: string): string {
+      return `<html><head><meta charset="utf-8"></head><body><pre>${escapedJson}</pre><div class="json-formatter-container"></div></body></html>`;
+    }
+
+    /** Bulbapedia blocks the direct request, then `flareSolverr` answers. */
+    function stubBlockThen(flareSolverr: () => Promise<unknown>) {
+      const fetchMock = vi.fn((input: URL, _init?: RequestInit) =>
+        input.origin === 'https://bulbapedia.bulbagarden.net'
+          ? Promise.resolve({
+              ok: false,
+              status: 403,
+              statusText: 'Error',
+              headers: new Headers({ 'cf-mitigated': 'challenge' }),
+              json: () => Promise.resolve({}),
+            })
+          : flareSolverr()
+      );
+      vi.stubGlobal('fetch', fetchMock);
+      return fetchMock;
+    }
+
+    function flareSolverrReply(body: unknown, status = 200) {
+      return () =>
+        Promise.resolve({
+          status,
+          text: () => Promise.resolve(typeof body === 'string' ? body : JSON.stringify(body)),
+        });
+    }
+
+    function solved(page: string) {
+      return flareSolverrReply({
+        status: 'ok',
+        message: 'Challenge not detected!',
+        solution: { status: 200, response: page },
+      });
+    }
+
+    afterEach(() => {
+      vi.unstubAllEnvs();
+    });
+
+    it('stays direct when the flag is off', async () => {
+      vi.stubEnv('FLARESOLVERR_ENABLED', undefined);
+      const fetchMock = stubBlockThen(solved(viewerPage('{}')));
+
+      await expect(fetchWikitext('Dynamax (GO)')).rejects.toThrow(new Error(BLOCK_MESSAGE));
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('treats any flag value but "true" as off', async () => {
+      vi.stubEnv('FLARESOLVERR_ENABLED', 'false');
+      const fetchMock = stubBlockThen(solved(viewerPage('{}')));
+
+      await expect(fetchWikitext('Dynamax (GO)')).rejects.toThrow(new Error(BLOCK_MESSAGE));
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('stays direct when the direct request succeeds', async () => {
+      vi.stubEnv('FLARESOLVERR_ENABLED', 'true');
+      const fetchMock = stubFetch({ ok: true, status: 200, body: { parse: { wikitext: 'text' } } });
+
+      await expect(fetchWikitext('Dynamax (GO)')).resolves.toBe('text');
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it("doesn't retry errors that aren't a Cloudflare block", async () => {
+      vi.stubEnv('FLARESOLVERR_ENABLED', 'true');
+      const fetchMock = stubFetch({ ok: false, status: 503, body: {} });
+
+      await expect(fetchWikitext('Dynamax (GO)')).rejects.toThrow(/503 Error$/);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+
+    it('retries a block through FlareSolverr at its default URL', async () => {
+      vi.stubEnv('FLARESOLVERR_ENABLED', 'true');
+      const log = vi.spyOn(console, 'log');
+      const fetchMock = stubBlockThen(solved(viewerPage('{"parse":{"wikitext":"text"}}')));
+
+      await expect(fetchWikitext('Dynamax (GO)')).resolves.toBe('text');
+
+      const [directUrl] = fetchMock.mock.calls[0];
+      const [url, init] = fetchMock.mock.calls[1];
+      expect(url.href).toBe('http://flaresolverr:8191/v1');
+      expect(init?.method).toBe('POST');
+      expect(JSON.parse(init?.body as string)).toEqual({
+        cmd: 'request.get',
+        url: directUrl.href,
+        maxTimeout: 60_000,
+      });
+      expect(log).toHaveBeenCalledWith(
+        'Bulbapedia: "Dynamax (GO)" blocked by Cloudflare, retrying via FlareSolverr.'
+      );
+    });
+
+    it('uses FLARESOLVERR_URL when set', async () => {
+      vi.stubEnv('FLARESOLVERR_ENABLED', 'true');
+      vi.stubEnv('FLARESOLVERR_URL', 'http://127.0.0.1:9000');
+      const fetchMock = stubBlockThen(solved(viewerPage('{"parse":{"wikitext":"text"}}')));
+
+      await fetchWikitext('Dynamax (GO)');
+
+      expect(fetchMock.mock.calls[1][0].href).toBe('http://127.0.0.1:9000/v1');
+    });
+
+    it('accepts the flag in any case and uses the default for a blank URL', async () => {
+      vi.stubEnv('FLARESOLVERR_ENABLED', ' TRUE ');
+      vi.stubEnv('FLARESOLVERR_URL', '  ');
+      const fetchMock = stubBlockThen(solved(viewerPage('{"parse":{"wikitext":"text"}}')));
+
+      await expect(fetchWikitext('Dynamax (GO)')).resolves.toBe('text');
+
+      expect(fetchMock.mock.calls[1][0].href).toBe('http://flaresolverr:8191/v1');
+    });
+
+    it('decodes the viewer page once, keeping text the wiki itself escaped', async () => {
+      vi.stubEnv('FLARESOLVERR_ENABLED', 'true');
+      stubBlockThen(
+        solved(
+          viewerPage(
+            '{"parse":{"wikitext":"&lt;!-- a &amp; b --&gt; &nbsp;x &amp;lt;/pre&amp;gt;"}}'
+          )
+        )
+      );
+
+      await expect(fetchWikitext('Dynamax (GO)')).resolves.toBe('<!-- a & b -->  x &lt;/pre&gt;');
+    });
+
+    it("reports the API's error from inside the viewer page", async () => {
+      vi.stubEnv('FLARESOLVERR_ENABLED', 'true');
+      stubBlockThen(
+        solved(viewerPage('{"error":{"info":"The page you specified doesn\'t exist."}}'))
+      );
+
+      await expect(fetchWikitext('Dynamax (GO)')).rejects.toThrow(
+        /no wikitext returned for "Dynamax \(GO\)": The page you specified doesn't exist/
+      );
+    });
+
+    it.each([
+      [
+        'its own error',
+        flareSolverrReply({ status: 'error', message: 'Error solving the challenge.' }, 500),
+        'Error solving the challenge.',
+      ],
+      ['no solution', flareSolverrReply({ status: 'ok' }), 'no solution returned'],
+      ['an error with no message', flareSolverrReply({ status: 'error' }), 'no solution returned'],
+      [
+        'a solution with no page',
+        flareSolverrReply({ status: 'ok', solution: {} }),
+        'the page it returned has no JSON',
+      ],
+      [
+        'a non-JSON reply, such as the wrong service',
+        flareSolverrReply('<html>Bad Gateway</html>', 502),
+        '502 with a non-JSON reply from http://flaresolverr:8191, check FLARESOLVERR_URL',
+      ],
+      ['a page with no JSON', solved('<html><body>Just a moment</body></html>'), 'has no JSON'],
+      ['invalid JSON', solved(viewerPage('{not json')), 'has invalid JSON'],
+      [
+        'a connection failure',
+        () =>
+          Promise.reject(
+            new TypeError('fetch failed', {
+              cause: new Error('getaddrinfo ENOTFOUND flaresolverr'),
+            })
+          ),
+        'getaddrinfo ENOTFOUND flaresolverr',
+      ],
+      ['a timeout', () => Promise.reject(new Error('aborted due to timeout')), 'aborted'],
+    ])('names the block and the reason on %s', async (_label, flareSolverr, reason) => {
+      vi.stubEnv('FLARESOLVERR_ENABLED', 'true');
+      stubBlockThen(flareSolverr);
+
+      const error = await fetchWikitext('Dynamax (GO)').catch((err: unknown) => err as Error);
+
+      expect((error as Error).message).toContain(`${BLOCK_MESSAGE}; FlareSolverr failed: `);
+      expect((error as Error).message).toContain(reason);
+    });
+  });
 });
