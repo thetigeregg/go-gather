@@ -11,6 +11,7 @@
 		4D22ABE92AF431CB00220026 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		50379B232058CBB4000EE86E /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
 		504EC3081FED79650016851F /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
+		548E922E7FE5069569EB3134 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C595F078A2FE7568CC222A77 /* SceneDelegate.swift */; };
 		504EC30D1FED79650016851F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30B1FED79650016851F /* Main.storyboard */; };
 		504EC30F1FED79650016851F /* Assets.shared.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 504EC30E1FED79650016851F /* Assets.shared.xcassets */; };
 		C9F2C1C49345E6CB47F3E9F2 /* Assets.dev.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = E30787F0B3F4C5B96A006F42 /* Assets.dev.xcassets */; };
@@ -18,6 +19,7 @@
 		50B271D11FEDC1A000F3C39B /* public in Resources */ = {isa = PBXBuildFile; fileRef = 50B271D01FEDC1A000F3C39B /* public */; };
 		C691A6CF5EDB86CBA3807EE2 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = BCFFACA414D38DF39EC2CEDF /* PrivacyInfo.xcprivacy */; };
 		35CB5FCA6AB7D770D5E78437 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 504EC3071FED79650016851F /* AppDelegate.swift */; };
+		01F83DFDA176CD253A098744 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C595F078A2FE7568CC222A77 /* SceneDelegate.swift */; };
 		8C9AAA91C314C950408D8FD2 /* CapApp-SPM in Frameworks */ = {isa = PBXBuildFile; productRef = 4D22ABE82AF431CB00220026 /* CapApp-SPM */; };
 		9195D8DB31A0D5823CFFF33F /* config.xml in Resources */ = {isa = PBXBuildFile; fileRef = 2FAD9762203C412B000D30F8 /* config.xml */; };
 		1893A310EA05AE1C824DDAE9 /* capacitor.config.json in Resources */ = {isa = PBXBuildFile; fileRef = 50379B222058CBB4000EE86E /* capacitor.config.json */; };
@@ -37,6 +39,7 @@
 		504EC3041FED79650016851F /* App DEV.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "App DEV.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2CCE7D71BBA84306E917C1BA /* App PROD.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "App PROD.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		504EC3071FED79650016851F /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		C595F078A2FE7568CC222A77 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		504EC30C1FED79650016851F /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		504EC30E1FED79650016851F /* Assets.shared.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.shared.xcassets; sourceTree = "<group>"; };
 		E30787F0B3F4C5B96A006F42 /* Assets.dev.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.dev.xcassets; sourceTree = "<group>"; };
@@ -98,6 +101,7 @@
 			children = (
 				50379B222058CBB4000EE86E /* capacitor.config.json */,
 				504EC3071FED79650016851F /* AppDelegate.swift */,
+				C595F078A2FE7568CC222A77 /* SceneDelegate.swift */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.shared.xcassets */,
 				E30787F0B3F4C5B96A006F42 /* Assets.dev.xcassets */,
@@ -245,6 +249,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				504EC3081FED79650016851F /* AppDelegate.swift in Sources */,
+				548E922E7FE5069569EB3134 /* SceneDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -253,6 +258,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				35CB5FCA6AB7D770D5E78437 /* AppDelegate.swift in Sources */,
+				01F83DFDA176CD253A098744 /* SceneDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
