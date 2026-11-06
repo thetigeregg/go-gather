@@ -4,7 +4,7 @@
 # serving the last OTA bundle instead of shipping an empty ota/ios and
 # silently withdrawing it. The default (the base image) has no OTA dir, so
 # local builds stay empty without needing registry access.
-ARG OTA_PREVIOUS_IMAGE=node:24.22.1-slim
+ARG OTA_PREVIOUS_IMAGE=node:24.22.2-slim
 FROM ${OTA_PREVIOUS_IMAGE} AS ota-previous
 
 # --- Stage 1: web + OTA artifact builder (needs Angular/Ionic devDependencies) ---
