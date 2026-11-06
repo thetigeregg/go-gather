@@ -123,20 +123,17 @@
                 </ion-select>
               </ion-item>
               <ion-item>
-                <ion-checkbox
-                  [(ngModel)]="editableRule.numericUseRange"
-                  (ngModelChange)="updatePreview()"
-                >
+                <ion-checkbox [(ngModel)]="editableRule.useRange" (ngModelChange)="updatePreview()">
                   Range
                 </ion-checkbox>
               </ion-item>
-              @if (editableRule.numericUseRange) {
+              @if (editableRule.useRange) {
                 <ion-item>
                   <ion-input
                     type="number"
                     label="Min"
                     labelPlacement="stacked"
-                    [(ngModel)]="editableRule.numericMin"
+                    [(ngModel)]="editableRule.rangeMin"
                     (ngModelChange)="updatePreview()"
                   ></ion-input>
                 </ion-item>
@@ -145,7 +142,7 @@
                     type="number"
                     label="Max"
                     labelPlacement="stacked"
-                    [(ngModel)]="editableRule.numericMax"
+                    [(ngModel)]="editableRule.rangeMax"
                     (ngModelChange)="updatePreview()"
                   ></ion-input>
                 </ion-item>
@@ -175,35 +172,94 @@
                 </ion-select>
               </ion-item>
               <ion-item>
-                <ion-input
-                  type="number"
-                  label="Value (0-4)"
-                  labelPlacement="stacked"
-                  [min]="0"
-                  [max]="4"
-                  [(ngModel)]="editableRule.statRatingValue"
-                  (ngModelChange)="updatePreview()"
-                ></ion-input>
+                <ion-checkbox [(ngModel)]="editableRule.useRange" (ngModelChange)="updatePreview()">
+                  Range
+                </ion-checkbox>
               </ion-item>
+              @if (editableRule.useRange) {
+                <ion-item>
+                  <ion-input
+                    type="number"
+                    label="Min (0-4)"
+                    labelPlacement="stacked"
+                    [min]="0"
+                    [max]="4"
+                    [(ngModel)]="editableRule.rangeMin"
+                    (ngModelChange)="updatePreview()"
+                  ></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input
+                    type="number"
+                    label="Max (0-4)"
+                    labelPlacement="stacked"
+                    [min]="0"
+                    [max]="4"
+                    [(ngModel)]="editableRule.rangeMax"
+                    (ngModelChange)="updatePreview()"
+                  ></ion-input>
+                </ion-item>
+              } @else {
+                <ion-item>
+                  <ion-input
+                    type="number"
+                    label="Value (0-4)"
+                    labelPlacement="stacked"
+                    [min]="0"
+                    [max]="4"
+                    [(ngModel)]="editableRule.statRatingValue"
+                    (ngModelChange)="updatePreview()"
+                  ></ion-input>
+                </ion-item>
+              }
             }
             @case ('smallEnumNumber') {
-              <ion-item>
-                <ion-input
-                  type="number"
-                  [label]="
-                    'Value (' +
-                    (editableRule.catalogEntry.smallEnumRange?.min ?? 0) +
-                    '-' +
-                    (editableRule.catalogEntry.smallEnumRange?.max ?? 0) +
-                    ')'
-                  "
-                  labelPlacement="stacked"
-                  [min]="editableRule.catalogEntry.smallEnumRange?.min ?? 0"
-                  [max]="editableRule.catalogEntry.smallEnumRange?.max ?? 0"
-                  [(ngModel)]="editableRule.smallEnumValue"
-                  (ngModelChange)="updatePreview()"
-                ></ion-input>
-              </ion-item>
+              @if (editableRule.catalogEntry.supportsRange) {
+                <ion-item>
+                  <ion-checkbox
+                    [(ngModel)]="editableRule.useRange"
+                    (ngModelChange)="updatePreview()"
+                  >
+                    Range
+                  </ion-checkbox>
+                </ion-item>
+              }
+              @if (editableRule.catalogEntry.supportsRange && editableRule.useRange) {
+                <ion-item>
+                  <ion-input
+                    type="number"
+                    [label]="smallEnumLabel('Min', editableRule)"
+                    labelPlacement="stacked"
+                    [min]="editableRule.catalogEntry.smallEnumRange?.min ?? 0"
+                    [max]="editableRule.catalogEntry.smallEnumRange?.max ?? 0"
+                    [(ngModel)]="editableRule.rangeMin"
+                    (ngModelChange)="updatePreview()"
+                  ></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input
+                    type="number"
+                    [label]="smallEnumLabel('Max', editableRule)"
+                    labelPlacement="stacked"
+                    [min]="editableRule.catalogEntry.smallEnumRange?.min ?? 0"
+                    [max]="editableRule.catalogEntry.smallEnumRange?.max ?? 0"
+                    [(ngModel)]="editableRule.rangeMax"
+                    (ngModelChange)="updatePreview()"
+                  ></ion-input>
+                </ion-item>
+              } @else {
+                <ion-item>
+                  <ion-input
+                    type="number"
+                    [label]="smallEnumLabel('Value', editableRule)"
+                    labelPlacement="stacked"
+                    [min]="editableRule.catalogEntry.smallEnumRange?.min ?? 0"
+                    [max]="editableRule.catalogEntry.smallEnumRange?.max ?? 0"
+                    [(ngModel)]="editableRule.smallEnumValue"
+                    (ngModelChange)="updatePreview()"
+                  ></ion-input>
+                </ion-item>
+              }
             }
           }
 

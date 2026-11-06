@@ -26,6 +26,11 @@ export interface TermCatalogEntry {
   fieldOptions?: string[];
   /** Inclusive min/max for 'smallEnumNumber' (appraisalStars/buddyLevel/megaLevel). */
   smallEnumRange?: { min: number; max: number };
+  /** Whether the editor offers a min/max range toggle for this kind (the
+   * search bar accepts e.g. `buddy2-5`, `mega1-`, `3-4attack`). Not every
+   * numeric kind does: appraisal stars reject ranges like `3-4*`. The
+   * `numericRange` input kind always offers one, so it doesn't need this flag. */
+  supportsRange?: boolean;
 }
 
 export const SIMPLE_KEYWORDS: SimpleKeyword[] = [
@@ -204,6 +209,7 @@ export const TERM_CATALOG: TermCatalogEntry[] = [
     category: 'Numeric',
     inputKind: 'statRating',
     fieldOptions: ['hp', 'attack', 'defense'],
+    supportsRange: true,
   },
   {
     kind: 'appraisalStars',
@@ -218,6 +224,7 @@ export const TERM_CATALOG: TermCatalogEntry[] = [
     category: 'Numeric',
     inputKind: 'smallEnumNumber',
     smallEnumRange: { min: 0, max: 5 },
+    supportsRange: true,
   },
   {
     kind: 'megaLevel',
@@ -225,6 +232,7 @@ export const TERM_CATALOG: TermCatalogEntry[] = [
     category: 'Numeric',
     inputKind: 'smallEnumNumber',
     smallEnumRange: { min: 0, max: 4 },
+    supportsRange: true,
   },
   { kind: 'raw', label: 'Raw Search Text', category: 'Basic', inputKind: 'freeText' },
 ];

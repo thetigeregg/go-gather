@@ -91,6 +91,80 @@ describe('PresetQueryEditPage', () => {
       expect(component.groups[0].rules[0].enumValue).toBe('alola');
     });
 
+    it('hydrates a saved range value into range mode', () => {
+      userSettings = {
+        ...userSettings,
+        presetQueries: [
+          makePreset({
+            groups: [
+              {
+                id: 'group-1',
+                rules: [
+                  {
+                    id: 'rule-1',
+                    term: { kind: 'buddyLevel', value: { min: 2, max: 5 } },
+                    negate: false,
+                  },
+                ],
+              },
+            ],
+          }),
+        ],
+      };
+      routeId = 'preset-1';
+      setUp();
+
+      component.ionViewWillEnter();
+
+      const rule = component.groups[0].rules[0];
+      expect(rule.useRange).toBe(true);
+      expect(rule.rangeMin).toBe(2);
+      expect(rule.rangeMax).toBe(5);
+      expect(component.previewString).toBe('buddy2-5');
+    });
+
+    it('hydrates an open-ended saved range, leaving the missing bound blank', () => {
+      userSettings = {
+        ...userSettings,
+        presetQueries: [
+          makePreset({
+            groups: [
+              {
+                id: 'group-1',
+                rules: [
+                  {
+                    id: 'rule-1',
+                    term: { kind: 'statRating', field: 'attack', value: { max: 1 } },
+                    negate: false,
+                  },
+                ],
+              },
+            ],
+          }),
+        ],
+      };
+      routeId = 'preset-1';
+      setUp();
+
+      component.ionViewWillEnter();
+
+      const rule = component.groups[0].rules[0];
+      expect(rule.useRange).toBe(true);
+      expect(rule.rangeMin).toBeNull();
+      expect(rule.rangeMax).toBe(1);
+      expect(component.previewString).toBe('-1attack');
+    });
+
+    it('labels smallEnumNumber inputs with the kind bounds', () => {
+      routeId = 'new';
+      setUp();
+      component.ionViewWillEnter();
+      component.addRule(component.groups[0]);
+      component.ruleKindChanged(component.groups[0].rules[0], 'buddyLevel');
+
+      expect(component.smallEnumLabel('Min', component.groups[0].rules[0])).toBe('Min (0-5)');
+    });
+
     it('falls back to create mode for an unknown preset id', () => {
       routeId = 'does-not-exist';
       setUp();
@@ -249,9 +323,9 @@ describe('PresetQueryEditPage', () => {
       component.addRule(component.groups[0]);
       component.ruleKindChanged(component.groups[0].rules[0], 'numeric');
       component.groups[0].rules[0].numericField = 'cp';
-      component.groups[0].rules[0].numericUseRange = true;
-      component.groups[0].rules[0].numericMin = 1000;
-      component.groups[0].rules[0].numericMax = 2000;
+      component.groups[0].rules[0].useRange = true;
+      component.groups[0].rules[0].rangeMin = 1000;
+      component.groups[0].rules[0].rangeMax = 2000;
 
       expect(saveAndGetTerm()).toEqual({
         kind: 'numeric',
@@ -277,6 +351,52 @@ describe('PresetQueryEditPage', () => {
       component.groups[0].rules[0].smallEnumValue = 4;
 
       expect(saveAndGetTerm()).toEqual({ kind: 'buddyLevel', value: 4 });
+    });
+
+    it('statRating (range)', () => {
+      component.name = 'p';
+      component.addRule(component.groups[0]);
+      component.ruleKindChanged(component.groups[0].rules[0], 'statRating');
+      component.groups[0].rules[0].statRatingField = 'attack';
+      component.groups[0].rules[0].useRange = true;
+      component.groups[0].rules[0].rangeMin = 3;
+      component.groups[0].rules[0].rangeMax = 4;
+
+      expect(saveAndGetTerm()).toEqual({
+        kind: 'statRating',
+        field: 'attack',
+        value: { min: 3, max: 4 },
+      });
+    });
+
+    it('smallEnumNumber (buddyLevel, open-ended range)', () => {
+      component.name = 'p';
+      component.addRule(component.groups[0]);
+      component.ruleKindChanged(component.groups[0].rules[0], 'buddyLevel');
+      component.groups[0].rules[0].useRange = true;
+      component.groups[0].rules[0].rangeMin = 2;
+
+      expect(saveAndGetTerm()).toEqual({ kind: 'buddyLevel', value: { min: 2, max: undefined } });
+    });
+
+    it('smallEnumNumber (megaLevel, range)', () => {
+      component.name = 'p';
+      component.addRule(component.groups[0]);
+      component.ruleKindChanged(component.groups[0].rules[0], 'megaLevel');
+      component.groups[0].rules[0].useRange = true;
+      component.groups[0].rules[0].rangeMin = 1;
+      component.groups[0].rules[0].rangeMax = 3;
+
+      expect(saveAndGetTerm()).toEqual({ kind: 'megaLevel', value: { min: 1, max: 3 } });
+    });
+
+    it('smallEnumNumber (appraisalStars) stays exact-only', () => {
+      component.name = 'p';
+      component.addRule(component.groups[0]);
+      component.ruleKindChanged(component.groups[0].rules[0], 'appraisalStars');
+      component.groups[0].rules[0].smallEnumValue = 4;
+
+      expect(saveAndGetTerm()).toEqual({ kind: 'appraisalStars', value: 4 });
     });
   });
 
@@ -318,7 +438,7 @@ describe('PresetQueryEditPage', () => {
     it('does not throw and falls back to null instead of crashing', () => {
       component.addRule(component.groups[0]);
       component.ruleKindChanged(component.groups[0].rules[0], 'numeric');
-      component.groups[0].rules[0].numericUseRange = true;
+      component.groups[0].rules[0].useRange = true;
       // Range checked but no min/max entered yet — the real transient state
       // right after checking the box, before typing a value.
 
@@ -331,7 +451,7 @@ describe('PresetQueryEditPage', () => {
     it('still updates the negated-tag warning even when the compile step fails', () => {
       component.addRule(component.groups[0]);
       component.ruleKindChanged(component.groups[0].rules[0], 'numeric');
-      component.groups[0].rules[0].numericUseRange = true;
+      component.groups[0].rules[0].useRange = true;
       component.addGroup();
       component.addRule(component.groups[1]);
       component.ruleKindChanged(component.groups[1].rules[0], 'hasTag');

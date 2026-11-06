@@ -44,6 +44,14 @@ describe('TERM_CATALOG', () => {
     expect(getTermCatalogEntry(kind).kind).toBe(kind);
   });
 
+  it('offers a range toggle only for kinds the search bar accepts ranges for', () => {
+    const rangeKinds = TERM_CATALOG.filter((entry) => entry.supportsRange)
+      .map((entry) => entry.kind)
+      .sort();
+    // appraisalStars is deliberately absent: the game rejects e.g. `3-4*`.
+    expect(rangeKinds).toEqual(['buddyLevel', 'megaLevel', 'statRating']);
+  });
+
   it('throws for an unknown kind', () => {
     expect(() => getTermCatalogEntry('not-a-real-kind' as SearchTerm['kind'])).toThrow(
       'No TERM_CATALOG entry for kind "not-a-real-kind"'

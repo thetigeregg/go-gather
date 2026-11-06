@@ -29,9 +29,11 @@ import {
 } from '../../core/search-engine/search-term-catalog';
 import { UserDataService } from '../../core/services/user-data.service';
 
-/** Local editing shape for a numeric-range/statRating rule value, since a
- * pair of number inputs edits min/max separately before they're assembled
- * back into `SearchTermData`'s `{ min?, max? } | number` union on save. */
+/** Local editing shape for a rule's value. Range-capable kinds (numeric,
+ * statRating, buddyLevel, megaLevel) share one `useRange`/`rangeMin`/
+ * `rangeMax` set, since a pair of number inputs edits min/max separately
+ * before they're assembled back into `SearchTermData`'s
+ * `{ min?, max? } | number` union on save. */
 interface EditableRule {
   rule: PresetQueryRule;
   catalogEntry: TermCatalogEntry;
@@ -43,9 +45,9 @@ interface EditableRule {
   enumValue: string;
   numericField: string;
   numericExact: number | null;
-  numericMin: number | null;
-  numericMax: number | null;
-  numericUseRange: boolean;
+  useRange: boolean;
+  rangeMin: number | null;
+  rangeMax: number | null;
   statRatingField: string;
   statRatingValue: number;
   smallEnumValue: number;
@@ -117,6 +119,33 @@ function defaultValueForCatalogEntry(catalogEntry: TermCatalogEntry): SearchTerm
   }
 }
 
+type RangeOrExact = number | { min?: number; max?: number };
+
+/** Loads an exact-or-range value into the editor: an exact value goes
+ * through `setExact`, a range into the shared `rangeMin`/`rangeMax`. */
+function applyRangeOrExact(
+  editable: EditableRule,
+  value: RangeOrExact,
+  setExact: (exact: number) => void
+): void {
+  if (typeof value === 'number') {
+    setExact(value);
+    editable.useRange = false;
+  } else {
+    editable.rangeMin = value.min ?? null;
+    editable.rangeMax = value.max ?? null;
+    editable.useRange = true;
+  }
+}
+
+/** The inverse of `applyRangeOrExact`: the edited range when "Range" is
+ * checked, otherwise `exact`. */
+function rangeOrExact(editable: EditableRule, exact: number): RangeOrExact {
+  return editable.useRange
+    ? { min: editable.rangeMin ?? undefined, max: editable.rangeMax ?? undefined }
+    : exact;
+}
+
 /** Writes `term`'s value onto an already-constructed `EditableRule`'s
  * form-field properties (freeTextValue, enumValue, numeric fields, etc). */
 function applyTermValue(editable: EditableRule, term: SearchTermData): void {
@@ -151,23 +180,24 @@ function applyTermValue(editable: EditableRule, term: SearchTermData): void {
       break;
     case 'numeric':
       editable.numericField = term.field;
-      if (typeof term.value === 'number') {
-        editable.numericExact = term.value;
-        editable.numericUseRange = false;
-      } else {
-        editable.numericMin = term.value.min ?? null;
-        editable.numericMax = term.value.max ?? null;
-        editable.numericUseRange = true;
-      }
+      applyRangeOrExact(editable, term.value, (exact) => {
+        editable.numericExact = exact;
+      });
       break;
     case 'statRating':
       editable.statRatingField = term.field;
-      editable.statRatingValue = term.value;
+      applyRangeOrExact(editable, term.value, (exact) => {
+        editable.statRatingValue = exact;
+      });
       break;
     case 'appraisalStars':
+      editable.smallEnumValue = term.value;
+      break;
     case 'buddyLevel':
     case 'megaLevel':
-      editable.smallEnumValue = term.value;
+      applyRangeOrExact(editable, term.value, (exact) => {
+        editable.smallEnumValue = exact;
+      });
       break;
     case 'weather':
     case 'special':
@@ -187,9 +217,9 @@ function toEditableRule(rule: PresetQueryRule): EditableRule {
     enumValue: '',
     numericField: catalogEntry.fieldOptions?.[0] ?? '',
     numericExact: null,
-    numericMin: null,
-    numericMax: null,
-    numericUseRange: false,
+    useRange: false,
+    rangeMin: null,
+    rangeMax: null,
     statRatingField: catalogEntry.fieldOptions?.[0] ?? '',
     statRatingValue: 0,
     smallEnumValue: catalogEntry.smallEnumRange?.min ?? 0,
@@ -230,23 +260,19 @@ function toSearchTermData(editable: EditableRule): SearchTermData {
       return {
         kind: 'numeric',
         field: editable.numericField,
-        value: editable.numericUseRange
-          ? {
-              min: editable.numericMin ?? undefined,
-              max: editable.numericMax ?? undefined,
-            }
-          : (editable.numericExact ?? 0),
+        value: rangeOrExact(editable, editable.numericExact ?? 0),
       };
     case 'statRating':
       return {
         kind: 'statRating',
         field: editable.statRatingField,
-        value: editable.statRatingValue,
+        value: rangeOrExact(editable, editable.statRatingValue),
       };
     case 'appraisalStars':
+      return { kind, value: editable.smallEnumValue };
     case 'buddyLevel':
     case 'megaLevel':
-      return { kind, value: editable.smallEnumValue };
+      return { kind, value: rangeOrExact(editable, editable.smallEnumValue) };
     case 'weather':
       return { kind: 'weather' };
     case 'special':
@@ -332,6 +358,13 @@ export class PresetQueryEditPage implements ViewWillEnter {
     return this.termCatalog.filter((entry) => entry.category === category);
   }
 
+  /** Label for a 'smallEnumNumber' input, suffixed with the kind's
+   * inclusive bounds, e.g. "Min (0-5)". */
+  smallEnumLabel(prefix: string, rule: EditableRule): string {
+    const bounds = rule.catalogEntry.smallEnumRange;
+    return `${prefix} (${String(bounds?.min ?? 0)}-${String(bounds?.max ?? 0)})`;
+  }
+
   addGroup(): void {
     this.groups.push({ group: { id: newId(), rules: [] }, rules: [] });
     this.updatePreview();
@@ -389,7 +422,7 @@ export class PresetQueryEditPage implements ViewWillEnter {
   updatePreview(): void {
     const preset = this.buildPresetQuery();
 
-    // A numeric-range rule with "Range" checked but no min/max entered yet
+    // A range-capable rule with "Range" checked but no min/max entered yet
     // (e.g. immediately after checking the box, before typing a value) is a
     // real, momentarily-incomplete edit state — compilePresetQuery/the
     // serializer correctly rejects it rather than silently emitting a

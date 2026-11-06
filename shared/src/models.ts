@@ -182,10 +182,10 @@ export type SearchTermData =
   | { kind: 'weakAgainst'; value: string }
   | { kind: 'superEffectiveAgainst'; value: string }
   | { kind: 'numeric'; field: string; value: number | { min?: number; max?: number } }
-  | { kind: 'statRating'; field: string; value: number }
+  | { kind: 'statRating'; field: string; value: number | { min?: number; max?: number } }
   | { kind: 'appraisalStars'; value: number }
-  | { kind: 'buddyLevel'; value: number }
-  | { kind: 'megaLevel'; value: number }
+  | { kind: 'buddyLevel'; value: number | { min?: number; max?: number } }
+  | { kind: 'megaLevel'; value: number | { min?: number; max?: number } }
   | { kind: 'raw'; value: string };
 
 export interface PresetQueryRule {
