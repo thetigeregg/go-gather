@@ -391,3 +391,7 @@
 ## v0.29.0 - 2026-11-06
 
 - ab541b3 feat(preset-queries): support ranges for buddy, mega, stat ratings (#117)
+
+## v0.29.1 - 2026-11-06
+
+- 0fa764a fix(sync): date Bulbapedia releases that only have MSP/HOME sprites (#118)
