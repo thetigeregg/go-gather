@@ -399,3 +399,7 @@
 ## v0.29.2 - 2026-11-06
 
 - 1daea25 fix(ci): carry OTA artifacts forward on server-only releases (#119)
+
+## v0.29.3 - 2026-11-06
+
+- 1daea25 fix(ci): carry OTA artifacts forward on server-only releases (#119)
