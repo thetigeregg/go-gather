@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { ActivatedRoute, Router } from '@angular/router';
-import { DEFAULT_SETTINGS, PresetQuery, UserSettings } from '@go-gather/shared';
+import { DEFAULT_SETTINGS, PresetQuery, SearchTermData, UserSettings } from '@go-gather/shared';
 import { PresetQueryEditPage } from './preset-query-edit.page';
 import { UserDataService } from '../../core/services/user-data.service';
 
@@ -89,6 +89,126 @@ describe('PresetQueryEditPage', () => {
       expect(component.groups[0].rules).toHaveLength(1);
       expect(component.groups[0].rules[0].catalogEntry.kind).toBe('region');
       expect(component.groups[0].rules[0].enumValue).toBe('alola');
+    });
+
+    it('hydrates a saved range value into range mode', () => {
+      userSettings = {
+        ...userSettings,
+        presetQueries: [
+          makePreset({
+            groups: [
+              {
+                id: 'group-1',
+                rules: [
+                  {
+                    id: 'rule-1',
+                    term: { kind: 'buddyLevel', value: { min: 2, max: 5 } },
+                    negate: false,
+                  },
+                ],
+              },
+            ],
+          }),
+        ],
+      };
+      routeId = 'preset-1';
+      setUp();
+
+      component.ionViewWillEnter();
+
+      const rule = component.groups[0].rules[0];
+      expect(rule.useRange).toBe(true);
+      expect(rule.rangeMin).toBe(2);
+      expect(rule.rangeMax).toBe(5);
+      expect(component.previewString).toBe('buddy2-5');
+    });
+
+    it.each([
+      { kind: 'buddyLevel', term: { kind: 'buddyLevel', value: null } },
+      { kind: 'statRating', term: { kind: 'statRating', field: 'hp', value: null } },
+    ])(
+      'reopens a legacy $kind rule saved with value: null as a blank, invalid value',
+      ({ term }) => {
+        // Presets saved before range support stored a cleared number input as
+        // null; reopening one must surface the validation error, not throw.
+        userSettings = {
+          ...userSettings,
+          presetQueries: [
+            makePreset({
+              groups: [
+                {
+                  id: 'group-1',
+                  rules: [{ id: 'rule-1', term: term as SearchTermData, negate: false }],
+                },
+              ],
+            }),
+          ],
+        };
+        routeId = 'preset-1';
+        setUp();
+
+        expect(() => {
+          component.ionViewWillEnter();
+        }).not.toThrow();
+
+        const rule = component.groups[0].rules[0];
+        expect(rule.useRange).toBe(false);
+        expect(component.ruleValueError(rule)).toBe('Enter a value.');
+        expect(component.hasInvalidRules).toBe(true);
+        expect(component.previewString).toBeNull();
+      }
+    );
+
+    it('hydrates an open-ended saved range, leaving the missing bound blank', () => {
+      userSettings = {
+        ...userSettings,
+        presetQueries: [
+          makePreset({
+            groups: [
+              {
+                id: 'group-1',
+                rules: [
+                  {
+                    id: 'rule-1',
+                    term: { kind: 'statRating', field: 'attack', value: { max: 1 } },
+                    negate: false,
+                  },
+                ],
+              },
+            ],
+          }),
+        ],
+      };
+      routeId = 'preset-1';
+      setUp();
+
+      component.ionViewWillEnter();
+
+      const rule = component.groups[0].rules[0];
+      expect(rule.useRange).toBe(true);
+      expect(rule.rangeMin).toBeNull();
+      expect(rule.rangeMax).toBe(1);
+      expect(component.previewString).toBe('-1attack');
+    });
+
+    it('labels smallEnumNumber inputs with the kind bounds', () => {
+      routeId = 'new';
+      setUp();
+      component.ionViewWillEnter();
+      component.addRule(component.groups[0]);
+      component.ruleKindChanged(component.groups[0].rules[0], 'buddyLevel');
+
+      expect(component.boundedLabel('Min', component.groups[0].rules[0])).toBe('Min (0-5)');
+    });
+
+    it('leaves the label unsuffixed for kinds without bounds', () => {
+      routeId = 'new';
+      setUp();
+      component.ionViewWillEnter();
+      component.addRule(component.groups[0]);
+      component.ruleKindChanged(component.groups[0].rules[0], 'numeric');
+
+      expect(component.boundedLabel('Min', component.groups[0].rules[0])).toBe('Min');
     });
 
     it('falls back to create mode for an unknown preset id', () => {
@@ -249,9 +369,9 @@ describe('PresetQueryEditPage', () => {
       component.addRule(component.groups[0]);
       component.ruleKindChanged(component.groups[0].rules[0], 'numeric');
       component.groups[0].rules[0].numericField = 'cp';
-      component.groups[0].rules[0].numericUseRange = true;
-      component.groups[0].rules[0].numericMin = 1000;
-      component.groups[0].rules[0].numericMax = 2000;
+      component.groups[0].rules[0].useRange = true;
+      component.groups[0].rules[0].rangeMin = 1000;
+      component.groups[0].rules[0].rangeMax = 2000;
 
       expect(saveAndGetTerm()).toEqual({
         kind: 'numeric',
@@ -277,6 +397,52 @@ describe('PresetQueryEditPage', () => {
       component.groups[0].rules[0].smallEnumValue = 4;
 
       expect(saveAndGetTerm()).toEqual({ kind: 'buddyLevel', value: 4 });
+    });
+
+    it('statRating (range)', () => {
+      component.name = 'p';
+      component.addRule(component.groups[0]);
+      component.ruleKindChanged(component.groups[0].rules[0], 'statRating');
+      component.groups[0].rules[0].statRatingField = 'attack';
+      component.groups[0].rules[0].useRange = true;
+      component.groups[0].rules[0].rangeMin = 3;
+      component.groups[0].rules[0].rangeMax = 4;
+
+      expect(saveAndGetTerm()).toEqual({
+        kind: 'statRating',
+        field: 'attack',
+        value: { min: 3, max: 4 },
+      });
+    });
+
+    it('smallEnumNumber (buddyLevel, open-ended range)', () => {
+      component.name = 'p';
+      component.addRule(component.groups[0]);
+      component.ruleKindChanged(component.groups[0].rules[0], 'buddyLevel');
+      component.groups[0].rules[0].useRange = true;
+      component.groups[0].rules[0].rangeMin = 2;
+
+      expect(saveAndGetTerm()).toEqual({ kind: 'buddyLevel', value: { min: 2, max: undefined } });
+    });
+
+    it('smallEnumNumber (megaLevel, range)', () => {
+      component.name = 'p';
+      component.addRule(component.groups[0]);
+      component.ruleKindChanged(component.groups[0].rules[0], 'megaLevel');
+      component.groups[0].rules[0].useRange = true;
+      component.groups[0].rules[0].rangeMin = 1;
+      component.groups[0].rules[0].rangeMax = 3;
+
+      expect(saveAndGetTerm()).toEqual({ kind: 'megaLevel', value: { min: 1, max: 3 } });
+    });
+
+    it('smallEnumNumber (appraisalStars) stays exact-only', () => {
+      component.name = 'p';
+      component.addRule(component.groups[0]);
+      component.ruleKindChanged(component.groups[0].rules[0], 'appraisalStars');
+      component.groups[0].rules[0].smallEnumValue = 4;
+
+      expect(saveAndGetTerm()).toEqual({ kind: 'appraisalStars', value: 4 });
     });
   });
 
@@ -318,7 +484,7 @@ describe('PresetQueryEditPage', () => {
     it('does not throw and falls back to null instead of crashing', () => {
       component.addRule(component.groups[0]);
       component.ruleKindChanged(component.groups[0].rules[0], 'numeric');
-      component.groups[0].rules[0].numericUseRange = true;
+      component.groups[0].rules[0].useRange = true;
       // Range checked but no min/max entered yet — the real transient state
       // right after checking the box, before typing a value.
 
@@ -331,7 +497,7 @@ describe('PresetQueryEditPage', () => {
     it('still updates the negated-tag warning even when the compile step fails', () => {
       component.addRule(component.groups[0]);
       component.ruleKindChanged(component.groups[0].rules[0], 'numeric');
-      component.groups[0].rules[0].numericUseRange = true;
+      component.groups[0].rules[0].useRange = true;
       component.addGroup();
       component.addRule(component.groups[1]);
       component.ruleKindChanged(component.groups[1].rules[0], 'hasTag');
@@ -342,6 +508,213 @@ describe('PresetQueryEditPage', () => {
 
       expect(component.previewString).toBeNull();
       expect(component.hasUnsafeNegatedTagBeforeOr).toBe(true);
+    });
+  });
+
+  describe('rule value validation', () => {
+    beforeEach(() => {
+      routeId = 'new';
+      setUp();
+      component.ionViewWillEnter();
+      component.name = 'p';
+      component.addRule(component.groups[0]);
+    });
+
+    function rule() {
+      return component.groups[0].rules[0];
+    }
+
+    function expectBlocked(message: string): void {
+      component.updatePreview();
+      expect(component.ruleValueError(rule())).toBe(message);
+      expect(component.hasInvalidRules).toBe(true);
+      expect(component.previewString).toBeNull();
+
+      component.saveClicked();
+      expect(updateUserSettingsCalls).toHaveLength(0);
+      expect(navigateSpy).not.toHaveBeenCalled();
+    }
+
+    it('blocks a cleared exact value instead of saving the literal "null"', () => {
+      component.ruleKindChanged(rule(), 'buddyLevel');
+      rule().smallEnumValue = null;
+
+      expectBlocked('Enter a value.');
+    });
+
+    it('blocks a cleared exact stat rating', () => {
+      component.ruleKindChanged(rule(), 'statRating');
+      rule().statRatingValue = null;
+
+      expectBlocked('Enter a value.');
+    });
+
+    it('blocks a range with neither bound', () => {
+      component.ruleKindChanged(rule(), 'megaLevel');
+      rule().useRange = true;
+
+      expectBlocked('Enter a min, a max, or both.');
+    });
+
+    it('blocks a reversed range', () => {
+      component.ruleKindChanged(rule(), 'megaLevel');
+      rule().useRange = true;
+      rule().rangeMin = 3;
+      rule().rangeMax = 1;
+
+      expectBlocked('Min must not be greater than max.');
+    });
+
+    it('blocks a reversed numeric range', () => {
+      component.ruleKindChanged(rule(), 'numeric');
+      rule().useRange = true;
+      rule().rangeMin = 3000;
+      rule().rangeMax = 10;
+
+      expectBlocked('Min must not be greater than max.');
+    });
+
+    it('blocks an out-of-bounds range bound', () => {
+      component.ruleKindChanged(rule(), 'statRating');
+      rule().useRange = true;
+      rule().rangeMin = 0;
+      rule().rangeMax = 9;
+
+      expectBlocked('Min and max must be whole numbers from 0 to 4.');
+    });
+
+    it('blocks an out-of-bounds exact value', () => {
+      component.ruleKindChanged(rule(), 'appraisalStars');
+      rule().smallEnumValue = 5;
+
+      expectBlocked('Value must be a whole number from 0 to 4.');
+    });
+
+    it('accepts zero appraisal stars (`0*` is a valid search)', () => {
+      component.ruleKindChanged(rule(), 'appraisalStars');
+      rule().smallEnumValue = 0;
+      component.updatePreview();
+
+      expect(component.ruleValueError(rule())).toBeNull();
+      expect(component.previewString).toBe('0*');
+    });
+
+    it('blocks a fractional bounded value', () => {
+      component.ruleKindChanged(rule(), 'buddyLevel');
+      rule().smallEnumValue = 2.5;
+
+      expectBlocked('Value must be a whole number from 0 to 5.');
+    });
+
+    it('does not bound numeric values', () => {
+      component.ruleKindChanged(rule(), 'numeric');
+      rule().numericExact = 5000;
+      component.updatePreview();
+
+      expect(component.ruleValueError(rule())).toBeNull();
+      expect(component.previewString).toBe('cp5000');
+    });
+
+    it('ignores non-number rules', () => {
+      component.ruleKindChanged(rule(), 'hasTag');
+      component.updatePreview();
+
+      expect(component.ruleValueError(rule())).toBeNull();
+      expect(component.hasInvalidRules).toBe(false);
+    });
+
+    it('clears the error once the value is fixed', () => {
+      component.ruleKindChanged(rule(), 'buddyLevel');
+      rule().smallEnumValue = null;
+      component.updatePreview();
+      expect(component.hasInvalidRules).toBe(true);
+
+      rule().smallEnumValue = 3;
+      component.updatePreview();
+
+      expect(component.hasInvalidRules).toBe(false);
+      expect(component.previewString).toBe('buddy3');
+    });
+
+    it('re-checks validity on save even if the preview was not refreshed', () => {
+      component.ruleKindChanged(rule(), 'buddyLevel');
+      rule().smallEnumValue = null;
+
+      component.saveClicked();
+
+      expect(updateUserSettingsCalls).toHaveLength(0);
+    });
+
+    it('treats a stray useRange on a kind without range support as exact', () => {
+      component.ruleKindChanged(rule(), 'appraisalStars');
+      rule().smallEnumValue = 4;
+      rule().useRange = true;
+      component.updatePreview();
+
+      expect(component.isRangeMode(rule())).toBe(false);
+      expect(component.ruleValueError(rule())).toBeNull();
+      expect(component.previewString).toBe('4*');
+    });
+  });
+
+  describe('rangeToggled', () => {
+    beforeEach(() => {
+      routeId = 'new';
+      setUp();
+      component.ionViewWillEnter();
+      component.addRule(component.groups[0]);
+    });
+
+    it('seeds both bounds from the exact value so the preview keeps matching', () => {
+      const editableRule = component.groups[0].rules[0];
+      component.ruleKindChanged(editableRule, 'statRating');
+      editableRule.statRatingField = 'attack';
+      editableRule.statRatingValue = 3;
+
+      editableRule.useRange = true;
+      component.rangeToggled(editableRule);
+
+      expect(editableRule.rangeMin).toBe(3);
+      expect(editableRule.rangeMax).toBe(3);
+      expect(component.previewString).toBe('3-3attack');
+    });
+
+    it('keeps bounds the user already entered', () => {
+      const editableRule = component.groups[0].rules[0];
+      component.ruleKindChanged(editableRule, 'buddyLevel');
+      editableRule.smallEnumValue = 1;
+      editableRule.rangeMin = 2;
+
+      editableRule.useRange = true;
+      component.rangeToggled(editableRule);
+
+      expect(editableRule.rangeMin).toBe(2);
+      expect(editableRule.rangeMax).toBeNull();
+      expect(component.previewString).toBe('buddy2-');
+    });
+
+    it('leaves bounds empty when there is no exact value to seed from', () => {
+      const editableRule = component.groups[0].rules[0];
+      component.ruleKindChanged(editableRule, 'numeric');
+      editableRule.numericExact = null;
+
+      editableRule.useRange = true;
+      component.rangeToggled(editableRule);
+
+      expect(editableRule.rangeMin).toBeNull();
+      expect(editableRule.rangeMax).toBeNull();
+    });
+
+    it('does nothing to the bounds when Range is unticked', () => {
+      const editableRule = component.groups[0].rules[0];
+      component.ruleKindChanged(editableRule, 'megaLevel');
+      editableRule.smallEnumValue = 2;
+
+      editableRule.useRange = false;
+      component.rangeToggled(editableRule);
+
+      expect(editableRule.rangeMin).toBeNull();
+      expect(component.previewString).toBe('mega2');
     });
   });
 

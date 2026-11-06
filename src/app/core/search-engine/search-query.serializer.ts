@@ -4,8 +4,8 @@
  * field, not an actual type-safety risk. */
 import {
   NumericField,
-  NumericValue,
   QueryNode,
+  RangeValue,
   SearchTerm,
   StatRatingField,
 } from './search-query.model';
@@ -43,7 +43,7 @@ export function serializeQuery(node: QueryNode): string {
   }
 }
 
-function serializeNumericValue(value: NumericValue): string {
+function serializeRangeValue(value: RangeValue<number>): string {
   if (typeof value === 'number') {
     return String(value);
   }
@@ -62,7 +62,7 @@ function serializeNumericValue(value: NumericValue): string {
     return `-${max}`;
   }
 
-  throw new Error('Numeric range must specify at least one of min/max.');
+  throw new Error('Range must specify at least one of min/max.');
 }
 
 const NUMERIC_FIELD_PREFIX: Record<NumericField, string> = {
@@ -121,15 +121,15 @@ function serializeTerm(term: SearchTerm): string {
     case 'superEffectiveAgainst':
       return `>${term.value}`;
     case 'numeric':
-      return `${NUMERIC_FIELD_PREFIX[term.field]}${serializeNumericValue(term.value)}`;
+      return `${NUMERIC_FIELD_PREFIX[term.field]}${serializeRangeValue(term.value)}`;
     case 'statRating':
-      return `${term.value}${STAT_RATING_FIELD_SUFFIX[term.field]}`;
+      return `${serializeRangeValue(term.value)}${STAT_RATING_FIELD_SUFFIX[term.field]}`;
     case 'appraisalStars':
       return `${term.value}*`;
     case 'buddyLevel':
-      return `buddy${term.value}`;
+      return `buddy${serializeRangeValue(term.value)}`;
     case 'megaLevel':
-      return `mega${term.value}`;
+      return `mega${serializeRangeValue(term.value)}`;
     case 'raw':
       return term.value;
   }

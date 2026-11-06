@@ -111,6 +111,34 @@ describe('serializeQuery', () => {
       expect(serializeQuery(term({ kind: 'megaLevel', value: 2 }))).toBe('mega2');
     });
 
+    it('statRating serializes a range before the field suffix', () => {
+      expect(
+        serializeQuery(term({ kind: 'statRating', field: 'attack', value: { min: 3, max: 4 } }))
+      ).toBe('3-4attack');
+      expect(serializeQuery(term({ kind: 'statRating', field: 'hp', value: { max: 1 } }))).toBe(
+        '-1hp'
+      );
+    });
+
+    it('buddyLevel serializes a range after the buddy prefix', () => {
+      expect(serializeQuery(term({ kind: 'buddyLevel', value: { min: 2 } }))).toBe('buddy2-');
+      expect(serializeQuery(term({ kind: 'buddyLevel', value: { min: 2, max: 4 } }))).toBe(
+        'buddy2-4'
+      );
+    });
+
+    it('megaLevel serializes a range after the mega prefix', () => {
+      expect(serializeQuery(term({ kind: 'megaLevel', value: { min: 1, max: 3 } }))).toBe(
+        'mega1-3'
+      );
+    });
+
+    it('throws when a buddyLevel range has neither min nor max', () => {
+      expect(() => serializeQuery(term({ kind: 'buddyLevel', value: {} }))).toThrow(
+        'Range must specify at least one of min/max.'
+      );
+    });
+
     it('raw serializes as a bare value', () => {
       expect(serializeQuery(term({ kind: 'raw', value: 'anything goes' }))).toBe('anything goes');
     });
@@ -166,7 +194,7 @@ describe('serializeQuery', () => {
 
     it('throws when a numeric range has neither min nor max', () => {
       expect(() => serializeQuery(term({ kind: 'numeric', field: 'cp', value: {} }))).toThrow(
-        'Numeric range must specify at least one of min/max.'
+        'Range must specify at least one of min/max.'
       );
     });
   });

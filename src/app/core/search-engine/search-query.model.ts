@@ -87,9 +87,13 @@ export type Size = 'xxs' | 'xs' | 'xl' | 'xxl';
 
 export type RaidOrigin = 'raid' | 'remoteraid' | 'megaraid' | 'exraid' | 'primalraid';
 
+/** A bare value (exact match) or a `min-max`/`min-`/`-max` range, matching
+ * the search bar's range syntax (e.g. `cp10-50`, `buddy2-`, `3-4attack`). */
+export type RangeValue<T extends number> = T | { min?: T; max?: T };
+
 /** A bare number (exact match) or a `min-max`/`min-`/`-max` range, matching
  * the doc's range syntax (e.g. `cp10-50`, `cp-1500`, `10-`). */
-export type NumericValue = number | { min?: number; max?: number };
+export type NumericValue = RangeValue<number>;
 
 export type NumericField =
   | 'cp'
@@ -109,7 +113,7 @@ export type StatRatingField = 'hp' | 'attack' | 'defense';
 export type StatRating = 0 | 1 | 2 | 3 | 4;
 
 /** Overall appraisal star rating, e.g. `4*` for a hundo. */
-export type AppraisalStars = 1 | 2 | 3 | 4;
+export type AppraisalStars = 0 | 1 | 2 | 3 | 4;
 
 export type BuddyLevel = 0 | 1 | 2 | 3 | 4 | 5;
 
@@ -144,10 +148,10 @@ export type SearchTerm =
   | { kind: 'weakAgainst'; value: string }
   | { kind: 'superEffectiveAgainst'; value: string }
   | { kind: 'numeric'; field: NumericField; value: NumericValue }
-  | { kind: 'statRating'; field: StatRatingField; value: StatRating }
+  | { kind: 'statRating'; field: StatRatingField; value: RangeValue<StatRating> }
   | { kind: 'appraisalStars'; value: AppraisalStars }
-  | { kind: 'buddyLevel'; value: BuddyLevel }
-  | { kind: 'megaLevel'; value: MegaLevel }
+  | { kind: 'buddyLevel'; value: RangeValue<BuddyLevel> }
+  | { kind: 'megaLevel'; value: RangeValue<MegaLevel> }
   | { kind: 'raw'; value: string };
 
 /** AND (`&`), OR (`,`), and NOT (`!`) compose terms into a tree, mirroring

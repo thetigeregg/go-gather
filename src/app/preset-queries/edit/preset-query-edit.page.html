@@ -5,7 +5,7 @@
     </ion-buttons>
     <ion-title>{{ pageTitle }}</ion-title>
     <ion-buttons slot="end">
-      <ion-button [disabled]="!name" (click)="saveClicked()">Save</ion-button>
+      <ion-button [disabled]="!name || hasInvalidRules" (click)="saveClicked()">Save</ion-button>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
@@ -124,19 +124,19 @@
               </ion-item>
               <ion-item>
                 <ion-checkbox
-                  [(ngModel)]="editableRule.numericUseRange"
-                  (ngModelChange)="updatePreview()"
+                  [(ngModel)]="editableRule.useRange"
+                  (ngModelChange)="rangeToggled(editableRule)"
                 >
                   Range
                 </ion-checkbox>
               </ion-item>
-              @if (editableRule.numericUseRange) {
+              @if (isRangeMode(editableRule)) {
                 <ion-item>
                   <ion-input
                     type="number"
                     label="Min"
                     labelPlacement="stacked"
-                    [(ngModel)]="editableRule.numericMin"
+                    [(ngModel)]="editableRule.rangeMin"
                     (ngModelChange)="updatePreview()"
                   ></ion-input>
                 </ion-item>
@@ -145,7 +145,7 @@
                     type="number"
                     label="Max"
                     labelPlacement="stacked"
-                    [(ngModel)]="editableRule.numericMax"
+                    [(ngModel)]="editableRule.rangeMax"
                     (ngModelChange)="updatePreview()"
                   ></ion-input>
                 </ion-item>
@@ -174,37 +174,105 @@
                   }
                 </ion-select>
               </ion-item>
-              <ion-item>
-                <ion-input
-                  type="number"
-                  label="Value (0-4)"
-                  labelPlacement="stacked"
-                  [min]="0"
-                  [max]="4"
-                  [(ngModel)]="editableRule.statRatingValue"
-                  (ngModelChange)="updatePreview()"
-                ></ion-input>
-              </ion-item>
+              @if (editableRule.catalogEntry.supportsRange) {
+                <ion-item>
+                  <ion-checkbox
+                    [(ngModel)]="editableRule.useRange"
+                    (ngModelChange)="rangeToggled(editableRule)"
+                  >
+                    Range
+                  </ion-checkbox>
+                </ion-item>
+              }
+              @if (isRangeMode(editableRule)) {
+                <ion-item>
+                  <ion-input
+                    type="number"
+                    [label]="boundedLabel('Min', editableRule)"
+                    labelPlacement="stacked"
+                    [min]="editableRule.catalogEntry.valueBounds?.min ?? 0"
+                    [max]="editableRule.catalogEntry.valueBounds?.max ?? 0"
+                    [(ngModel)]="editableRule.rangeMin"
+                    (ngModelChange)="updatePreview()"
+                  ></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input
+                    type="number"
+                    [label]="boundedLabel('Max', editableRule)"
+                    labelPlacement="stacked"
+                    [min]="editableRule.catalogEntry.valueBounds?.min ?? 0"
+                    [max]="editableRule.catalogEntry.valueBounds?.max ?? 0"
+                    [(ngModel)]="editableRule.rangeMax"
+                    (ngModelChange)="updatePreview()"
+                  ></ion-input>
+                </ion-item>
+              } @else {
+                <ion-item>
+                  <ion-input
+                    type="number"
+                    [label]="boundedLabel('Value', editableRule)"
+                    labelPlacement="stacked"
+                    [min]="editableRule.catalogEntry.valueBounds?.min ?? 0"
+                    [max]="editableRule.catalogEntry.valueBounds?.max ?? 0"
+                    [(ngModel)]="editableRule.statRatingValue"
+                    (ngModelChange)="updatePreview()"
+                  ></ion-input>
+                </ion-item>
+              }
             }
             @case ('smallEnumNumber') {
-              <ion-item>
-                <ion-input
-                  type="number"
-                  [label]="
-                    'Value (' +
-                    (editableRule.catalogEntry.smallEnumRange?.min ?? 0) +
-                    '-' +
-                    (editableRule.catalogEntry.smallEnumRange?.max ?? 0) +
-                    ')'
-                  "
-                  labelPlacement="stacked"
-                  [min]="editableRule.catalogEntry.smallEnumRange?.min ?? 0"
-                  [max]="editableRule.catalogEntry.smallEnumRange?.max ?? 0"
-                  [(ngModel)]="editableRule.smallEnumValue"
-                  (ngModelChange)="updatePreview()"
-                ></ion-input>
-              </ion-item>
+              @if (editableRule.catalogEntry.supportsRange) {
+                <ion-item>
+                  <ion-checkbox
+                    [(ngModel)]="editableRule.useRange"
+                    (ngModelChange)="rangeToggled(editableRule)"
+                  >
+                    Range
+                  </ion-checkbox>
+                </ion-item>
+              }
+              @if (isRangeMode(editableRule)) {
+                <ion-item>
+                  <ion-input
+                    type="number"
+                    [label]="boundedLabel('Min', editableRule)"
+                    labelPlacement="stacked"
+                    [min]="editableRule.catalogEntry.valueBounds?.min ?? 0"
+                    [max]="editableRule.catalogEntry.valueBounds?.max ?? 0"
+                    [(ngModel)]="editableRule.rangeMin"
+                    (ngModelChange)="updatePreview()"
+                  ></ion-input>
+                </ion-item>
+                <ion-item>
+                  <ion-input
+                    type="number"
+                    [label]="boundedLabel('Max', editableRule)"
+                    labelPlacement="stacked"
+                    [min]="editableRule.catalogEntry.valueBounds?.min ?? 0"
+                    [max]="editableRule.catalogEntry.valueBounds?.max ?? 0"
+                    [(ngModel)]="editableRule.rangeMax"
+                    (ngModelChange)="updatePreview()"
+                  ></ion-input>
+                </ion-item>
+              } @else {
+                <ion-item>
+                  <ion-input
+                    type="number"
+                    [label]="boundedLabel('Value', editableRule)"
+                    labelPlacement="stacked"
+                    [min]="editableRule.catalogEntry.valueBounds?.min ?? 0"
+                    [max]="editableRule.catalogEntry.valueBounds?.max ?? 0"
+                    [(ngModel)]="editableRule.smallEnumValue"
+                    (ngModelChange)="updatePreview()"
+                  ></ion-input>
+                </ion-item>
+              }
             }
+          }
+
+          @if (ruleValueError(editableRule); as error) {
+            <div class="preset-editor-rule-error" role="alert">{{ error }}</div>
           }
 
           <ion-item class="preset-editor-rule-negate">
@@ -242,7 +310,9 @@
 
   <div class="preset-editor-preview">
     <span class="preset-editor-preview-label">Preview</span>
-    <div class="preset-editor-preview-value">{{ previewString ?? '(no rules yet)' }}</div>
+    <div class="preset-editor-preview-value">
+      {{ previewString ?? (hasInvalidRules ? '(fix the rule errors above)' : '(no rules yet)') }}
+    </div>
   </div>
 
   @if (hasUnsafeNegatedTagBeforeOr) {

@@ -149,6 +149,10 @@ export interface ExportBundle {
   excludedSearchTermsByPokedex: Record<PokedexType, ExcludedSearchTerm[]>;
 }
 
+/** An exact number or a `min-max`/`min-`/`-max` range; mirrors the app's
+ * `RangeValue<number>` in search-query.model.ts. */
+export type RangeValueData = number | { min?: number; max?: number };
+
 /**
  * A plain, serializable mirror of the app's `SearchTerm` union (defined in
  * `src/app/core/search-engine/search-query.model.ts`) — kept here, not
@@ -181,11 +185,11 @@ export type SearchTermData =
   | { kind: 'special' }
   | { kind: 'weakAgainst'; value: string }
   | { kind: 'superEffectiveAgainst'; value: string }
-  | { kind: 'numeric'; field: string; value: number | { min?: number; max?: number } }
-  | { kind: 'statRating'; field: string; value: number }
+  | { kind: 'numeric'; field: string; value: RangeValueData }
+  | { kind: 'statRating'; field: string; value: RangeValueData }
   | { kind: 'appraisalStars'; value: number }
-  | { kind: 'buddyLevel'; value: number }
-  | { kind: 'megaLevel'; value: number }
+  | { kind: 'buddyLevel'; value: RangeValueData }
+  | { kind: 'megaLevel'; value: RangeValueData }
   | { kind: 'raw'; value: string };
 
 export interface PresetQueryRule {
