@@ -1,3 +1,12 @@
+# Image whose /app/server/ota is carried forward when this build doesn't
+# produce new OTA artifacts (BUILD_IOS_LIVE_UPDATE=false). CI passes the
+# currently published :main server image, so a server-only release keeps
+# serving the last OTA bundle instead of shipping an empty ota/ios and
+# silently withdrawing it. The default (the base image) has no OTA dir, so
+# local builds stay empty without needing registry access.
+ARG OTA_PREVIOUS_IMAGE=node:24.22.1-slim
+FROM ${OTA_PREVIOUS_IMAGE} AS ota-previous
+
 # --- Stage 1: web + OTA artifact builder (needs Angular/Ionic devDependencies) ---
 FROM node:24.22.1-slim AS builder
 WORKDIR /app
@@ -19,6 +28,7 @@ ARG BUILD_IOS_LIVE_UPDATE=false
 ARG IOS_OTA_NATIVE_BUILD_NUMBER
 RUN --mount=type=secret,id=IOS_LIVE_UPDATE_PRIVATE_KEY,required=false \
     --mount=type=secret,id=IOS_BACKEND_ORIGIN_PROD,required=false \
+    --mount=type=bind,from=ota-previous,target=/ota-previous \
   if [ "$BUILD_IOS_LIVE_UPDATE" = "true" ]; then \
     test -n "$IOS_OTA_NATIVE_BUILD_NUMBER" || { echo "IOS_OTA_NATIVE_BUILD_NUMBER required" >&2; exit 1; }; \
     test -s /run/secrets/IOS_LIVE_UPDATE_PRIVATE_KEY || { echo "IOS_LIVE_UPDATE_PRIVATE_KEY required" >&2; exit 1; }; \
@@ -28,6 +38,9 @@ RUN --mount=type=secret,id=IOS_LIVE_UPDATE_PRIVATE_KEY,required=false \
     node scripts/build-ios-live-update-artifacts.mjs; \
   else \
     mkdir -p ota/ios; \
+    if [ -d /ota-previous/app/server/ota/ios ]; then \
+      cp -a /ota-previous/app/server/ota/ios/. ota/ios/; \
+    fi; \
   fi
 
 # --- Stage 2: runtime ---
