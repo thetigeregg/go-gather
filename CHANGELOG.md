@@ -407,3 +407,7 @@
 ## v0.29.4 - 2026-11-06
 
 - 37a09ce build(deps): upgrade to Angular 22, Ionic 9, and TypeScript 6.0 (#120)
+
+## v0.29.5 - 2026-11-06
+
+- 217bd37 build(deps): bump vitest 5, jsdom 31, capacitor 8.6; hold firebase 12 (#121)
