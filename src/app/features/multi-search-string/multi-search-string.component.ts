@@ -1,5 +1,5 @@
 import { Component, Input } from '@angular/core';
-import { IonAccordionGroup } from '@ionic/angular/standalone';
+import { IonAccordionGroup } from '@ionic/angular';
 import {
   SearchStringComponent,
   SearchStringConfig,

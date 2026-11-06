@@ -15,7 +15,7 @@ import {
   IonAccordionGroup,
   ViewWillEnter,
   ViewWillLeave,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { ExcludedSearchTerm, PokedexType } from '@go-gather/shared';
 import { SearchStringService } from '../core/services/search-string.service';
 import { UserDataService } from '../core/services/user-data.service';

@@ -11,7 +11,7 @@ import {
   IonSegmentButton,
   IonTitle,
   IonToolbar,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { filter, menu } from 'ionicons/icons';
 import { EventFocusService } from '../core/services/event-focus.service';

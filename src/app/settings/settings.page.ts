@@ -24,7 +24,7 @@ import {
   IonNote,
   ToastController,
   ViewWillEnter,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { download, share } from 'ionicons/icons';
 import {

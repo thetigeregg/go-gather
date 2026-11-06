@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { AlertController, ModalController } from '@ionic/angular/standalone';
+import { AlertController, ModalController } from '@ionic/angular';
 import { Subject } from 'rxjs';
 import { AppComponent } from './app.component';
 import { SideMenuComponent } from './features/side-menu/side-menu.component';

@@ -1,5 +1,5 @@
 import { Component, Input, OnChanges, OnInit, inject } from '@angular/core';
-import { IonIcon } from '@ionic/angular/standalone';
+import { IonIcon } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { helpCircleOutline, helpOutline } from 'ionicons/icons';
 import { MAJOR_CALENDAR_EVENT_TYPES } from '../../core/services/calendar-event-major.util';

@@ -1,5 +1,5 @@
 import { Component, Input } from '@angular/core';
-import { IonCard, IonCardHeader, IonCardSubtitle, IonList } from '@ionic/angular/standalone';
+import { IonCard, IonCardHeader, IonCardSubtitle, IonList } from '@ionic/angular';
 import { SpeciesGroup } from '../../core/services/filter.service';
 import { GatherEntryComponent } from '../gather-entry/gather-entry.component';
 

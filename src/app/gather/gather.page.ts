@@ -17,7 +17,7 @@ import {
   IonSearchbar,
   IonFab,
   IonFabButton,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { menu, filter, search } from 'ionicons/icons';
 import { UserSettings } from '@go-gather/shared';

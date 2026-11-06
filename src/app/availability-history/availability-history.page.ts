@@ -11,7 +11,7 @@ import {
   IonCardHeader,
   IonCardTitle,
   ViewWillEnter,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { AvailabilityChangesService } from '../core/services/availability-changes.service';
 import {
   AvailabilitySection,

@@ -3,7 +3,7 @@ import dayjs, { Dayjs } from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import { forkJoin } from 'rxjs';
-import { IonButton, IonIcon, IonModal } from '@ionic/angular/standalone';
+import { IonButton, IonIcon, IonModal } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { calendarOutline, chevronBack, chevronForward } from 'ionicons/icons';
 import { EventMetadata, PogoEvent, Season } from '@go-gather/shared';

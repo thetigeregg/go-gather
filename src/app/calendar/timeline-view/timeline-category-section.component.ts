@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { Dayjs } from 'dayjs';
-import { IonAccordion, IonItem, IonLabel } from '@ionic/angular/standalone';
+import { IonAccordion, IonItem, IonLabel } from '@ionic/angular';
 import { EventMetadata, PogoEvent } from '@go-gather/shared';
 import { TimelineCategoryKey, TimelineDateGroup } from './timeline-categories.util';
 import { TimelineEventComponent } from './timeline-event.component';

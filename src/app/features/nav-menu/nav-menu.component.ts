@@ -11,7 +11,7 @@ import {
   IonIcon,
   IonLabel,
   IonMenuToggle,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { cog, pricetags, searchCircle, time } from 'ionicons/icons';
 

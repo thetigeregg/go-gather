@@ -8,7 +8,7 @@ import {
   IonItem,
   IonSelect,
   IonSelectOption,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { closeCircle } from 'ionicons/icons';
 import { ExcludedSearchTerm } from '@go-gather/shared';

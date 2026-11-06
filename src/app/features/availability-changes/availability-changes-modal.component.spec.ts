@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
-import { ModalController } from '@ionic/angular/standalone';
+import { ModalController } from '@ionic/angular';
 import { AvailabilityChangesModalComponent } from './availability-changes-modal.component';
 import { AvailabilitySectionsComponent } from './availability-sections.component';
 

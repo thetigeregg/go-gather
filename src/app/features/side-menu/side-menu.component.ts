@@ -13,7 +13,7 @@ import {
   IonFooter,
   IonButton,
   IonMenuToggle,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { PokedexType, RegionFilter, ShinyFilter, UserSettings } from '@go-gather/shared';
 import { UserDataService } from '../../core/services/user-data.service';
 

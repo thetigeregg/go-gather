@@ -17,7 +17,7 @@ import {
   AlertController,
   ToastController,
   ViewWillEnter,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { Clipboard } from '@capacitor/clipboard';
 import { addIcons } from 'ionicons';
 import { add, copyOutline } from 'ionicons/icons';

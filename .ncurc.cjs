@@ -1,8 +1,8 @@
 const base = require('@thetigeregg/ncu-config');
 
 const ANGULAR_MAJOR = 21;
-const IONIC_MAJOR = 8;
-const IONIC_ANGULAR_TOOLKIT_MAJOR = 12;
+const IONIC_MAJOR = 9;
+const IONIC_ANGULAR_TOOLKIT_MAJOR = 13;
 
 const isAngularPackage = (name) =>
   name.startsWith('@angular/') || name.startsWith('@angular-devkit/') || name === 'angular-eslint';

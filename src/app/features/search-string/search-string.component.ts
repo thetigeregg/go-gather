@@ -7,7 +7,7 @@ import {
   IonIcon,
   IonTextarea,
   ToastController,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { Clipboard } from '@capacitor/clipboard';
 import { addIcons } from 'ionicons';
 import { copyOutline } from 'ionicons/icons';

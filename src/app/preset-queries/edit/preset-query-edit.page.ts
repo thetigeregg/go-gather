@@ -17,7 +17,7 @@ import {
   IonToggle,
   IonIcon,
   ViewWillEnter,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { trash } from 'ionicons/icons';
 import { PresetQuery, PresetQueryGroup, PresetQueryRule, SearchTermData } from '@go-gather/shared';

@@ -1,12 +1,5 @@
 import { Component, Input } from '@angular/core';
-import {
-  IonItem,
-  IonItemDivider,
-  IonLabel,
-  IonList,
-  IonListHeader,
-  IonNote,
-} from '@ionic/angular/standalone';
+import { IonItem, IonItemDivider, IonLabel, IonList, IonListHeader, IonNote } from '@ionic/angular';
 import { PokedexType } from '@go-gather/shared';
 import {
   AvailabilityChangeKind,

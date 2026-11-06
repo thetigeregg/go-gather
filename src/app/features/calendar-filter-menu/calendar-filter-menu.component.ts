@@ -15,7 +15,7 @@ import {
   IonTitle,
   IonToggle,
   IonToolbar,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { close } from 'ionicons/icons';
 import { EVENT_TYPES, EventMetadata, EventTypeInfo } from '@go-gather/shared';

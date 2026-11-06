@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import { Dayjs } from 'dayjs';
-import { IonBadge, IonButton, IonIcon, ToastController } from '@ionic/angular/standalone';
+import { IonBadge, IonButton, IonIcon, ToastController } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
   arrowUpCircleOutline,
