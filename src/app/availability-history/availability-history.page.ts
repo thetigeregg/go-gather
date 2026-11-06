@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject } from '@angular/core';
+import { Component, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import {
   IonHeader,
@@ -11,7 +11,7 @@ import {
   IonCardHeader,
   IonCardTitle,
   ViewWillEnter,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { AvailabilityChangesService } from '../core/services/availability-changes.service';
 import {
   AvailabilitySection,
@@ -32,6 +32,7 @@ export interface AvailabilityHistoryDay {
   selector: 'app-availability-history',
   templateUrl: 'availability-history.page.html',
   styleUrls: ['availability-history.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     IonHeader,
     IonToolbar,

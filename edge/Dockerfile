@@ -1,5 +1,5 @@
 # --- Stage 1: web builder ---
-FROM node:24.19.0-slim AS builder
+FROM node:24.22.2-slim AS builder
 WORKDIR /app
 ENV HUSKY=0
 

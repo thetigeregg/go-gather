@@ -44,7 +44,7 @@
       @if (currentImageSrc && !hasError) {
         <img
           [src]="currentImageSrc"
-          [alt]="pokemonData?.name"
+          [alt]="pokemonData?.name ?? ''"
           class="pokemon-icon"
           [style.height.px]="height"
           [style.width.px]="height"

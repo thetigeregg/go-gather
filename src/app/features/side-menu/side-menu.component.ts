@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import {
   IonMenu,
   IonHeader,
@@ -13,7 +13,7 @@ import {
   IonFooter,
   IonButton,
   IonMenuToggle,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { PokedexType, RegionFilter, ShinyFilter, UserSettings } from '@go-gather/shared';
 import { UserDataService } from '../../core/services/user-data.service';
 
@@ -103,6 +103,7 @@ interface ToggleOption {
     IonMenuToggle,
   ],
   templateUrl: './side-menu.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './side-menu.component.scss',
 })
 export class SideMenuComponent implements OnInit {

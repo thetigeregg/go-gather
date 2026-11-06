@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { SpriteEffect } from '../../core/services/event-sprite-url.util';
 import { RaidTierGroupWithImages } from '../../core/services/raid-tier-groups.util';
 import { TimelineScheduleDaySection } from '../../core/services/timeline-schedule.util';
@@ -19,6 +19,7 @@ const RAID_SCHEDULE_IMAGE_HEIGHT = 60;
   selector: 'app-timeline-raid-schedule',
   imports: [RaidTierGroupImagesComponent],
   templateUrl: './timeline-raid-schedule.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './timeline-raid-schedule.component.scss',
 })
 export class TimelineRaidScheduleComponent {

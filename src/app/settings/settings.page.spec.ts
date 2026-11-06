@@ -8,7 +8,7 @@ import {
   ProgressEntry,
   UserSettings,
 } from '@go-gather/shared';
-import { ToastController } from '@ionic/angular/standalone';
+import { ToastController } from '@ionic/angular';
 import { SettingsPage } from './settings.page';
 import { AvailabilityStatusService } from '../core/services/availability-status.service';
 import { NotificationService } from '../core/services/notification.service';

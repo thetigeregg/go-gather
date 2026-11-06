@@ -1,6 +1,13 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  Output,
+  inject,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { Dayjs } from 'dayjs';
-import { IonButton, IonContent, IonIcon, ToastController } from '@ionic/angular/standalone';
+import { IonButton, IonContent, IonIcon, ToastController } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { arrowUpCircleOutline, close, eyeOffOutline, swapHorizontalOutline } from 'ionicons/icons';
 import { EventMetadata, PogoEvent } from '@go-gather/shared';
@@ -67,6 +74,7 @@ const HIDE_TOAST_DURATION_MS = 4000;
     TimelineRaidScheduleComponent,
   ],
   templateUrl: './event-detail.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './event-detail.component.scss',
 })
 export class EventDetailComponent {

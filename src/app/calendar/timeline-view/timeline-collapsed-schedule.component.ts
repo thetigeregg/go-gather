@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { SpriteEffect } from '../../core/services/event-sprite-url.util';
 import { CollapsedScheduleDayGroup } from '../../core/services/timeline-schedule.util';
 import { PokemonImageComponent } from './pokemon-image.component';
@@ -15,6 +15,7 @@ const COLLAPSED_SCHEDULE_IMAGE_HEIGHT = 34;
   selector: 'app-timeline-collapsed-schedule',
   imports: [PokemonImageComponent],
   templateUrl: './timeline-collapsed-schedule.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './timeline-collapsed-schedule.component.scss',
 })
 export class TimelineCollapsedScheduleComponent {

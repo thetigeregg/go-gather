@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import {
   IonButton,
   IonContent,
@@ -15,7 +15,7 @@ import {
   IonTitle,
   IonToggle,
   IonToolbar,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { close } from 'ionicons/icons';
 import { EVENT_TYPES, EventMetadata, EventTypeInfo } from '@go-gather/shared';
@@ -90,6 +90,7 @@ interface DailyBonusDayOption {
     IonMenuToggle,
   ],
   templateUrl: './calendar-filter-menu.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './calendar-filter-menu.component.scss',
 })
 export class CalendarFilterMenuComponent implements OnInit {

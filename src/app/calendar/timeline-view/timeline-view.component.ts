@@ -1,7 +1,7 @@
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import dayjs, { Dayjs } from 'dayjs';
-import { IonAccordionGroup } from '@ionic/angular/standalone';
+import { IonAccordionGroup } from '@ionic/angular';
 import { EventMetadata, PogoEvent } from '@go-gather/shared';
 import { CalendarEventsService } from '../../core/services/calendar-events.service';
 import { CalendarFilterService } from '../../core/services/calendar-filter.service';
@@ -63,6 +63,7 @@ function emptyTimelineData(): TimelineData {
   selector: 'app-timeline-view',
   imports: [IonAccordionGroup, TimelineCategorySectionComponent],
   templateUrl: './timeline-view.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './timeline-view.component.scss',
 })
 export class TimelineViewComponent implements OnInit {

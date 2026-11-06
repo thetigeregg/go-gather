@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ChangeDetectionStrategy } from '@angular/core';
 import { PogoEvent } from '@go-gather/shared';
 import { formatEventName } from '../../core/services/calendar-event-name.util';
 import { EventBarPosition } from './calendar-day-layout.util';
@@ -13,6 +13,7 @@ import { EventBarPosition } from './calendar-day-layout.util';
 @Component({
   selector: 'app-multi-day-event-bar',
   templateUrl: './multi-day-event-bar.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './multi-day-event-bar.component.scss',
 })
 export class MultiDayEventBarComponent {

@@ -1,9 +1,9 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import dayjs, { Dayjs } from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
 import { forkJoin } from 'rxjs';
-import { IonButton, IonIcon, IonModal } from '@ionic/angular/standalone';
+import { IonButton, IonIcon, IonModal } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { calendarOutline, chevronBack, chevronForward } from 'ionicons/icons';
 import { EventMetadata, PogoEvent, Season } from '@go-gather/shared';
@@ -45,6 +45,7 @@ const EARLIEST_MONTH = dayjs().year(2016).month(0);
   selector: 'app-calendar-view',
   imports: [IonButton, IonIcon, IonModal, CalendarDayComponent, EventDetailComponent],
   templateUrl: './calendar-view.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './calendar-view.component.scss',
 })
 export class CalendarViewComponent implements OnInit {

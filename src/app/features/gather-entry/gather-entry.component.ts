@@ -5,7 +5,7 @@ import {
   Input,
   inject,
 } from '@angular/core';
-import { IonIcon, IonItem, IonLabel, IonThumbnail } from '@ionic/angular/standalone';
+import { IonIcon, IonItem, IonLabel, IonThumbnail } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { checkmarkCircle, sparkles } from 'ionicons/icons';
 import { CatalogEntry } from '@go-gather/shared';

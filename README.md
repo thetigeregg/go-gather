@@ -14,7 +14,7 @@ GO Gather is an Ionic + Angular app for tracking Pokémon catalog progress, with
 
 ## Prerequisites
 
-- Node.js `24.15.0` (see `.nvmrc`)
+- Node.js `24.22.2` (see `.nvmrc`)
 - npm
 - Docker (only needed for `server/Dockerfile` / production deployment — local dev doesn't use Docker)
 

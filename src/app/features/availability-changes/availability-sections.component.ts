@@ -1,12 +1,5 @@
-import { Component, Input } from '@angular/core';
-import {
-  IonItem,
-  IonItemDivider,
-  IonLabel,
-  IonList,
-  IonListHeader,
-  IonNote,
-} from '@ionic/angular/standalone';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
+import { IonItem, IonItemDivider, IonLabel, IonList, IonListHeader, IonNote } from '@ionic/angular';
 import { PokedexType } from '@go-gather/shared';
 import {
   AvailabilityChangeKind,
@@ -26,6 +19,7 @@ const SECTION_TITLES: Record<AvailabilityChangeKind, string> = {
   selector: 'app-availability-sections',
   templateUrl: './availability-sections.component.html',
   styleUrl: './availability-sections.component.scss',
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [IonItem, IonItemDivider, IonLabel, IonList, IonListHeader, IonNote],
 })
 export class AvailabilitySectionsComponent {

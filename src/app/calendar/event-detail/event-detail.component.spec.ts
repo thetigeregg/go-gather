@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { ToastController } from '@ionic/angular/standalone';
+import { ToastController } from '@ionic/angular';
 import dayjs from 'dayjs';
 import { EventMetadata, EventTypeInfoWithoutColor, PogoEvent } from '@go-gather/shared';
 import { CalendarFilterService } from '../../core/services/calendar-filter.service';

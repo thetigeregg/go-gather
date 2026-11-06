@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject } from '@angular/core';
+import { Component, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription } from 'rxjs';
 import {
@@ -15,7 +15,7 @@ import {
   IonAccordionGroup,
   ViewWillEnter,
   ViewWillLeave,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { ExcludedSearchTerm, PokedexType } from '@go-gather/shared';
 import { SearchStringService } from '../core/services/search-string.service';
 import { UserDataService } from '../core/services/user-data.service';
@@ -53,6 +53,7 @@ const SHINY_LABELS: Record<PokedexType, string> = {
   selector: 'app-search-strings',
   templateUrl: 'search-strings.page.html',
   styleUrls: ['search-strings.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     IonHeader,
     IonToolbar,

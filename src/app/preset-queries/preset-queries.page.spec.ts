@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { Router } from '@angular/router';
 import { DEFAULT_SETTINGS, PresetQuery, UserSettings } from '@go-gather/shared';
-import { AlertController, ToastController } from '@ionic/angular/standalone';
+import { AlertController, ToastController } from '@ionic/angular';
 import { Clipboard } from '@capacitor/clipboard';
 import { PresetQueriesPage } from './preset-queries.page';
 import { UserDataService } from '../core/services/user-data.service';

@@ -3,7 +3,7 @@ import { vi } from 'vitest';
 import { Subject, of } from 'rxjs';
 import { CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { DEFAULT_SETTINGS, UserSettings } from '@go-gather/shared';
-import { IonSearchbar } from '@ionic/angular/standalone';
+import { IonSearchbar } from '@ionic/angular';
 import { GatherPage } from './gather.page';
 import { PokeDataService } from '../core/services/poke-data.service';
 import { UserDataService } from '../core/services/user-data.service';

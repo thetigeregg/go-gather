@@ -1,4 +1,11 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  Output,
+  inject,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   AlertController,
@@ -9,7 +16,7 @@ import {
   IonInput,
   IonItem,
   IonLabel,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { close } from 'ionicons/icons';
 
@@ -34,6 +41,7 @@ import { close } from 'ionicons/icons';
     IonIcon,
   ],
   templateUrl: './chip-list-input.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './chip-list-input.component.scss',
 })
 export class ChipListInputComponent {

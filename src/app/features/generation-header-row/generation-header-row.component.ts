@@ -9,7 +9,7 @@ import {
   inject,
 } from '@angular/core';
 import { Subscription } from 'rxjs';
-import { IonItem, IonLabel } from '@ionic/angular/standalone';
+import { IonItem, IonLabel } from '@ionic/angular';
 import { Generation } from '../../core/services/filter.service';
 import { UserDataService } from '../../core/services/user-data.service';
 import { GATHER_GENERATION_HEADER_ITEM_PX } from '../../gather/gather-row-sizing';

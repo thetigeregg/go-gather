@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges } from '@angular/core';
+import { Component, Input, OnChanges, ChangeDetectionStrategy } from '@angular/core';
 import { PogoEvent } from '@go-gather/shared';
 import {
   getEventPokemonImages,
@@ -39,6 +39,7 @@ const PLACEHOLDER_EVENT_TYPES: readonly string[] = [
   selector: 'app-pokemon-event-images',
   imports: [PokemonImageComponent],
   templateUrl: './pokemon-event-images.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './pokemon-event-images.component.scss',
 })
 export class PokemonEventImagesComponent implements OnChanges {

@@ -1,5 +1,12 @@
-import { Component, Input, OnChanges, OnInit, inject } from '@angular/core';
-import { IonIcon } from '@ionic/angular/standalone';
+import {
+  Component,
+  Input,
+  OnChanges,
+  OnInit,
+  inject,
+  ChangeDetectionStrategy,
+} from '@angular/core';
+import { IonIcon } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { helpCircleOutline, helpOutline } from 'ionicons/icons';
 import { MAJOR_CALENDAR_EVENT_TYPES } from '../../core/services/calendar-event-major.util';
@@ -46,6 +53,7 @@ const CP_SUPPORTED_EVENT_TYPES: readonly string[] = [
   selector: 'app-pokemon-image',
   imports: [IonIcon],
   templateUrl: './pokemon-image.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './pokemon-image.component.scss',
 })
 export class PokemonImageComponent implements OnInit, OnChanges {

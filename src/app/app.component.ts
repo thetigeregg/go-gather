@@ -1,11 +1,6 @@
-import { Component, DestroyRef, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import {
-  AlertController,
-  IonApp,
-  IonRouterOutlet,
-  ModalController,
-} from '@ionic/angular/standalone';
+import { AlertController, IonApp, IonRouterOutlet, ModalController } from '@ionic/angular';
 import { SideMenuComponent } from './features/side-menu/side-menu.component';
 import { NavMenuComponent } from './features/nav-menu/nav-menu.component';
 import { CalendarFilterMenuComponent } from './features/calendar-filter-menu/calendar-filter-menu.component';
@@ -21,6 +16,7 @@ import { UserDataService } from './core/services/user-data.service';
 @Component({
   selector: 'app-root',
   templateUrl: 'app.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     IonApp,
     IonRouterOutlet,

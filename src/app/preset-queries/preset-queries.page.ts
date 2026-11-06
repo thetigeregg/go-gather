@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   IonHeader,
@@ -17,7 +17,7 @@ import {
   AlertController,
   ToastController,
   ViewWillEnter,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { Clipboard } from '@capacitor/clipboard';
 import { addIcons } from 'ionicons';
 import { add, copyOutline } from 'ionicons/icons';
@@ -35,6 +35,7 @@ interface PresetQueryRow {
   selector: 'app-preset-queries',
   templateUrl: 'preset-queries.page.html',
   styleUrls: ['preset-queries.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     IonHeader,
     IonToolbar,

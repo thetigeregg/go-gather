@@ -1,4 +1,4 @@
-import { Component, Input, inject } from '@angular/core';
+import { Component, Input, inject, ChangeDetectionStrategy } from '@angular/core';
 import {
   IonButton,
   IonButtons,
@@ -9,7 +9,7 @@ import {
   IonTitle,
   IonToolbar,
   ModalController,
-} from '@ionic/angular/standalone';
+} from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { close } from 'ionicons/icons';
 import { AvailabilitySection } from '../../core/services/availability-changes.util';
@@ -22,6 +22,7 @@ import { AvailabilitySectionsComponent } from './availability-sections.component
   selector: 'app-availability-changes-modal',
   templateUrl: './availability-changes-modal.component.html',
   styleUrl: './availability-changes-modal.component.scss',
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     IonButton,
     IonButtons,
