@@ -212,14 +212,46 @@ describe('parseDynamaxReleases', () => {
     );
   });
 
-  it.each(['[[Dialga]]', '{{MSP|0483|Dialga}}', ''])(
-    'throws on a row whose Pokemon cell %j has no MSP/GO code',
+  it.each(['[[Dialga]]', ''])(
+    'throws on a row whose Pokemon cell %j has no sprite code',
     (pokemon) => {
       expect(() => parseDynamaxReleases(dynamaxPage([row('Jun 1, 2025', pokemon)]))).toThrow(
-        /no MSP\/GO Pokemon in release row/
+        /no Pokemon sprite in release row/
       );
     }
   );
+
+  it('dates a row with no GO sprite from its other sprite templates, and warns', () => {
+    const releases = parseDynamaxReleases(dynamaxPage([row('Jun 1, 2025', '{{MSP|0483|Dialga}}')]));
+
+    expect(releases).toContainEqual({ dexNr: 483, form: null, releasedOn: '2025-06-01' });
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringMatching(/"Jun 1, 2025" dates non-GO sprites \{\{MSP\|0483\|Dialga\}\}/)
+    );
+  });
+
+  it('dates every code in a row that mixes GO and other sprites, warning about the others', () => {
+    const releases = parseDynamaxReleases(
+      dynamaxPage([row('Jun 1, 2025', '{{MSP/GO|0483|Dialga}}{{MSP/HOME|0484|Palkia}}')])
+    );
+
+    expect(releases).toEqual(
+      expect.arrayContaining([
+        { dexNr: 483, form: null, releasedOn: '2025-06-01' },
+        { dexNr: 484, form: null, releasedOn: '2025-06-01' },
+      ])
+    );
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringMatching(/dates non-GO sprites \{\{MSP\/HOME\|0484\|Palkia\}\}\.$/)
+    );
+  });
+
+  it('dates a GO-only row without warning', () => {
+    parseDynamaxReleases(dynamaxPage([row('Jun 1, 2025', '{{MSP/GO|0483|Dialga}}')]));
+
+    expect(console.warn).not.toHaveBeenCalled();
+  });
 
   it('throws when far fewer species than expected are parsed', () => {
     expect(() => parseDynamaxReleases(dynamaxPage([], 20))).toThrow(
@@ -408,7 +440,7 @@ describe('parseSpeciesReleases', () => {
     expect(releases).toContainEqual({ dexNr: 222, formCode: 'G', releasedOn: '2022-03-01' });
   });
 
-  it('accepts MSP, MSP/GO and MS templates in the unreleased list', () => {
+  it('accepts MSP, MSP/GO, MS and MSP/HOME templates in the unreleased list', () => {
     expect(() => parse({ unreleased: [901, 902, 903, 904] })).not.toThrow();
   });
 
@@ -432,6 +464,18 @@ describe('parseSpeciesReleases', () => {
     });
 
     expect(releases.some((r) => r.dexNr === 902)).toBe(false);
+  });
+
+  it('counts MSP/HOME sprites in a TBA row and a commented-out row as listed', () => {
+    const releases = parse({
+      rows: [
+        row('Jan 1, 2020', '{{MSP/GO|0904|Ursaluna}}'),
+        row('TBA', '{{MSP/HOME|0902|Basculegion}}'),
+        '<!--' + row('TBA', '{{MSP/HOME|0903|Sneasler}}') + '-->',
+      ],
+    });
+
+    expect(releases.some((r) => r.dexNr === 902 || r.dexNr === 903)).toBe(false);
   });
 
   it('throws when a species is neither dated nor listed as unreleased', () => {
@@ -483,6 +527,16 @@ describe('parseMegaReleases', () => {
       { dexNr: 26, form: 'MEGA_X', releasedOn: '2025-01-01' },
     ]);
     expect(releases).toContainEqual({ dexNr: 609, form: 'MEGA', releasedOn: '2026-10-31' });
+  });
+
+  it('dates an announced Mega with only an MSP/HOME sprite, and warns', () => {
+    const releases = parse([row('Nov 28, 2026', '{{MSP/HOME|0036M|Clefable}}')]);
+
+    expect(releases).toContainEqual({ dexNr: 36, form: 'MEGA', releasedOn: '2026-11-28' });
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringMatching(/non-GO sprites \{\{MSP\/HOME\|0036M\|Clefable\}\}/)
+    );
   });
 
   it('ignores the MSP/HOME "yet to be released" table', () => {
