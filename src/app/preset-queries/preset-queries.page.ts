@@ -126,8 +126,11 @@ export class PresetQueriesPage implements ViewWillEnter {
     }));
   }
 
-  // A preset saved mid-edit with an incomplete numeric-range rule (e.g.
-  // "Range" checked but no min/max entered) compiles to an invalid query —
+  // A preset with an incomplete range rule (e.g. "Range" checked but no
+  // min/max entered, on Numeric, Stat Rating, or Buddy/Mega Level) compiles
+  // to an invalid query. The editor now blocks saving that, but presets
+  // saved before that check can still hold one, and
+  // compilePresetQuery throws rather than returning a meaningless string.
   // compilePresetQuery throws rather than returning a meaningless string.
   // The list must still render that row instead of crashing the whole page.
   private compileForDisplay(preset: PresetQuery): string {

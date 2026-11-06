@@ -22,8 +22,10 @@ import { addIcons } from 'ionicons';
 import { trash } from 'ionicons/icons';
 import { PresetQuery, PresetQueryGroup, PresetQueryRule, SearchTermData } from '@go-gather/shared';
 import { compilePresetQuery } from '../../core/search-engine/preset-query.compiler';
+import { RangeValue } from '../../core/search-engine/search-query.model';
 import {
   TermCatalogEntry,
+  TermInputKind,
   TERM_CATALOG,
   getTermCatalogEntry,
 } from '../../core/search-engine/search-term-catalog';
@@ -49,8 +51,10 @@ interface EditableRule {
   rangeMin: number | null;
   rangeMax: number | null;
   statRatingField: string;
-  statRatingValue: number;
-  smallEnumValue: number;
+  /** `null` when the user clears the input (Ionic's number accessor maps an
+   * empty `ion-input type="number"` to null). */
+  statRatingValue: number | null;
+  smallEnumValue: number | null;
 }
 
 interface EditableGroup {
@@ -87,11 +91,11 @@ function defaultValueForCatalogEntry(catalogEntry: TermCatalogEntry): SearchTerm
     case 'statRating':
       return { kind: 'statRating', field: catalogEntry.fieldOptions?.[0] ?? 'hp', value: 0 };
     case 'appraisalStars':
-      return { kind: 'appraisalStars', value: catalogEntry.smallEnumRange?.min ?? 1 };
+      return { kind: 'appraisalStars', value: catalogEntry.valueBounds?.min ?? 1 };
     case 'buddyLevel':
-      return { kind: 'buddyLevel', value: catalogEntry.smallEnumRange?.min ?? 0 };
+      return { kind: 'buddyLevel', value: catalogEntry.valueBounds?.min ?? 0 };
     case 'megaLevel':
-      return { kind: 'megaLevel', value: catalogEntry.smallEnumRange?.min ?? 0 };
+      return { kind: 'megaLevel', value: catalogEntry.valueBounds?.min ?? 0 };
     case 'name':
       return { kind: 'name', value: '' };
     case 'family':
@@ -119,13 +123,11 @@ function defaultValueForCatalogEntry(catalogEntry: TermCatalogEntry): SearchTerm
   }
 }
 
-type RangeOrExact = number | { min?: number; max?: number };
-
 /** Loads an exact-or-range value into the editor: an exact value goes
  * through `setExact`, a range into the shared `rangeMin`/`rangeMax`. */
 function applyRangeOrExact(
   editable: EditableRule,
-  value: RangeOrExact,
+  value: RangeValue<number>,
   setExact: (exact: number) => void
 ): void {
   if (typeof value === 'number') {
@@ -140,10 +142,86 @@ function applyRangeOrExact(
 
 /** The inverse of `applyRangeOrExact`: the edited range when "Range" is
  * checked, otherwise `exact`. */
-function rangeOrExact(editable: EditableRule, exact: number): RangeOrExact {
-  return editable.useRange
+function rangeOrExact(editable: EditableRule, exact: number): RangeValue<number> {
+  return isRangeMode(editable)
     ? { min: editable.rangeMin ?? undefined, max: editable.rangeMax ?? undefined }
     : exact;
+}
+
+/** Input kinds whose value is typed into a number input. */
+const NUMBER_INPUT_KINDS: ReadonlySet<TermInputKind> = new Set([
+  'numericRange',
+  'statRating',
+  'smallEnumNumber',
+]);
+
+/** Whether the rule is edited as a min/max range: its kind offers a Range
+ * toggle (the `numericRange` input kind always does; others opt in via
+ * `supportsRange`) and the toggle is on. */
+function isRangeMode(editable: EditableRule): boolean {
+  const { inputKind, supportsRange } = editable.catalogEntry;
+  return editable.useRange && (inputKind === 'numericRange' || supportsRange === true);
+}
+
+/** The rule's exact-value input, for number input kinds. */
+function exactValue(editable: EditableRule): number | null {
+  switch (editable.catalogEntry.inputKind) {
+    case 'numericRange':
+      return editable.numericExact;
+    case 'statRating':
+      return editable.statRatingValue;
+    case 'smallEnumNumber':
+      return editable.smallEnumValue;
+    default:
+      return null;
+  }
+}
+
+function isWithinBounds(value: number, bounds: { min: number; max: number }): boolean {
+  return Number.isInteger(value) && value >= bounds.min && value <= bounds.max;
+}
+
+/** Why a rule's value can't be saved as-is, or null when it's valid. Covers
+ * what the inputs' `[min]`/`[max]` attributes don't enforce: an empty value,
+ * an empty or reversed range, and out-of-bounds or fractional values for
+ * bounded kinds (stat rating, buddy/mega level, appraisal stars). */
+function ruleValueError(editable: EditableRule): string | null {
+  if (!NUMBER_INPUT_KINDS.has(editable.catalogEntry.inputKind)) {
+    return null;
+  }
+
+  const bounds = editable.catalogEntry.valueBounds;
+  const boundsText = bounds ? `${String(bounds.min)} to ${String(bounds.max)}` : '';
+
+  if (isRangeMode(editable)) {
+    const { rangeMin: min, rangeMax: max } = editable;
+
+    if (min === null && max === null) {
+      return 'Enter a min, a max, or both.';
+    }
+
+    if (bounds && [min, max].some((value) => value !== null && !isWithinBounds(value, bounds))) {
+      return `Min and max must be whole numbers from ${boundsText}.`;
+    }
+
+    if (min !== null && max !== null && min > max) {
+      return 'Min must not be greater than max.';
+    }
+
+    return null;
+  }
+
+  const exact = exactValue(editable);
+
+  if (exact === null) {
+    return 'Enter a value.';
+  }
+
+  if (bounds && !isWithinBounds(exact, bounds)) {
+    return `Value must be a whole number from ${boundsText}.`;
+  }
+
+  return null;
 }
 
 /** Writes `term`'s value onto an already-constructed `EditableRule`'s
@@ -222,7 +300,7 @@ function toEditableRule(rule: PresetQueryRule): EditableRule {
     rangeMax: null,
     statRatingField: catalogEntry.fieldOptions?.[0] ?? '',
     statRatingValue: 0,
-    smallEnumValue: catalogEntry.smallEnumRange?.min ?? 0,
+    smallEnumValue: catalogEntry.valueBounds?.min ?? 0,
   };
 
   applyTermValue(editable, rule.term);
@@ -266,13 +344,13 @@ function toSearchTermData(editable: EditableRule): SearchTermData {
       return {
         kind: 'statRating',
         field: editable.statRatingField,
-        value: rangeOrExact(editable, editable.statRatingValue),
+        value: rangeOrExact(editable, editable.statRatingValue ?? 0),
       };
     case 'appraisalStars':
-      return { kind, value: editable.smallEnumValue };
+      return { kind, value: editable.smallEnumValue ?? 0 };
     case 'buddyLevel':
     case 'megaLevel':
-      return { kind, value: rangeOrExact(editable, editable.smallEnumValue) };
+      return { kind, value: rangeOrExact(editable, editable.smallEnumValue ?? 0) };
     case 'weather':
       return { kind: 'weather' };
     case 'special':
@@ -323,6 +401,8 @@ export class PresetQueryEditPage implements ViewWillEnter {
    * looser than &) say it shouldn't. Only the LAST group is safe to contain
    * a negated tag; this flag warns when an earlier one does. */
   hasUnsafeNegatedTagBeforeOr = false;
+  /** True while any rule has a `ruleValueError`; disables Save. */
+  hasInvalidRules = false;
 
   constructor() {
     addIcons({ trash });
@@ -358,11 +438,33 @@ export class PresetQueryEditPage implements ViewWillEnter {
     return this.termCatalog.filter((entry) => entry.category === category);
   }
 
-  /** Label for a 'smallEnumNumber' input, suffixed with the kind's
-   * inclusive bounds, e.g. "Min (0-5)". */
-  smallEnumLabel(prefix: string, rule: EditableRule): string {
-    const bounds = rule.catalogEntry.smallEnumRange;
-    return `${prefix} (${String(bounds?.min ?? 0)}-${String(bounds?.max ?? 0)})`;
+  /** Label for a bounded number input, suffixed with the kind's inclusive
+   * bounds, e.g. "Min (0-5)". */
+  boundedLabel(prefix: string, rule: EditableRule): string {
+    const bounds = rule.catalogEntry.valueBounds;
+    return bounds ? `${prefix} (${String(bounds.min)}-${String(bounds.max)})` : prefix;
+  }
+
+  isRangeMode(rule: EditableRule): boolean {
+    return isRangeMode(rule);
+  }
+
+  ruleValueError(rule: EditableRule): string | null {
+    return ruleValueError(rule);
+  }
+
+  /** Seeds an empty range from the current exact value when "Range" is
+   * ticked, so the preview keeps matching what the user had (e.g. `3attack`
+   * becomes `3-3attack`) instead of going blank until both bounds are typed. */
+  rangeToggled(rule: EditableRule): void {
+    const exact = exactValue(rule);
+
+    if (rule.useRange && rule.rangeMin === null && rule.rangeMax === null && exact !== null) {
+      rule.rangeMin = exact;
+      rule.rangeMax = exact;
+    }
+
+    this.updatePreview();
   }
 
   addGroup(): void {
@@ -422,16 +524,18 @@ export class PresetQueryEditPage implements ViewWillEnter {
   updatePreview(): void {
     const preset = this.buildPresetQuery();
 
-    // A range-capable rule with "Range" checked but no min/max entered yet
-    // (e.g. immediately after checking the box, before typing a value) is a
-    // real, momentarily-incomplete edit state — compilePresetQuery/the
-    // serializer correctly rejects it rather than silently emitting a
-    // meaningless query, but that means it throws instead of returning
-    // null. Since this runs on every keystroke, treat a throw the same way
-    // as "no compilable query yet" rather than letting it escape as an
-    // uncaught error.
+    this.hasInvalidRules = this.anyRuleInvalid();
+
+    // An invalid rule (see `ruleValueError`) would otherwise preview a
+    // fallback value (e.g. a cleared Buddy Level showing `buddy0`) that Save
+    // won't accept, or make the serializer throw (e.g. "Range" checked with
+    // no min/max yet), so show no preview until it's fixed.
+    //
+    // The catch is a backstop for any serializer rejection validation
+    // doesn't anticipate: this runs on every keystroke, so treat a throw as
+    // "no compilable query yet" rather than letting it escape uncaught.
     try {
-      this.previewString = compilePresetQuery(preset);
+      this.previewString = this.hasInvalidRules ? null : compilePresetQuery(preset);
     } catch {
       this.previewString = null;
     }
@@ -449,6 +553,13 @@ export class PresetQueryEditPage implements ViewWillEnter {
   }
 
   saveClicked(): void {
+    // The Save button is disabled in this state; re-check here rather than
+    // trusting the cached flag, so an invalid rule can never be persisted as
+    // an uncompilable preset.
+    if (this.anyRuleInvalid()) {
+      return;
+    }
+
     const preset = this.buildPresetQuery();
     const userSettings = this.userDataService.getUserSettings();
     const existingIndex = userSettings.presetQueries.findIndex(
@@ -464,6 +575,12 @@ export class PresetQueryEditPage implements ViewWillEnter {
 
     this.userDataService.updateUserSettings({ presetQueries });
     void this.router.navigate(['/preset-queries']);
+  }
+
+  private anyRuleInvalid(): boolean {
+    return this.groups.some((editableGroup) =>
+      editableGroup.rules.some((rule) => ruleValueError(rule) !== null)
+    );
   }
 
   private buildPresetQuery(): PresetQuery {

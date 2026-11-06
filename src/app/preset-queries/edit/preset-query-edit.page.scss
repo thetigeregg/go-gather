@@ -80,3 +80,9 @@
   margin-bottom: 16px;
   font-size: 0.85rem;
 }
+
+.preset-editor-rule-error {
+  color: var(--ion-color-danger, #c5000f);
+  font-size: 0.85rem;
+  padding: 4px 16px 8px;
+}
