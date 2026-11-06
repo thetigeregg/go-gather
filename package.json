@@ -83,7 +83,7 @@
     "@types/node": "^26.6.5",
     "@types/sql.js": "^1.4.11",
     "@typescript-eslint/eslint-plugin": "^8.72.0",
-    "@typescript-eslint/parser": "^8.72.0",
+    "@typescript-eslint/parser": "^8.72.1",
     "@vitest/coverage-v8": "^4.1.11",
     "angular-eslint": "^22.6.0",
     "eslint": "^10.13.0",
