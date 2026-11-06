@@ -91,7 +91,7 @@ function defaultValueForCatalogEntry(catalogEntry: TermCatalogEntry): SearchTerm
     case 'statRating':
       return { kind: 'statRating', field: catalogEntry.fieldOptions?.[0] ?? 'hp', value: 0 };
     case 'appraisalStars':
-      return { kind: 'appraisalStars', value: catalogEntry.valueBounds?.min ?? 1 };
+      return { kind: 'appraisalStars', value: catalogEntry.valueBounds?.min ?? 0 };
     case 'buddyLevel':
       return { kind: 'buddyLevel', value: catalogEntry.valueBounds?.min ?? 0 };
     case 'megaLevel':
@@ -124,13 +124,18 @@ function defaultValueForCatalogEntry(catalogEntry: TermCatalogEntry): SearchTerm
 }
 
 /** Loads an exact-or-range value into the editor: an exact value goes
- * through `setExact`, a range into the shared `rangeMin`/`rangeMax`. */
+ * through `setExact`, a range into the shared `rangeMin`/`rangeMax`.
+ *
+ * `null` is accepted because presets saved before range support could store
+ * a cleared Stat Rating/Buddy/Mega input as `value: null`. It loads as a
+ * blank exact value, so the rule's "Enter a value." error shows and the
+ * preset can be reopened and repaired instead of throwing on `null.min`. */
 function applyRangeOrExact(
   editable: EditableRule,
-  value: RangeValue<number>,
-  setExact: (exact: number) => void
+  value: RangeValue<number> | null,
+  setExact: (exact: number | null) => void
 ): void {
-  if (typeof value === 'number') {
+  if (value === null || typeof value === 'number') {
     setExact(value);
     editable.useRange = false;
   } else {

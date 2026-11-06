@@ -113,7 +113,7 @@ export type StatRatingField = 'hp' | 'attack' | 'defense';
 export type StatRating = 0 | 1 | 2 | 3 | 4;
 
 /** Overall appraisal star rating, e.g. `4*` for a hundo. */
-export type AppraisalStars = 1 | 2 | 3 | 4;
+export type AppraisalStars = 0 | 1 | 2 | 3 | 4;
 
 export type BuddyLevel = 0 | 1 | 2 | 3 | 4 | 5;
 

@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { ActivatedRoute, Router } from '@angular/router';
-import { DEFAULT_SETTINGS, PresetQuery, UserSettings } from '@go-gather/shared';
+import { DEFAULT_SETTINGS, PresetQuery, SearchTermData, UserSettings } from '@go-gather/shared';
 import { PresetQueryEditPage } from './preset-query-edit.page';
 import { UserDataService } from '../../core/services/user-data.service';
 
@@ -122,6 +122,42 @@ describe('PresetQueryEditPage', () => {
       expect(rule.rangeMax).toBe(5);
       expect(component.previewString).toBe('buddy2-5');
     });
+
+    it.each([
+      { kind: 'buddyLevel', term: { kind: 'buddyLevel', value: null } },
+      { kind: 'statRating', term: { kind: 'statRating', field: 'hp', value: null } },
+    ])(
+      'reopens a legacy $kind rule saved with value: null as a blank, invalid value',
+      ({ term }) => {
+        // Presets saved before range support stored a cleared number input as
+        // null; reopening one must surface the validation error, not throw.
+        userSettings = {
+          ...userSettings,
+          presetQueries: [
+            makePreset({
+              groups: [
+                {
+                  id: 'group-1',
+                  rules: [{ id: 'rule-1', term: term as SearchTermData, negate: false }],
+                },
+              ],
+            }),
+          ],
+        };
+        routeId = 'preset-1';
+        setUp();
+
+        expect(() => {
+          component.ionViewWillEnter();
+        }).not.toThrow();
+
+        const rule = component.groups[0].rules[0];
+        expect(rule.useRange).toBe(false);
+        expect(component.ruleValueError(rule)).toBe('Enter a value.');
+        expect(component.hasInvalidRules).toBe(true);
+        expect(component.previewString).toBeNull();
+      }
+    );
 
     it('hydrates an open-ended saved range, leaving the missing bound blank', () => {
       userSettings = {
@@ -549,9 +585,18 @@ describe('PresetQueryEditPage', () => {
 
     it('blocks an out-of-bounds exact value', () => {
       component.ruleKindChanged(rule(), 'appraisalStars');
-      rule().smallEnumValue = 0;
+      rule().smallEnumValue = 5;
 
-      expectBlocked('Value must be a whole number from 1 to 4.');
+      expectBlocked('Value must be a whole number from 0 to 4.');
+    });
+
+    it('accepts zero appraisal stars (`0*` is a valid search)', () => {
+      component.ruleKindChanged(rule(), 'appraisalStars');
+      rule().smallEnumValue = 0;
+      component.updatePreview();
+
+      expect(component.ruleValueError(rule())).toBeNull();
+      expect(component.previewString).toBe('0*');
     });
 
     it('blocks a fractional bounded value', () => {

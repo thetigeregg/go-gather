@@ -215,10 +215,10 @@ export const TERM_CATALOG: TermCatalogEntry[] = [
   },
   {
     kind: 'appraisalStars',
-    label: 'Appraisal Stars (1-4*)',
+    label: 'Appraisal Stars (0-4*)',
     category: 'Numeric',
     inputKind: 'smallEnumNumber',
-    valueBounds: { min: 1, max: 4 },
+    valueBounds: { min: 0, max: 4 },
   },
   {
     kind: 'buddyLevel',
