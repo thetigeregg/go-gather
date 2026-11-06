@@ -24,6 +24,12 @@ module.exports = {
       return 'patch';
     }
 
+    // @capacitor-firebase/messaging (8.6.0) peers on firebase ^12.6.0 — hold
+    // at 12.x until the plugin widens its peer range to include 13.
+    if (name === 'firebase') {
+      return 'minor';
+    }
+
     return base.target(name);
   },
   filterResults: (packageName, { upgradedVersionSemver }) => {
