@@ -1,4 +1,12 @@
-import { AfterViewInit, Component, DestroyRef, OnInit, ViewChild, inject } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  DestroyRef,
+  OnInit,
+  ViewChild,
+  inject,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { forkJoin, tap } from 'rxjs';
 import {
@@ -56,6 +64,7 @@ import {
     GenerationHeaderRowComponent,
     GatherPokemonComponent,
   ],
+  changeDetection: ChangeDetectionStrategy.Eager,
   providers: [
     PrecomputedSizeVirtualScrollStrategy,
     { provide: VIRTUAL_SCROLL_STRATEGY, useExisting: PrecomputedSizeVirtualScrollStrategy },

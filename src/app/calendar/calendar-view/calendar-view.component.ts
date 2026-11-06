@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import dayjs, { Dayjs } from 'dayjs';
 import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
 import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
@@ -45,6 +45,7 @@ const EARLIEST_MONTH = dayjs().year(2016).month(0);
   selector: 'app-calendar-view',
   imports: [IonButton, IonIcon, IonModal, CalendarDayComponent, EventDetailComponent],
   templateUrl: './calendar-view.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './calendar-view.component.scss',
 })
 export class CalendarViewComponent implements OnInit {

@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ChangeDetectionStrategy } from '@angular/core';
 import { Dayjs } from 'dayjs';
 import { IonAccordion, IonItem, IonLabel } from '@ionic/angular';
 import { EventMetadata, PogoEvent } from '@go-gather/shared';
@@ -20,6 +20,7 @@ import { TimelineEventComponent } from './timeline-event.component';
   selector: 'app-timeline-category-section',
   imports: [IonAccordion, IonItem, IonLabel, TimelineEventComponent],
   templateUrl: './timeline-category-section.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './timeline-category-section.component.scss',
 })
 export class TimelineCategorySectionComponent {

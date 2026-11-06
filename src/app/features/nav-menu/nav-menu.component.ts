@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, ChangeDetectionStrategy } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
   IonMenu,
@@ -32,6 +32,7 @@ import { cog, pricetags, searchCircle, time } from 'ionicons/icons';
     IonMenuToggle,
   ],
   templateUrl: './nav-menu.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './nav-menu.component.scss',
 })
 export class NavMenuComponent {

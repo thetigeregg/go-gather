@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ChangeDetectionStrategy } from '@angular/core';
 import { EventMetadata, PogoEvent } from '@go-gather/shared';
 import { formatEventName } from '../../core/services/calendar-event-name.util';
 import {
@@ -19,6 +19,7 @@ import { getSourceEventID, isDailyMajorDisplayEvent } from './calendar-single-da
 @Component({
   selector: 'app-single-day-event',
   templateUrl: './single-day-event.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './single-day-event.component.scss',
 })
 export class SingleDayEventComponent {

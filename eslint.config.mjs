@@ -1,19 +1,9 @@
 import { defineConfig, globalIgnores } from 'eslint/config';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import js from '@eslint/js';
-import { FlatCompat } from '@eslint/eslintrc';
+import { configs as angularConfigs, processInlineTemplates } from 'angular-eslint';
 import { importX } from 'eslint-plugin-import-x';
 import unusedImports from 'eslint-plugin-unused-imports';
 import { configs as tseslintConfigs } from 'typescript-eslint';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-  recommendedConfig: js.configs.recommended,
-  allConfig: js.configs.all,
-});
 const jsTsFiles = ['**/*.{js,mjs,cjs,jsx,mjsx,ts,tsx,mtsx}'];
 const tsFiles = ['**/*.{ts,tsx,mts,cts}'];
 
@@ -41,10 +31,8 @@ export default defineConfig([
   {
     files: ['**/*.ts', '**/*.mts', '**/*.cts'],
 
-    extends: compat.extends(
-      'plugin:@angular-eslint/recommended',
-      'plugin:@angular-eslint/template/process-inline-templates'
-    ),
+    extends: [...angularConfigs.tsRecommended],
+    processor: processInlineTemplates,
 
     plugins: {
       'import-x': importX,
@@ -57,7 +45,7 @@ export default defineConfig([
 
       parserOptions: {
         project: ['tsconfig.app.json', 'tsconfig.spec.json', 'tsconfig.json'],
-        tsconfigRootDir: __dirname,
+        tsconfigRootDir: import.meta.dirname,
       },
     },
 
@@ -76,6 +64,11 @@ export default defineConfig([
       ],
 
       '@angular-eslint/prefer-standalone': 'off',
+
+      // Angular 22's `ng update` pinned pre-existing components to
+      // ChangeDetectionStrategy.Eager to preserve their zone-driven behavior.
+      // Moving them to OnPush is a separate refactor, not part of the upgrade.
+      '@angular-eslint/prefer-on-push-component-change-detection': 'off',
 
       '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
 
@@ -123,7 +116,7 @@ export default defineConfig([
   },
   {
     files: ['**/*.html'],
-    extends: compat.extends('plugin:@angular-eslint/template/recommended'),
+    extends: [...angularConfigs.templateRecommended],
     rules: {},
   },
 ]);

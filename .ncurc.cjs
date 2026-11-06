@@ -1,6 +1,6 @@
 const base = require('@thetigeregg/ncu-config');
 
-const ANGULAR_MAJOR = 21;
+const ANGULAR_MAJOR = 22;
 const IONIC_MAJOR = 9;
 const IONIC_ANGULAR_TOOLKIT_MAJOR = 13;
 
@@ -18,9 +18,14 @@ module.exports = {
       return 'minor';
     }
 
+    // Angular 22, typescript-eslint, and @ionic/angular-toolkit all peer on
+    // typescript >=6.0 <6.1, and TypeScript minors can break — stay on patches.
+    if (name === 'typescript') {
+      return 'patch';
+    }
+
     return base.target(name);
   },
-  reject: (name) => name === 'typescript',
   filterResults: (packageName, { upgradedVersionSemver }) => {
     if (isAngularPackage(packageName)) {
       return parseInt(upgradedVersionSemver?.major, 10) === ANGULAR_MAJOR;

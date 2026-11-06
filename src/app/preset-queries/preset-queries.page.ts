@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import {
   IonHeader,
@@ -35,6 +35,7 @@ interface PresetQueryRow {
   selector: 'app-preset-queries',
   templateUrl: 'preset-queries.page.html',
   styleUrls: ['preset-queries.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     IonHeader,
     IonToolbar,

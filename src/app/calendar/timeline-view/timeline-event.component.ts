@@ -1,4 +1,11 @@
-import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Input,
+  Output,
+  inject,
+  ChangeDetectionStrategy,
+} from '@angular/core';
 import { Dayjs } from 'dayjs';
 import { IonBadge, IonButton, IonIcon, ToastController } from '@ionic/angular';
 import { addIcons } from 'ionicons';
@@ -86,6 +93,7 @@ const HIDE_TOAST_DURATION_MS = 4000;
     TimelineRaidScheduleComponent,
   ],
   templateUrl: './timeline-event.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './timeline-event.component.scss',
 })
 export class TimelineEventComponent {

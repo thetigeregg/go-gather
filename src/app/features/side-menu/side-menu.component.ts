@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import {
   IonMenu,
   IonHeader,
@@ -103,6 +103,7 @@ interface ToggleOption {
     IonMenuToggle,
   ],
   templateUrl: './side-menu.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './side-menu.component.scss',
 })
 export class SideMenuComponent implements OnInit {

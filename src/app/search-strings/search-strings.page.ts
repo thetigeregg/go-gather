@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject } from '@angular/core';
+import { Component, DestroyRef, inject, ChangeDetectionStrategy } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Subscription } from 'rxjs';
 import {
@@ -53,6 +53,7 @@ const SHINY_LABELS: Record<PokedexType, string> = {
   selector: 'app-search-strings',
   templateUrl: 'search-strings.page.html',
   styleUrls: ['search-strings.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     IonHeader,
     IonToolbar,

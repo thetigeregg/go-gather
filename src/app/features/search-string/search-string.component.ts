@@ -1,4 +1,4 @@
-import { Component, Input, inject } from '@angular/core';
+import { Component, Input, inject, ChangeDetectionStrategy } from '@angular/core';
 import {
   IonAccordion,
   IonItem,
@@ -22,6 +22,7 @@ export interface SearchStringConfig {
   standalone: true,
   imports: [IonAccordion, IonItem, IonLabel, IonButton, IonIcon, IonTextarea],
   templateUrl: './search-string.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './search-string.component.scss',
 })
 export class SearchStringComponent {

@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { IonAccordionGroup } from '@ionic/angular';
 import {
   SearchStringComponent,
@@ -10,6 +10,7 @@ import {
   standalone: true,
   imports: [IonAccordionGroup, SearchStringComponent],
   templateUrl: './multi-search-string.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './multi-search-string.component.scss',
 })
 export class MultiSearchStringComponent {

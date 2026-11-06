@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import {
   IonButton,
@@ -37,6 +37,7 @@ import { SimpleKeyword, Size } from '../../core/search-engine/search-query.model
     IonIcon,
   ],
   templateUrl: './excluded-search-term-input.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './excluded-search-term-input.component.scss',
 })
 export class ExcludedSearchTermInputComponent {

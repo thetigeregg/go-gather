@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
@@ -369,6 +369,7 @@ function toSearchTermData(editable: EditableRule): SearchTermData {
   selector: 'app-preset-query-edit',
   templateUrl: 'preset-query-edit.page.html',
   styleUrls: ['preset-query-edit.page.scss'],
+  changeDetection: ChangeDetectionStrategy.Eager,
   imports: [
     FormsModule,
     IonHeader,

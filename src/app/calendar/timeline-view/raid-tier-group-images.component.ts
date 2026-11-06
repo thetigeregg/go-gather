@@ -1,4 +1,4 @@
-import { Component, Input } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy } from '@angular/core';
 import { SpriteEffect } from '../../core/services/event-sprite-url.util';
 import { RaidTierGroupWithImages } from '../../core/services/raid-tier-groups.util';
 import { PokemonImageComponent } from './pokemon-image.component';
@@ -14,6 +14,7 @@ import { PokemonImageComponent } from './pokemon-image.component';
   selector: 'app-raid-tier-group-images',
   imports: [PokemonImageComponent],
   templateUrl: './raid-tier-group-images.component.html',
+  changeDetection: ChangeDetectionStrategy.Eager,
   styleUrl: './raid-tier-group-images.component.scss',
 })
 export class RaidTierGroupImagesComponent {
