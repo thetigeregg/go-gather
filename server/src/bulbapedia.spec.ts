@@ -212,14 +212,33 @@ describe('parseDynamaxReleases', () => {
     );
   });
 
-  it.each(['[[Dialga]]', '{{MSP|0483|Dialga}}', ''])(
-    'throws on a row whose Pokemon cell %j has no MSP/GO code',
+  it.each(['[[Dialga]]', ''])(
+    'throws on a row whose Pokemon cell %j has no sprite code',
     (pokemon) => {
       expect(() => parseDynamaxReleases(dynamaxPage([row('Jun 1, 2025', pokemon)]))).toThrow(
         /no MSP\/GO Pokemon in release row/
       );
     }
   );
+
+  it('dates a row with no GO sprite from its other sprite templates, and warns', () => {
+    const releases = parseDynamaxReleases(dynamaxPage([row('Jun 1, 2025', '{{MSP|0483|Dialga}}')]));
+
+    expect(releases).toContainEqual({ dexNr: 483, form: null, releasedOn: '2025-06-01' });
+    expect(console.warn).toHaveBeenCalledWith(
+      expect.stringMatching(/"Jun 1, 2025" has no GO sprite/)
+    );
+  });
+
+  it('reads only the GO codes of a row that mixes GO and other sprites, without warning', () => {
+    const releases = parseDynamaxReleases(
+      dynamaxPage([row('Jun 1, 2025', '{{MSP/GO|0483|Dialga}}{{MSP/HOME|0484|Palkia}}')])
+    );
+
+    expect(releases).toContainEqual({ dexNr: 483, form: null, releasedOn: '2025-06-01' });
+    expect(releases.some((r) => r.dexNr === 484)).toBe(false);
+    expect(console.warn).not.toHaveBeenCalled();
+  });
 
   it('throws when far fewer species than expected are parsed', () => {
     expect(() => parseDynamaxReleases(dynamaxPage([], 20))).toThrow(
@@ -483,6 +502,14 @@ describe('parseMegaReleases', () => {
       { dexNr: 26, form: 'MEGA_X', releasedOn: '2025-01-01' },
     ]);
     expect(releases).toContainEqual({ dexNr: 609, form: 'MEGA', releasedOn: '2026-10-31' });
+  });
+
+  it('dates an announced Mega with only an MSP/HOME sprite, and warns', () => {
+    const releases = parse([row('Nov 28, 2026', '{{MSP/HOME|0036M|Clefable}}')]);
+
+    expect(releases).toContainEqual({ dexNr: 36, form: 'MEGA', releasedOn: '2026-11-28' });
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(console.warn).toHaveBeenCalledWith(expect.stringMatching(/dating 0036M from other/));
   });
 
   it('ignores the MSP/HOME "yet to be released" table', () => {

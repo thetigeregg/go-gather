@@ -171,9 +171,13 @@ const RELEASE_DATE = /^([A-Za-z]{3})[A-Za-z]*\.? (\d{1,2}), (\d{4})/;
 const UNSCHEDULED_DATE = /^(?:TBA|TBD)\b/i;
 const MSP_GO_TEMPLATE = /\{\{MSP\/GO\|([^}]*)\}\}/g;
 // Also the plain `{{MSP|…}}` and `{{MS|…}}` sprite templates, used for
-// Pokemon and forms with no GO sprite yet — only read in the unreleased lists
-// and TBA/TBD release rows, never where a release gets dated.
+// Pokemon and forms with no GO sprite yet — read in the unreleased lists and
+// TBA/TBD release rows. Dated rows use DATED_ROW_FALLBACK_TEMPLATE instead.
 const MSP_ANY_TEMPLATE = /\{\{MS(?:P(?:\/GO)?)?\|([^}]*)\}\}/g;
+// Every sprite template, `{{MSP/HOME|…}}` included — read only from a dated
+// release row with no `{{MSP/GO|…}}` code, as Bulbapedia writes an announced
+// release (e.g. a Mega) before GO has a sprite for it.
+const DATED_ROW_FALLBACK_TEMPLATE = /\{\{MS(?:P(?:\/(?:GO|HOME))?)?\|([^}]*)\}\}/g;
 const UNRELEASED_FORMS_INTRO = 'yet to be made available';
 // Dex numbers alone, from any sprite template — for scanning commented-out
 // rows, whose content needn't be well-formed enough for parseMspGoCodes.
@@ -445,7 +449,9 @@ function parseTableRows(tableLines: string[]): TableRow[] {
  * comes back with `releasedOn: null`, so it isn't treated as released but
  * still counts as listed (see parseSpeciesReleases' cross-check) — read
  * with every sprite template, since an announced Pokemon may have no GO
- * sprite yet.
+ * sprite yet. For the same reason, a dated row with no `{{MSP/GO|…}}` code
+ * is read with every sprite template, `{{MSP/HOME|…}}` included, and keeps
+ * its date with a warning; a row with any GO code reads only those.
  */
 export function parseReleaseTable(section: string): ReleaseRow[] {
   return parseTableRows(firstTableLines(section)).flatMap(({ cells, isHeader }): ReleaseRow[] => {
@@ -464,10 +470,17 @@ export function parseReleaseTable(section: string): ReleaseRow[] {
       console.warn(`Bulbapedia: release row with unscheduled date "${cells[0]}" has no date yet.`);
       return [{ releasedOn: null, pokemon: parseMspGoCodes(cells[1], MSP_ANY_TEMPLATE) }];
     }
-    const pokemon = parseMspGoCodes(cells[1]);
+    const goPokemon = parseMspGoCodes(cells[1]);
+    if (goPokemon.length > 0) {
+      return [{ releasedOn, pokemon: goPokemon }];
+    }
+    const pokemon = parseMspGoCodes(cells[1], DATED_ROW_FALLBACK_TEMPLATE);
     if (pokemon.length === 0) {
       throw new Error(`Bulbapedia: no MSP/GO Pokemon in release row: ${rowText.slice(0, 120)}`);
     }
+    console.warn(
+      `Bulbapedia: release row "${cells[0]}" has no GO sprite — dating ${pokemon.map((p) => p.code).join(', ')} from other sprite templates.`
+    );
     return [{ releasedOn, pokemon }];
   });
 }
@@ -552,9 +565,9 @@ export function parseGigantamaxReleases(availabilityPage: string): DatedMaxRelea
 
 /**
  * Released and announced Mega Evolutions and Primal Reversions, from the
- * first table of the availability page's Mega section. The section's second
- * table ("yet to be released") uses `{{MSP/HOME|…}}` sprites, so it's never
- * read as released either way.
+ * first table of the availability page's Mega section. An announced Mega
+ * there may still have a `{{MSP/HOME|…}}` sprite (see parseReleaseTable).
+ * The section's second table ("yet to be released") is never read.
  */
 export function parseMegaReleases(availabilityPage: string): DatedMegaRelease[] {
   return releasesFromSection(
