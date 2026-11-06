@@ -170,18 +170,16 @@ const RELEASE_DATE = /^([A-Za-z]{3})[A-Za-z]*\.? (\d{1,2}), (\d{4})/;
 // A date cell for a release that's announced but not yet scheduled.
 const UNSCHEDULED_DATE = /^(?:TBA|TBD)\b/i;
 const MSP_GO_TEMPLATE = /\{\{MSP\/GO\|([^}]*)\}\}/g;
-// Also the plain `{{MSP|…}}` and `{{MS|…}}` sprite templates, used for
-// Pokemon and forms with no GO sprite yet — read in the unreleased lists and
-// TBA/TBD release rows. Dated rows use DATED_ROW_FALLBACK_TEMPLATE instead.
-const MSP_ANY_TEMPLATE = /\{\{MS(?:P(?:\/GO)?)?\|([^}]*)\}\}/g;
-// Every sprite template, `{{MSP/HOME|…}}` included — read only from a dated
-// release row with no `{{MSP/GO|…}}` code, as Bulbapedia writes an announced
+// Also the plain `{{MSP|…}}`, `{{MS|…}}` and `{{MSP/HOME|…}}` sprite
+// templates, used for Pokemon and forms with no GO sprite yet — read in the
+// unreleased lists and in release rows, since Bulbapedia lists an announced
 // release (e.g. a Mega) before GO has a sprite for it.
-const DATED_ROW_FALLBACK_TEMPLATE = /\{\{MS(?:P(?:\/(?:GO|HOME))?)?\|([^}]*)\}\}/g;
+const MSP_ANY_TEMPLATE = /\{\{MS(?:P(?:\/(?:GO|HOME))?)?\|([^}]*)\}\}/g;
+const MSP_GO_OPENER = '{{MSP/GO|';
 const UNRELEASED_FORMS_INTRO = 'yet to be made available';
 // Dex numbers alone, from any sprite template — for scanning commented-out
 // rows, whose content needn't be well-formed enough for parseMspGoCodes.
-const ANY_MSP_DEX_NR = /\{\{MS(?:P(?:\/GO)?)?\|(?:size=\d+\|)?(\d{4})/g;
+const ANY_MSP_DEX_NR = /\{\{MS(?:P(?:\/(?:GO|HOME))?)?\|(?:size=\d+\|)?(\d{4})/g;
 // `0892R`, `0003GMax s`, `0521 f`: a 4-digit dex number, optional form
 // letters, then optional space-separated modifiers (shiny/female) that don't
 // matter for Max availability.
@@ -319,8 +317,8 @@ export function templateCalls(wikitext: string, name: string): string[][] {
 }
 
 /** Reads every sprite template in a wikitext fragment, in order — just
- * `{{MSP/GO|...}}` by default, or `{{MSP/GO|...}}` plus plain `{{MSP|...}}`
- * and `{{MS|...}}` with `MSP_ANY_TEMPLATE`. */
+ * `{{MSP/GO|...}}` by default, or `{{MSP/GO|...}}` plus plain `{{MSP|...}}`,
+ * `{{MS|...}}` and `{{MSP/HOME|...}}` with `MSP_ANY_TEMPLATE`. */
 export function parseMspGoCodes(wikitext: string, template = MSP_GO_TEMPLATE): PokemonCode[] {
   return [...wikitext.matchAll(template)].map((match) => {
     const params = match[1].split('|').map((param) => param.trim());
@@ -449,9 +447,9 @@ function parseTableRows(tableLines: string[]): TableRow[] {
  * comes back with `releasedOn: null`, so it isn't treated as released but
  * still counts as listed (see parseSpeciesReleases' cross-check) — read
  * with every sprite template, since an announced Pokemon may have no GO
- * sprite yet. For the same reason, a dated row with no `{{MSP/GO|…}}` code
- * is read with every sprite template, `{{MSP/HOME|…}}` included, and keeps
- * its date with a warning; a row with any GO code reads only those.
+ * sprite yet. Dated rows are read with every sprite template too, so an
+ * announced release with no GO sprite yet keeps its date; any non-GO sprite
+ * in a dated row is logged as a warning.
  */
 export function parseReleaseTable(section: string): ReleaseRow[] {
   return parseTableRows(firstTableLines(section)).flatMap(({ cells, isHeader }): ReleaseRow[] => {
@@ -470,17 +468,18 @@ export function parseReleaseTable(section: string): ReleaseRow[] {
       console.warn(`Bulbapedia: release row with unscheduled date "${cells[0]}" has no date yet.`);
       return [{ releasedOn: null, pokemon: parseMspGoCodes(cells[1], MSP_ANY_TEMPLATE) }];
     }
-    const goPokemon = parseMspGoCodes(cells[1]);
-    if (goPokemon.length > 0) {
-      return [{ releasedOn, pokemon: goPokemon }];
-    }
-    const pokemon = parseMspGoCodes(cells[1], DATED_ROW_FALLBACK_TEMPLATE);
+    const pokemon = parseMspGoCodes(cells[1], MSP_ANY_TEMPLATE);
     if (pokemon.length === 0) {
-      throw new Error(`Bulbapedia: no MSP/GO Pokemon in release row: ${rowText.slice(0, 120)}`);
+      throw new Error(`Bulbapedia: no Pokemon sprite in release row: ${rowText.slice(0, 120)}`);
     }
-    console.warn(
-      `Bulbapedia: release row "${cells[0]}" has no GO sprite — dating ${pokemon.map((p) => p.code).join(', ')} from other sprite templates.`
-    );
+    const nonGoSprites = [...cells[1].matchAll(MSP_ANY_TEMPLATE)]
+      .map((match) => match[0])
+      .filter((sprite) => !sprite.startsWith(MSP_GO_OPENER));
+    if (nonGoSprites.length > 0) {
+      console.warn(
+        `Bulbapedia: release row "${cells[0]}" dates non-GO sprites ${nonGoSprites.join('')}.`
+      );
+    }
     return [{ releasedOn, pokemon }];
   });
 }
