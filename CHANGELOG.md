@@ -387,3 +387,7 @@
 ## v0.28.2 - 2026-11-02
 
 - 7a88a77 fix(sync): read look-alike shiny codes as species codes (#116)
+
+## v0.29.0 - 2026-11-06
+
+- ab541b3 feat(preset-queries): support ranges for buddy, mega, stat ratings (#117)
