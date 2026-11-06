@@ -54,3 +54,15 @@ With both fixed, the mechanism was exercised for real, twice, using a temporary 
 - **Cycle 2** (bundle `v0.3.6-b3`): pushed a second commit removing the marker, as both cleanup and a corroborating second real cycle. Same sequence — new manifest/bundle confirmed reachable after a second NAS refresh, on-device relaunch → Update Ready → Reload → **marker confirmed gone**.
 
 Both cycles used `nativeBuildNumber: "3"`, matching the currently-installed TestFlight build's `CURRENT_PROJECT_VERSION` throughout — no native rebuild was needed for either OTA update, exactly as designed.
+
+## Follow-up: OTA artifacts carried forward across server-only releases
+
+**Incident.** v0.29.0 published OTA bundle `v0.29.0-b23` inside the `go-gather-server:main` image. 36 minutes later, v0.29.1 (a server-only sync fix, so `detect_ios_live_update` resolved `should_deploy=false`) published a new `:main` built with `BUILD_IOS_LIVE_UPDATE=false`. That build path used to just `mkdir -p ota/ios`. After the NAS pulled `:main`, `/ota/ios/23/manifest.json` returned 404 and build-23 devices never received the update. The client treats a missing manifest as "no update" and logs only `live_update.manifest_missing`.
+
+**Fix.** `server/Dockerfile` now takes an `OTA_PREVIOUS_IMAGE` build-arg (default: the Node base image, which has no OTA dir). The non-OTA build path copies `/app/server/ota/ios` from that image. `release-publish.yml`'s plain "Build and push" step passes `ghcr.io/<owner>/go-gather-server:main`, so a server-only release keeps serving the same manifest and bundle IDs. Devices get no extra "Update Ready" prompt. The OTA build path is unchanged and still writes a fresh `ota/ios` containing only the current native build's directory, so old bundles don't pile up.
+
+**Consequences.**
+
+- A bad OTA bundle can no longer be removed just by shipping a server-only release. Replace it with a new OTA build (any `src/**` change) or move devices to a new native build.
+- After a native-shell (TestFlight) release, the previous build's directory is still carried forward. That's harmless: new-build devices request their own `/ota/ios/<build>/` path, and old-build devices keep getting the bundle that matches their shell.
+- The plain build now pulls `:main` from GHCR. If that pull fails, the build fails instead of silently shipping an empty `ota/ios`.

@@ -395,3 +395,11 @@
 ## v0.29.1 - 2026-11-06
 
 - 0fa764a fix(sync): date Bulbapedia releases that only have MSP/HOME sprites (#118)
+
+## v0.29.2 - 2026-11-06
+
+- 1daea25 fix(ci): carry OTA artifacts forward on server-only releases (#119)
+
+## v0.29.3 - 2026-11-06
+
+- 1daea25 fix(ci): carry OTA artifacts forward on server-only releases (#119)

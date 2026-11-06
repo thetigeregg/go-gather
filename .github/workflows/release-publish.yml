@@ -328,6 +328,16 @@ jobs:
           cache-to: type=gha,mode=max,scope=go-gather-server
           build-args: |
             BUILD_IOS_LIVE_UPDATE=false
+            OTA_PREVIOUS_IMAGE=ghcr.io/${{ github.repository_owner }}/go-gather-server:main
+
+      - name: Write OTA carry-forward summary
+        if: needs.detect_ios_live_update.outputs.should_deploy != 'true'
+        run: |
+          {
+            echo "## OTA artifacts carried forward"
+            echo
+            echo "No new OTA bundle was built for this release, so \`ota/ios\` was copied from the previously published \`go-gather-server:main\` image."
+          } >> "$GITHUB_STEP_SUMMARY"
 
   publish_edge_image:
     name: Publish Edge Docker Image
