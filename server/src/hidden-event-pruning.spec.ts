@@ -170,6 +170,35 @@ describe('pruneExpiredHiddenEvents', () => {
     expect(settingsEvents()).toHaveLength(1);
   });
 
+  describe('with no device timezone known', () => {
+    beforeEach(() => {
+      db.prepare(`INSERT INTO pokemon_go_events VALUES ('local', '2026-06-14T17:00:00.000')`).run();
+      syncSettings({
+        ...DEFAULT_SETTINGS,
+        hiddenEventIds: ['ended', 'gone', 'local', 'ongoing-daily-bonus-2026-06-14'],
+      });
+    });
+
+    function hiddenIds(): string[] {
+      const row = db.prepare(`SELECT hidden_event_ids FROM user_settings`).get() as {
+        hidden_event_ids: string;
+      };
+      return JSON.parse(row.hidden_event_ids) as string[];
+    }
+
+    it('still prunes UTC ends and orphans, but keeps wall-clock ends until passed in UTC-12', () => {
+      // 01:00 UTC on 06-15: 17:00 and the end of 06-14 have passed in UTC,
+      // but not in UTC-12 (05:00 and 12:00 UTC on 06-15).
+      expect(pruneExpiredHiddenEvents(dayjs.utc('2026-06-15T01:00:00.000Z'))).toBe(2);
+      expect(hiddenIds()).toEqual(['local', 'ongoing-daily-bonus-2026-06-14']);
+    });
+
+    it('prunes wall-clock ends once they have passed everywhere', () => {
+      expect(pruneExpiredHiddenEvents(dayjs.utc('2026-06-15T12:00:00.001Z'))).toBe(4);
+      expect(hiddenIds()).toEqual([]);
+    });
+  });
+
   it('uses the most recently seen device timezone', () => {
     db.prepare(`INSERT INTO pokemon_go_events VALUES ('local', '2026-06-14T17:00:00.000')`).run();
     db.prepare(

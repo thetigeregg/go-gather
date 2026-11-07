@@ -3,10 +3,16 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import type { UserSettings } from '@go-gather/shared';
 import { db } from './db.js';
-import { readEffectiveTimezone } from './notification-scheduler.js';
+import { readKnownTimezone } from './notification-scheduler.js';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
+
+/** UTC-12 (IANA's Etc/ names invert the sign): the last place a given
+ * wall-clock time occurs. Used when no device has reported its timezone, so a
+ * timezone-dependent end is only treated as passed once it has passed
+ * everywhere — pruning late rather than unhiding an event early. */
+export const LATEST_TIMEZONE = 'Etc/GMT+12';
 
 export interface StoredEventEnd {
   eventId: string;
@@ -71,7 +77,8 @@ export function findExpiredHiddenEventIds(
  * Drops expired hidden IDs from the server's settings and appends a settings
  * change to `sync_events`, so devices pick up the shorter list on their next
  * pull. Runs right after a successful calendar sync, against the freshly
- * replaced events table and the server clock.
+ * replaced events table and the server clock. Ends are judged in the most
+ * recently seen device timezone, or LATEST_TIMEZONE when none is known.
  *
  * The hidden list is read from the `user_settings` column, which the schema
  * guarantees is a JSON array — the latest settings payload in `sync_events`
@@ -111,7 +118,7 @@ export function pruneExpiredHiddenEvents(now: Dayjs = dayjs()): number {
     ).map((row) => ({ eventId: row.event_id, end: row.end }));
 
     const expired = new Set(
-      findExpiredHiddenEventIds(hiddenEventIds, events, now, readEffectiveTimezone())
+      findExpiredHiddenEventIds(hiddenEventIds, events, now, readKnownTimezone() ?? LATEST_TIMEZONE)
     );
     if (expired.size === 0) {
       return 0;
