@@ -173,7 +173,7 @@ function readSettings(): NotificationPreferences | null {
   };
 }
 
-function readEffectiveTimezone(): string {
+export function readEffectiveTimezone(): string {
   const row = db
     .prepare(
       `SELECT timezone FROM fcm_tokens
