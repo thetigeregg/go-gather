@@ -2,6 +2,7 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type { PogoEvent } from '@go-gather/shared';
 import { db, initSchema } from './db.js';
+import { pruneExpiredHiddenEvents } from './hidden-event-pruning.js';
 
 // See pogo-cal's src/stores/events.ts — this is the same live feed pogo-cal
 // itself fetches client-side; go-gather instead proxies it through its own
@@ -87,6 +88,14 @@ export async function main(): Promise<void> {
   markCalendarEventsSynced();
 
   console.log(`Synced ${String(events.length)} calendar events.`);
+
+  // Done here, against the table just replaced from the feed, rather than on
+  // devices: a device's cached events can be stale or partial, and its
+  // whole-settings push could overwrite changes made on another device.
+  const pruned = pruneExpiredHiddenEvents();
+  if (pruned > 0) {
+    console.log(`Cleared ${String(pruned)} hidden events that have ended or left the feed.`);
+  }
 }
 
 // Guarded so this module can be imported (e.g. by scheduled-sync.ts) without

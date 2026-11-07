@@ -1,3 +1,4 @@
+import { pruneExpiredHiddenEvents } from './hidden-event-pruning';
 import { main, withDates } from './sync-calendar-events';
 
 // db.ts opens the real SQLite file on import, so it's replaced with just
@@ -11,6 +12,7 @@ vi.mock('./db.js', () => ({
   },
   initSchema: vi.fn(),
 }));
+vi.mock('./hidden-event-pruning.js', () => ({ pruneExpiredHiddenEvents: vi.fn(() => 0) }));
 
 function feedEvent(eventID: string, start: string | null, end: string | null) {
   return {
@@ -68,5 +70,37 @@ describe('main', () => {
     );
 
     await expect(main()).rejects.toThrow('Failed to fetch events.min.json: 503');
+    expect(pruneExpiredHiddenEvents).not.toHaveBeenCalled();
+  });
+
+  it('prunes expired hidden events after replacing the events table', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve([dated]) })
+    );
+    vi.mocked(pruneExpiredHiddenEvents).mockReturnValueOnce(2);
+
+    await main();
+
+    expect(pruneExpiredHiddenEvents).toHaveBeenCalledTimes(1);
+    expect(exec.mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(pruneExpiredHiddenEvents).mock.invocationCallOrder[0]
+    );
+    expect(console.log).toHaveBeenCalledWith(
+      'Cleared 2 hidden events that have ended or left the feed.'
+    );
+  });
+
+  it('logs nothing about pruning when no hidden event expired', async () => {
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve([dated]) })
+    );
+
+    await main();
+
+    expect(console.log).not.toHaveBeenCalledWith(expect.stringContaining('Cleared'));
   });
 });

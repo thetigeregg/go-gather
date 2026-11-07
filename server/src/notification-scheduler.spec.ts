@@ -1,14 +1,22 @@
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
+import { db } from './db';
 import {
   CandidateEvent,
   NotificationPreferences,
   computeDueNotifications,
+  readEffectiveTimezone,
+  readKnownTimezone,
 } from './notification-scheduler';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
+
+vi.mock('./db', async () => {
+  const { default: Database } = await import('better-sqlite3');
+  return { db: new Database(':memory:') };
+});
 
 const ZONE = 'America/Chicago';
 
@@ -169,5 +177,35 @@ describe('computeDueNotifications', () => {
     expect(due).toHaveLength(1);
     expect(due[0].title.length).toBeLessThanOrEqual(40);
     expect(due[0].body.length).toBeLessThanOrEqual(90);
+  });
+});
+
+describe('device timezone lookup', () => {
+  beforeEach(() => {
+    db.exec(`CREATE TABLE fcm_tokens (timezone TEXT, is_active INTEGER, last_seen_at TEXT)`);
+  });
+
+  afterEach(() => {
+    db.exec(`DROP TABLE fcm_tokens`);
+  });
+
+  function addToken(timezone: string | null, isActive: number, lastSeenAt: string): void {
+    db.prepare(`INSERT INTO fcm_tokens VALUES (?, ?, ?)`).run(timezone, isActive, lastSeenAt);
+  }
+
+  it('reports no known timezone, and UTC for notifications, when no device has one', () => {
+    addToken(null, 1, '2026-06-14T00:00:00.000Z');
+    addToken('Asia/Tokyo', 0, '2026-06-15T00:00:00.000Z');
+
+    expect(readKnownTimezone()).toBeNull();
+    expect(readEffectiveTimezone()).toBe('UTC');
+  });
+
+  it('uses the most recently seen active device timezone', () => {
+    addToken('America/Chicago', 1, '2026-06-13T00:00:00.000Z');
+    addToken('America/New_York', 1, '2026-06-14T00:00:00.000Z');
+
+    expect(readKnownTimezone()).toBe('America/New_York');
+    expect(readEffectiveTimezone()).toBe('America/New_York');
   });
 });

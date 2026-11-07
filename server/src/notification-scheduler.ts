@@ -173,7 +173,10 @@ function readSettings(): NotificationPreferences | null {
   };
 }
 
-function readEffectiveTimezone(): string {
+/** Timezone of the most recently seen device with an active push token, or
+ * null when none has reported one (web-only use, or notifications never
+ * enabled) — callers choose their own fallback. */
+export function readKnownTimezone(): string | null {
   const row = db
     .prepare(
       `SELECT timezone FROM fcm_tokens
@@ -182,7 +185,11 @@ function readEffectiveTimezone(): string {
     )
     .get() as { timezone: string } | undefined;
 
-  return row?.timezone ?? DEFAULT_TIMEZONE;
+  return row?.timezone ?? null;
+}
+
+export function readEffectiveTimezone(): string {
+  return readKnownTimezone() ?? DEFAULT_TIMEZONE;
 }
 
 function readCandidateEvents(): CandidateEvent[] {
