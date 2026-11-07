@@ -73,10 +73,13 @@ export function findExpiredHiddenEventIds(
  * pull. Runs right after a successful calendar sync, against the freshly
  * replaced events table and the server clock.
  *
- * The appended payload is the latest synced settings payload with only
- * `hiddenEventIds` changed — every other field stays exactly as the user last
- * synced it. With no settings change ever synced, `hidden_event_ids` is still
- * the seeded empty list, so there is nothing to prune.
+ * The hidden list is read from the `user_settings` column, which the schema
+ * guarantees is a JSON array — the latest settings payload in `sync_events`
+ * can predate `hiddenEventIds` on an older database. The appended payload is
+ * that latest payload with only `hiddenEventIds` changed, so every other
+ * field stays exactly as the user last synced it. With no settings change
+ * ever synced, the column is still the seeded empty list, so there is
+ * nothing to prune.
  *
  * Returns how many IDs were removed.
  */
@@ -92,7 +95,14 @@ export function pruneExpiredHiddenEvents(now: Dayjs = dayjs()): number {
       return 0;
     }
 
-    const settings = JSON.parse(latest.payload) as UserSettings;
+    const settingsRow = db
+      .prepare(`SELECT hidden_event_ids FROM user_settings WHERE id = 1`)
+      .get() as { hidden_event_ids: string } | undefined;
+    if (!settingsRow) {
+      return 0;
+    }
+    const hiddenEventIds = JSON.parse(settingsRow.hidden_event_ids) as string[];
+
     const events = (
       db.prepare(`SELECT event_id, end FROM pokemon_go_events`).all() as {
         event_id: string;
@@ -101,15 +111,15 @@ export function pruneExpiredHiddenEvents(now: Dayjs = dayjs()): number {
     ).map((row) => ({ eventId: row.event_id, end: row.end }));
 
     const expired = new Set(
-      findExpiredHiddenEventIds(settings.hiddenEventIds, events, now, readEffectiveTimezone())
+      findExpiredHiddenEventIds(hiddenEventIds, events, now, readEffectiveTimezone())
     );
     if (expired.size === 0) {
       return 0;
     }
 
     const pruned: UserSettings = {
-      ...settings,
-      hiddenEventIds: settings.hiddenEventIds.filter((id) => !expired.has(id)),
+      ...(JSON.parse(latest.payload) as UserSettings),
+      hiddenEventIds: hiddenEventIds.filter((id) => !expired.has(id)),
     };
 
     db.prepare(`UPDATE user_settings SET hidden_event_ids = @hiddenEventIds WHERE id = 1`).run({

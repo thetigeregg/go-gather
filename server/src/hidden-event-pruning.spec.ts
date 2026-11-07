@@ -150,6 +150,26 @@ describe('pruneExpiredHiddenEvents', () => {
     expect(settingsEvents()).toEqual([]);
   });
 
+  it('reads hidden IDs from the settings column when the latest payload predates them', () => {
+    const { hiddenEventIds: _omitted, ...legacy } = DEFAULT_SETTINGS;
+    db.prepare(`INSERT INTO user_settings VALUES (1, '["ended","ongoing"]')`).run();
+    db.prepare(
+      `INSERT INTO sync_events (entity_type, entity_key, operation, payload, server_timestamp)
+       VALUES ('settings', 'settings', 'upsert', ?, '2026-01-01T00:00:00.000Z')`
+    ).run(JSON.stringify(legacy));
+
+    expect(pruneExpiredHiddenEvents(NOW)).toBe(1);
+    expect(settingsEvents()[1]).toEqual({ ...DEFAULT_SETTINGS, hiddenEventIds: ['ongoing'] });
+  });
+
+  it('does nothing when the settings row is missing', () => {
+    syncSettings({ ...DEFAULT_SETTINGS, hiddenEventIds: ['ended'] });
+    db.exec(`DELETE FROM user_settings`);
+
+    expect(pruneExpiredHiddenEvents(NOW)).toBe(0);
+    expect(settingsEvents()).toHaveLength(1);
+  });
+
   it('uses the most recently seen device timezone', () => {
     db.prepare(`INSERT INTO pokemon_go_events VALUES ('local', '2026-06-14T17:00:00.000')`).run();
     db.prepare(
