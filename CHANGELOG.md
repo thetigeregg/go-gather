@@ -411,3 +411,7 @@
 ## v0.29.5 - 2026-11-06
 
 - 217bd37 build(deps): bump vitest 5, jsdom 31, capacitor 8.6; hold firebase 12 (#121)
+
+## v0.30.0 - 2026-11-07
+
+- eb61e7c feat(server): auto-clear hidden events once they end (#122)
