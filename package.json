@@ -59,7 +59,7 @@
     "@ionic/angular": "^9.0.10",
     "dayjs": "1.11.23",
     "dexie": "^4.4.7",
-    "firebase": "^12.19.0",
+    "firebase": "^13.2.0",
     "ionicons": "^8.1.0",
     "rxjs": "~7.8.2",
     "tslib": "^2.9.1",
