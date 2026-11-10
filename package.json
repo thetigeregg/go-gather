@@ -76,7 +76,7 @@
     "@ionic/angular-toolkit": "^13.0.0",
     "@playwright/test": "^1.65.0",
     "@thetigeregg/commitlint-config": "^2.0.3",
-    "@thetigeregg/dev-cli": "^5.0.2",
+    "@thetigeregg/dev-cli": "^5.1.0",
     "@thetigeregg/lint-staged-config": "^2.0.0",
     "@thetigeregg/ncu-config": "^3.1.0",
     "@thetigeregg/prettier-config": "^2.0.0",
