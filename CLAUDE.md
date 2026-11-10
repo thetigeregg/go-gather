@@ -14,6 +14,7 @@ Before suggesting any commit:
 - Prefer strict typing where applicable
 - Formatting is enforced by Prettier — do not manually reformat, let the pre-commit hook handle it
 - Do not bypass lint-staged or tests without explicit explanation
+- This is a monorepo — changes should be scoped to the relevant workspace
 
 # Commits
 
