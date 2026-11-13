@@ -1,8 +1,8 @@
 # NAS Deployment (Synology + Docker + Tailscale)
 
-A self-hosted deployment on your own NAS via Docker + Tailscale. Architecture is intentionally minimal: two deployable services — `server` (the Fastify API, SQLite for storage) and `edge` (a Caddy container serving the built Angular web app and reverse-proxying `/api` and `/images` to `server`) — no separate worker/scraper/backup containers.
+A self-hosted deployment on your own NAS via Docker + Tailscale. Architecture is intentionally minimal: two deployable services — `server` (the Fastify API, SQLite for storage) and `edge` (a Caddy container serving the built Angular web app and reverse-proxying `/api`, `/images` and `/ota` to `server`) — no separate worker/scraper/backup containers.
 
-`edge` exists only to serve the app in a browser. The native iOS app keeps talking to `server` directly, exactly as before — `edge` doesn't sit in front of it.
+`edge` exists to serve the app in a browser. The native iOS app can talk to either `server` directly or to `edge`: `edge` forwards `/api`, `/images` and `/ota` (OTA live-update manifests and bundles), so a Tailscale hostname pointed at `edge` still serves everything the iOS app needs.
 
 ## 1. Persistent directory
 
