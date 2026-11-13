@@ -6,6 +6,7 @@ import {
   parseIosLiveUpdateManifest,
   resolveBackendOriginFromApiUrl,
   shouldStageLiveUpdateManifest,
+  withManifestCacheBuster,
 } from './live-update.logic';
 
 describe('live-update.logic', () => {
@@ -41,13 +42,10 @@ describe('live-update.logic', () => {
     );
   });
 
-  it('buildLiveUpdateManifestUrl appends an encoded cache-buster when given', () => {
-    expect(buildLiveUpdateManifestUrl('https://gogather.example.com/', ' 42 ', 1700000000000)).toBe(
-      'https://gogather.example.com/ota/ios/42/manifest.json?t=1700000000000'
-    );
-    expect(buildLiveUpdateManifestUrl('https://gogather.example.com', '42', 'a b&c')).toBe(
-      'https://gogather.example.com/ota/ios/42/manifest.json?t=a%20b%26c'
-    );
+  it('withManifestCacheBuster appends an encoded ?t= query', () => {
+    const url = 'https://gogather.example.com/ota/ios/42/manifest.json';
+    expect(withManifestCacheBuster(url, 1700000000000)).toBe(`${url}?t=1700000000000`);
+    expect(withManifestCacheBuster(url, 'a b&c')).toBe(`${url}?t=a%20b%26c`);
   });
 
   it('resolveBackendOriginFromApiUrl strips path via URL host', () => {

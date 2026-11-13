@@ -10,6 +10,7 @@ import {
   parseIosLiveUpdateManifest,
   resolveBackendOriginFromApiUrl,
   shouldStageLiveUpdateManifest,
+  withManifestCacheBuster,
   type IosLiveUpdateManifest,
 } from './live-update.logic';
 import { isNativePlatform } from '../utils/native-platform.util';
@@ -195,8 +196,12 @@ export class LiveUpdateService {
     backendOrigin: string,
     nativeBuildNumber: string
   ): Promise<IosLiveUpdateManifest | null> {
-    const manifestUrl = buildLiveUpdateManifestUrl(backendOrigin, nativeBuildNumber);
-    const requestUrl = buildLiveUpdateManifestUrl(backendOrigin, nativeBuildNumber, Date.now());
+    // Logs carry the URL actually requested (with its cache-buster) so they
+    // line up with server/proxy access logs.
+    const manifestUrl = withManifestCacheBuster(
+      buildLiveUpdateManifestUrl(backendOrigin, nativeBuildNumber),
+      Date.now()
+    );
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
       controller.abort();
@@ -204,7 +209,7 @@ export class LiveUpdateService {
 
     let response: Response;
     try {
-      response = await fetch(requestUrl, {
+      response = await fetch(manifestUrl, {
         cache: 'no-store',
         signal: controller.signal,
       });
