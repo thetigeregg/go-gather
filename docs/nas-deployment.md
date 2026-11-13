@@ -121,12 +121,22 @@ The server checks for due notifications every `NOTIFICATION_CHECK_INTERVAL_MINUT
 
 ## 5. Publish over Tailscale
 
-Run on the Synology host (where Tailscale is installed). Keep the existing API mapping for the iOS app (`server`, port 3000) and add a second mapping on a different port for the web app (`edge`, port 8080) — Tailscale can serve multiple `https` ports from the same node:
+Run on the Synology host (where Tailscale is installed). Either of these works for the iOS app's origin (`:443`):
 
-```bash
-tailscale serve --bg --https=443 http://127.0.0.1:3000
-tailscale serve --bg --https=8443 http://127.0.0.1:8080
-```
+- **Single mapping to `edge`** — `edge` reverse-proxies `/api`, `/images` and `/ota` to `server`, so one hostname serves both the web app and everything the iOS app needs:
+
+  ```bash
+  tailscale serve --bg --https=443 http://127.0.0.1:8080
+  ```
+
+- **Separate mappings** — point `:443` at `server` (port 3000) for the iOS app and add a second port for the web app (`edge`, port 8080); Tailscale can serve multiple `https` ports from the same node:
+
+  ```bash
+  tailscale serve --bg --https=443 http://127.0.0.1:3000
+  tailscale serve --bg --https=8443 http://127.0.0.1:8080
+  ```
+
+Use the host ports you actually published (`SERVER_PORT` / `EDGE_PORT`) in place of `3000` / `8080`.
 
 Verify:
 
@@ -135,7 +145,7 @@ tailscale status
 tailscale serve status
 ```
 
-Use the `:443` tailnet URL from `tailscale serve status` as the iOS backend origin (step 6, unchanged), and the `:8443` tailnet URL to open the web app in a browser.
+Use the `:443` tailnet URL from `tailscale serve status` as the iOS backend origin (step 6). With a single `edge` mapping, open that same URL in a browser for the web app; with separate mappings, use the `:8443` URL. Either way, `https://<origin>/ota/ios/<nativeBuildNumber>/manifest.json` must return JSON — if it returns the web app's HTML, OTA live updates are not reaching `server`.
 
 ## 6. Point the iOS app at it
 
@@ -157,7 +167,7 @@ There's no dedicated `/health` route yet — `docker-compose.yml`'s healthcheck 
 
 ## 8. Known limitation: CORS
 
-`server/src/api.ts` registers a hardcoded CORS origin list (`http://localhost:4200`, `capacitor://localhost`) — no env var controls it. This doesn't block the iOS app itself (`CapacitorHttp: { enabled: true }` in `capacitor.config.ts` routes native requests around browser CORS entirely). It also doesn't affect the web app served via `edge`: the browser only ever talks to the `edge` container's own origin, which reverse-proxies `/api` and `/images` to `server` same-origin, so no cross-origin request (and therefore no CORS check) is involved. The limitation only matters if some other browser-based client were ever pointed directly at the `server` origin instead of going through `edge` — that would need a code change here first.
+`server/src/api.ts` registers a hardcoded CORS origin list (`http://localhost:4200`, `capacitor://localhost`) — no env var controls it. This doesn't block the iOS app itself (`CapacitorHttp: { enabled: true }` in `capacitor.config.ts` routes native requests around browser CORS entirely). It also doesn't affect the web app served via `edge`: the browser only ever talks to the `edge` container's own origin, which reverse-proxies `/api`, `/images` and `/ota` to `server` same-origin, so no cross-origin request (and therefore no CORS check) is involved. The limitation only matters if some other browser-based client were ever pointed directly at the `server` origin instead of going through `edge` — that would need a code change here first.
 
 ## 9. Backups
 
