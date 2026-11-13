@@ -16,7 +16,12 @@
 		reverse_proxy http://server:3000
 	}
 
+	# no-cache makes clients revalidate (cheap 304 via ETag) instead of
+	# heuristically caching responses without Cache-Control. iOS's URLSession
+	# did exactly that with the SPA fallback once served for /ota/*, replaying
+	# it from disk across app launches without contacting the server.
 	handle {
+		header Cache-Control "no-cache"
 		root * /srv
 		try_files {path} /index.html
 		file_server

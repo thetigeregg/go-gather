@@ -88,13 +88,23 @@ export function isBundleAlreadyDownloadedError(error: unknown): boolean {
   return error instanceof Error && /bundle already exists/i.test(error.message);
 }
 
+/**
+ * `cacheBuster`, when given, is appended as `?t=<value>`. CapacitorHttp sends
+ * fetch() through iOS's URLSession and drops fetch's `cache: 'no-store'`, so a
+ * cacheable response stored for this URL (e.g. an HTML fallback served before
+ * the manifest route existed) can be replayed from the device's disk cache
+ * without ever reaching the server. A unique query string per check sidesteps
+ * any such entry.
+ */
 export function buildLiveUpdateManifestUrl(
   backendOrigin: string,
-  nativeBuildNumber: string
+  nativeBuildNumber: string,
+  cacheBuster?: string | number
 ): string {
   const origin = backendOrigin.replace(/\/+$/, '');
   const buildSegment = nativeBuildNumber.trim();
-  return `${origin}/ota/ios/${buildSegment}/manifest.json`;
+  const url = `${origin}/ota/ios/${buildSegment}/manifest.json`;
+  return cacheBuster === undefined ? url : `${url}?t=${encodeURIComponent(String(cacheBuster))}`;
 }
 
 export function resolveBackendOriginFromApiUrl(apiUrl: string): string | null {

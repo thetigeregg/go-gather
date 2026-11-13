@@ -41,6 +41,15 @@ describe('live-update.logic', () => {
     );
   });
 
+  it('buildLiveUpdateManifestUrl appends an encoded cache-buster when given', () => {
+    expect(buildLiveUpdateManifestUrl('https://gogather.example.com/', ' 42 ', 1700000000000)).toBe(
+      'https://gogather.example.com/ota/ios/42/manifest.json?t=1700000000000'
+    );
+    expect(buildLiveUpdateManifestUrl('https://gogather.example.com', '42', 'a b&c')).toBe(
+      'https://gogather.example.com/ota/ios/42/manifest.json?t=a%20b%26c'
+    );
+  });
+
   it('resolveBackendOriginFromApiUrl strips path via URL host', () => {
     expect(resolveBackendOriginFromApiUrl('https://gogather.example.com/api')).toBe(
       'https://gogather.example.com'

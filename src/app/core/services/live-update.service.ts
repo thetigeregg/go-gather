@@ -196,6 +196,7 @@ export class LiveUpdateService {
     nativeBuildNumber: string
   ): Promise<IosLiveUpdateManifest | null> {
     const manifestUrl = buildLiveUpdateManifestUrl(backendOrigin, nativeBuildNumber);
+    const requestUrl = buildLiveUpdateManifestUrl(backendOrigin, nativeBuildNumber, Date.now());
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
       controller.abort();
@@ -203,7 +204,7 @@ export class LiveUpdateService {
 
     let response: Response;
     try {
-      response = await fetch(manifestUrl, {
+      response = await fetch(requestUrl, {
         cache: 'no-store',
         signal: controller.signal,
       });
