@@ -415,3 +415,9 @@
 ## v0.30.0 - 2026-11-07
 
 - eb61e7c feat(server): auto-clear hidden events once they end (#122)
+
+## v0.31.0 - 2026-11-13
+
+- f18503a feat(ui): wrap full event title on expanded timeline card (#126)
+- b754c38 chore(devx): bump dev-cli and add ship steps to PR commands (#125)
+- 4a2b03c Add Claude Code GitHub Workflow (#124)
