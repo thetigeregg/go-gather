@@ -14,9 +14,26 @@
 }
 
 .event-header {
+  --title-line-height: calc(0.9rem * 1.2);
+
   display: flex;
   align-items: center;
   gap: 6px;
+
+  // The expanded card's title can wrap (see .event-name), so pin the dot and
+  // icons to its first line instead of centering them on the whole block.
+  .is-active & {
+    align-items: flex-start;
+
+    > .event-dot {
+      margin-top: calc((var(--title-line-height) - 10px) / 2);
+    }
+
+    > .spotlight-bonus-icons,
+    > .expand-icon {
+      margin-top: calc((var(--title-line-height) - 16px) / 2);
+    }
+  }
 }
 
 .event-dot {
@@ -33,6 +50,14 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  // Collapsed cards stay one line; the expanded card shows the full title.
+  // `anywhere` also breaks long unbroken titles instead of clipping them.
+  .is-active & {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: var(--title-line-height);
+  }
 }
 
 .expand-icon {
