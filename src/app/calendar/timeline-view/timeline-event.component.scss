@@ -14,9 +14,26 @@
 }
 
 .event-header {
+  --title-font-size: 0.9rem;
+  --title-line-height: calc(var(--title-font-size) * 1.2);
+
+  // Top-aligned with each item centered on the title's first line, so the
+  // layout is identical whether the title is one line (collapsed) or wraps
+  // (expanded — see .event-name).
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
+
+  > .event-dot {
+    margin-top: calc((var(--title-line-height) - 10px) / 2);
+  }
+
+  // Icons are 1em tall (ion-icon's own sizing), so this tracks the user's
+  // font size rather than assuming 16px.
+  > .spotlight-bonus-icons,
+  > .expand-icon {
+    margin-top: calc((var(--title-line-height) - 1em) / 2);
+  }
 }
 
 .event-dot {
@@ -28,11 +45,19 @@
 
 .event-name {
   flex: 1;
-  font-size: 0.9rem;
+  font-size: var(--title-font-size);
   font-weight: 500;
+  line-height: var(--title-line-height);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+
+  // Collapsed cards stay one line; the expanded card shows the full title.
+  // `anywhere` also breaks long unbroken titles instead of clipping them.
+  .is-active & {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 }
 
 .expand-icon {
@@ -45,6 +70,9 @@
   align-items: center;
   gap: 3px;
   flex-shrink: 0;
+  // Always icon-height (even with only the 15px bonus image) so the header's
+  // 1em first-line offset centers it exactly.
+  height: 1em;
 }
 
 .evolve-icon {
