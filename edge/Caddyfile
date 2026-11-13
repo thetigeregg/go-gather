@@ -9,6 +9,13 @@
 		reverse_proxy http://server:3000
 	}
 
+	# iOS OTA live-update manifests and bundles are served by the server.
+	# Without this, /ota/* falls through to the SPA's index.html (200
+	# text/html) and the client logs live_update.manifest_invalid.
+	handle /ota/* {
+		reverse_proxy http://server:3000
+	}
+
 	handle {
 		root * /srv
 		try_files {path} /index.html
