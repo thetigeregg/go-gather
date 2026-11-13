@@ -279,6 +279,29 @@ describe('LiveUpdateService', () => {
     expect(liveUpdateGetNextBundleMock).not.toHaveBeenCalled();
   });
 
+  it('fetches the manifest with a fresh cache-buster per check and logs the requested URL', async () => {
+    const plainUrl = 'https://gogather.example.com/ota/ios/42/manifest.json';
+    const fetchMock = vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(new Response(null, { status: 404 })));
+    globalThis.fetch = fetchMock;
+    const nowSpy = vi.spyOn(Date, 'now');
+
+    nowSpy.mockReturnValue(1000);
+    await service.checkAndStageUpdate(true);
+    nowSpy.mockReturnValue(2000);
+    await service.checkAndStageUpdate(true);
+
+    expect(fetchMock).toHaveBeenNthCalledWith(1, `${plainUrl}?t=1000`, expect.anything());
+    expect(fetchMock).toHaveBeenNthCalledWith(2, `${plainUrl}?t=2000`, expect.anything());
+    const missingLogs = consoleInfoSpy.mock.calls.filter(
+      (call) => call[0] === 'live_update.manifest_missing'
+    );
+    expect(missingLogs).toHaveLength(2);
+    expect(missingLogs[0]?.[1]).toEqual({ status: 404, manifestUrl: `${plainUrl}?t=1000` });
+    expect(missingLogs[1]?.[1]).toEqual({ status: 404, manifestUrl: `${plainUrl}?t=2000` });
+  });
+
   it('skips staging when manifest response is not valid JSON', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue(
       new Response('<html>error</html>', {
