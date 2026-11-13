@@ -421,3 +421,7 @@
 - f18503a feat(ui): wrap full event title on expanded timeline card (#126)
 - b754c38 chore(devx): bump dev-cli and add ship steps to PR commands (#125)
 - 4a2b03c Add Claude Code GitHub Workflow (#124)
+
+## v0.31.1 - 2026-11-13
+
+- 2ef1ce4 fix(edge): proxy /ota/* to server for iOS live updates (#128)
