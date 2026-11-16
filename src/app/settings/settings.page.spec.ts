@@ -196,6 +196,7 @@ describe('SettingsPage', () => {
         notificationsEnabled: true,
         notificationTimedEventOffsetMinutes: 30,
         notificationAllDayEventTime: '08:15',
+        notificationMultiDayDailyEnabled: false,
       };
 
       component.ionViewWillEnter();
@@ -203,6 +204,16 @@ describe('SettingsPage', () => {
       expect(component.notificationsEnabled).toBe(true);
       expect(component.notificationTimedEventOffsetMinutes).toBe(30);
       expect(component.notificationAllDayEventTime).toBe('08:15');
+      expect(component.notificationMultiDayDailyEnabled).toBe(false);
+    });
+
+    it('multiDayDailyChanged persists the toggle state', () => {
+      component.multiDayDailyChanged(
+        new CustomEvent<{ checked: boolean }>('ionChange', { detail: { checked: false } })
+      );
+
+      expect(component.notificationMultiDayDailyEnabled).toBe(false);
+      expect(updateUserSettingsCalls).toEqual([{ notificationMultiDayDailyEnabled: false }]);
     });
 
     it('enabling requests permission, registers the device, and persists the setting on success', async () => {

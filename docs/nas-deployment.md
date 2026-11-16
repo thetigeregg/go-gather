@@ -47,6 +47,7 @@ Env vars (all optional, shown with their defaults):
 - `BACKUP_AFTER_N_MODIFICATIONS` (default `0`, disabled) — see "Automatic backups" below
 - `SECRETS_HOST_DIR` (default `./nas-secrets`) — see section 1
 - `NOTIFICATION_CHECK_INTERVAL_MINUTES` (default `2`) — how often the server checks for due calendar-event push notifications
+- `NOTIFICATION_MULTI_DAY_MAX_SPAN_DAYS` (default `4`) — longest multi-day event, in local calendar days, that also gets a reminder on each day after its first (when "Remind me each day of short multi-day events" is on in the app's Settings); longer events only get the start-day notification
 - `FLARESOLVERR_ENABLED` (default `false`), `FLARESOLVERR_URL` (default `http://flaresolverr:8191`) — see "Release data from Bulbapedia" below
 
 ## 4. First-time data bootstrap

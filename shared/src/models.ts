@@ -308,6 +308,11 @@ export interface UserSettings {
    * fire on the event's start day. Applies only to events whose start clock
    * time is exactly local midnight. */
   notificationAllDayEventTime: string;
+  /** Also notify on each later day of a short multi-day event (Wild Area,
+   * GO Tour), using the same timed-offset / all-day-time rules applied to
+   * that day. The server caps eligible events by span
+   * (NOTIFICATION_MULTI_DAY_MAX_SPAN_DAYS, default 4 days). */
+  notificationMultiDayDailyEnabled: boolean;
 }
 
 /** Also used server-side (see `server/src/db.ts`'s `initSchema()`) to seed
@@ -335,6 +340,7 @@ export const DEFAULT_SETTINGS: UserSettings = {
   notificationsEnabled: false,
   notificationTimedEventOffsetMinutes: 15,
   notificationAllDayEventTime: '09:00',
+  notificationMultiDayDailyEnabled: true,
 };
 
 /** Seeded default exclusions for one pokedex type — mirrors the old global

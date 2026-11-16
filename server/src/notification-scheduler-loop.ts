@@ -1,5 +1,8 @@
 import type { FastifyBaseLogger } from 'fastify';
-import { checkAndSendDueNotifications } from './notification-scheduler.js';
+import {
+  checkAndSendDueNotifications,
+  DEFAULT_MULTI_DAY_MAX_SPAN_DAYS,
+} from './notification-scheduler.js';
 
 const MINUTE_MS = 60 * 1000;
 
@@ -12,10 +15,10 @@ function readPositiveIntegerEnv(name: string, fallback: number): number {
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-async function runTick(logger: FastifyBaseLogger): Promise<void> {
+async function runTick(logger: FastifyBaseLogger, multiDayMaxSpanDays: number): Promise<void> {
   const startedAt = Date.now();
   try {
-    await checkAndSendDueNotifications();
+    await checkAndSendDueNotifications(multiDayMaxSpanDays);
   } catch (err: unknown) {
     logger.error({ durationMs: Date.now() - startedAt, err }, 'notification scheduler tick failed');
   }
@@ -31,11 +34,15 @@ async function runTick(logger: FastifyBaseLogger): Promise<void> {
  */
 export function startNotificationScheduler(logger: FastifyBaseLogger): () => void {
   const intervalMinutes = readPositiveIntegerEnv('NOTIFICATION_CHECK_INTERVAL_MINUTES', 2);
+  const multiDayMaxSpanDays = readPositiveIntegerEnv(
+    'NOTIFICATION_MULTI_DAY_MAX_SPAN_DAYS',
+    DEFAULT_MULTI_DAY_MAX_SPAN_DAYS
+  );
 
-  void runTick(logger);
+  void runTick(logger, multiDayMaxSpanDays);
 
   const timer = setInterval(() => {
-    void runTick(logger);
+    void runTick(logger, multiDayMaxSpanDays);
   }, intervalMinutes * MINUTE_MS);
 
   return function stopNotificationScheduler(): void {
