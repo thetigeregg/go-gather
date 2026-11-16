@@ -37,6 +37,9 @@ services:
       FIREBASE_SERVICE_ACCOUNT_JSON_FILE: ${FIREBASE_SERVICE_ACCOUNT_JSON_FILE:-/run/secrets/firebase_service_account_json}
       # How often (minutes) the server checks for due notifications.
       # NOTIFICATION_CHECK_INTERVAL_MINUTES: ${NOTIFICATION_CHECK_INTERVAL_MINUTES:-2}
+      # Longest multi-day event (local days) that also gets a
+      # reminder on each later day, when enabled in the app's Settings.
+      # NOTIFICATION_MULTI_DAY_MAX_SPAN_DAYS: ${NOTIFICATION_MULTI_DAY_MAX_SPAN_DAYS:-4}
       # Retry Bulbapedia requests Cloudflare blocks through FlareSolverr. Off
       # unless "true"; the URL defaults to http://flaresolverr:8191. See
       # docs/nas-deployment.md, "Release data from Bulbapedia".

@@ -73,7 +73,8 @@ export function initSchema(): void {
       disabled_season_daily_bonus_days TEXT NOT NULL DEFAULT '[]',
       notifications_enabled INTEGER NOT NULL DEFAULT 0,
       notification_timed_event_offset_minutes INTEGER NOT NULL DEFAULT 15,
-      notification_all_day_event_time TEXT NOT NULL DEFAULT '09:00'
+      notification_all_day_event_time TEXT NOT NULL DEFAULT '09:00',
+      notification_multi_day_daily_enabled INTEGER NOT NULL DEFAULT 1
     );
 
     -- Local-first sync support (adapted from game-shelf's Postgres
@@ -242,6 +243,11 @@ export function initSchema(): void {
       `ALTER TABLE user_settings ADD COLUMN notification_all_day_event_time TEXT NOT NULL DEFAULT '09:00'`
     );
   }
+  if (!settingsColumns.some((c) => c.name === 'notification_multi_day_daily_enabled')) {
+    db.exec(
+      `ALTER TABLE user_settings ADD COLUMN notification_multi_day_daily_enabled INTEGER NOT NULL DEFAULT 1`
+    );
+  }
 
   // Single-row settings table (id is always 1) — seeded once from
   // DEFAULT_SETTINGS on first run; `INSERT OR IGNORE` is a no-op on every
@@ -255,7 +261,8 @@ export function initSchema(): void {
       user_tags, preset_queries, excluded_search_terms_by_pokedex,
       hidden_event_ids, disabled_event_types, disabled_season_daily_bonus_days,
       notifications_enabled,
-      notification_timed_event_offset_minutes, notification_all_day_event_time
+      notification_timed_event_offset_minutes, notification_all_day_event_time,
+      notification_multi_day_daily_enabled
     ) VALUES (
       1, @pokedexType, @shinyFilter, @regionFilter,
       @showRegional, @showAlternate, @showGender, @showUncaughtOnly,
@@ -264,7 +271,8 @@ export function initSchema(): void {
       @userTags, @presetQueries, @excludedSearchTermsByPokedex,
       @hiddenEventIds, @disabledEventTypes, @disabledSeasonDailyBonusDays,
       @notificationsEnabled,
-      @notificationTimedEventOffsetMinutes, @notificationAllDayEventTime
+      @notificationTimedEventOffsetMinutes, @notificationAllDayEventTime,
+      @notificationMultiDayDailyEnabled
     )`
   ).run({
     pokedexType: DEFAULT_SETTINGS.pokedexType,
@@ -285,5 +293,6 @@ export function initSchema(): void {
     notificationsEnabled: DEFAULT_SETTINGS.notificationsEnabled ? 1 : 0,
     notificationTimedEventOffsetMinutes: DEFAULT_SETTINGS.notificationTimedEventOffsetMinutes,
     notificationAllDayEventTime: DEFAULT_SETTINGS.notificationAllDayEventTime,
+    notificationMultiDayDailyEnabled: DEFAULT_SETTINGS.notificationMultiDayDailyEnabled ? 1 : 0,
   });
 }

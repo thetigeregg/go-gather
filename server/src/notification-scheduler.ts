@@ -6,6 +6,7 @@ import { db } from './db.js';
 import { sendFcmMulticast } from './fcm.js';
 import {
   clampTextWithEllipsis,
+  clampTitleWithSuffix,
   MAX_NOTIFICATION_BODY,
   MAX_NOTIFICATION_TITLE,
 } from './notification-copy-policy.js';
@@ -16,6 +17,13 @@ dayjs.extend(timezone);
 
 const DEFAULT_LOOKBACK_MINUTES = 60;
 const DEFAULT_TIMEZONE = 'UTC';
+/** Longest multi-day event, in local days, that still gets a reminder on
+ * each day after its first — a final day the event ends on before its daily
+ * start (or fire) time doesn't count. Longer events — week-long raid
+ * rotations, GO Battle League seasons, the season itself — only get the
+ * start-day notification. Overridable via NOTIFICATION_MULTI_DAY_MAX_SPAN_DAYS
+ * (see notification-scheduler-loop.ts). */
+export const DEFAULT_MULTI_DAY_MAX_SPAN_DAYS = 4;
 
 export interface CandidateEvent {
   eventId: string;
@@ -23,6 +31,9 @@ export interface CandidateEvent {
   name: string;
   heading: string;
   start: string;
+  /** Absent for synthetic `season-daily-bonus` candidates, which are already
+   * single-day. */
+  end?: string;
   /** Set only for synthetic `season-daily-bonus` candidates (see
    * season-daily-bonus-notifications.util.ts) — 0=Sunday..6=Saturday,
    * matching `SeasonDailyBonus.dayOfWeek`. */
@@ -36,6 +47,7 @@ export interface NotificationPreferences {
   hiddenEventIds: string[];
   disabledEventTypes: string[];
   disabledSeasonDailyBonusDays: number[];
+  notificationMultiDayDailyEnabled: boolean;
 }
 
 export interface DueNotification {
@@ -59,13 +71,17 @@ export function computeDueNotifications(
   settings: NotificationPreferences,
   now: Dayjs,
   effectiveTimezone: string,
-  lookbackMinutes: number = DEFAULT_LOOKBACK_MINUTES
+  lookbackMinutes: number = DEFAULT_LOOKBACK_MINUTES,
+  multiDayMaxSpanDays: number = DEFAULT_MULTI_DAY_MAX_SPAN_DAYS
 ): DueNotification[] {
   if (!settings.notificationsEnabled) {
     return [];
   }
 
   const [allDayHour, allDayMinute] = parseTimeOfDay(settings.notificationAllDayEventTime);
+  const windowStart = now.subtract(lookbackMinutes, 'minute');
+  const isDue = (notifyAt: Dayjs): boolean =>
+    !notifyAt.isAfter(now) && !notifyAt.isBefore(windowStart);
   const due: DueNotification[] = [];
 
   for (const event of events) {
@@ -83,41 +99,133 @@ export function computeDueNotifications(
       continue;
     }
 
-    // Matches the client's parseEventDate(): a 'Z'-suffixed timestamp is
-    // UTC and must be converted into the device's timezone; a bare
-    // timestamp is already expressed in that timezone.
-    const startInTz = event.start.endsWith('Z')
-      ? dayjs.utc(event.start).tz(effectiveTimezone)
-      : dayjs.tz(event.start, effectiveTimezone);
+    const startInTz = parseInTimezone(event.start, effectiveTimezone);
 
     // "All-day" is defined on the CONVERTED local time, never raw UTC — a
     // start that's midnight UTC but not midnight in effectiveTimezone is
     // still a timed event.
     const isAllDay = startInTz.hour() === 0 && startInTz.minute() === 0;
     const category: 'timed' | 'all-day' = isAllDay ? 'all-day' : 'timed';
-    const notifyAt = isAllDay
-      ? startInTz.startOf('day').hour(allDayHour).minute(allDayMinute).second(0).millisecond(0)
-      : startInTz.subtract(settings.notificationTimedEventOffsetMinutes, 'minute');
+    const fireTimeFor = (occurrenceStart: Dayjs): Dayjs =>
+      isAllDay
+        ? occurrenceStart
+            .startOf('day')
+            .hour(allDayHour)
+            .minute(allDayMinute)
+            .second(0)
+            .millisecond(0)
+        : occurrenceStart.subtract(settings.notificationTimedEventOffsetMinutes, 'minute');
+    const body = clampTextWithEllipsis(event.heading || event.eventType, MAX_NOTIFICATION_BODY);
 
-    if (notifyAt.isAfter(now)) {
+    const startNotifyAt = fireTimeFor(startInTz);
+    if (isDue(startNotifyAt)) {
+      due.push({
+        eventId: event.eventId,
+        eventType: event.eventType,
+        category,
+        // Unchanged from before daily reminders existed, so an in-progress
+        // event's already-logged start notification is never re-sent.
+        eventKey: `${event.eventId}:${category}`,
+        notifyAt: startNotifyAt,
+        title: clampTextWithEllipsis(event.name, MAX_NOTIFICATION_TITLE),
+        body,
+      });
+    }
+
+    if (!settings.notificationMultiDayDailyEnabled || !event.end) {
       continue;
     }
-    if (notifyAt.isBefore(now.subtract(lookbackMinutes, 'minute'))) {
-      continue;
-    }
 
-    due.push({
-      eventId: event.eventId,
-      eventType: event.eventType,
-      category,
-      eventKey: `${event.eventId}:${category}`,
-      notifyAt,
-      title: clampTextWithEllipsis(event.name, MAX_NOTIFICATION_TITLE),
-      body: clampTextWithEllipsis(event.heading || event.eventType, MAX_NOTIFICATION_BODY),
+    const laterOccurrences = laterDayOccurrences(
+      startInTz,
+      parseInTimezone(event.end, effectiveTimezone),
+      effectiveTimezone,
+      multiDayMaxSpanDays,
+      fireTimeFor
+    );
+    const totalDays = laterOccurrences.length + 1;
+
+    laterOccurrences.forEach((occurrence, index) => {
+      if (!isDue(occurrence.notifyAt)) {
+        return;
+      }
+      due.push({
+        eventId: event.eventId,
+        eventType: event.eventType,
+        category,
+        eventKey: `${event.eventId}:${category}:${occurrence.date}`,
+        notifyAt: occurrence.notifyAt,
+        title: clampTitleWithSuffix({
+          baseTitle: event.name,
+          suffix: `Day ${String(index + 2)}/${String(totalDays)}`,
+        }),
+        body,
+      });
     });
   }
 
   return due;
+}
+
+/** Matches the client's parseEventDate(): a 'Z'-suffixed timestamp is UTC
+ * and must be converted into the device's timezone; a bare timestamp is
+ * already expressed in that timezone. */
+function parseInTimezone(value: string, effectiveTimezone: string): Dayjs {
+  return value.endsWith('Z')
+    ? dayjs.utc(value).tz(effectiveTimezone)
+    : dayjs.tz(value, effectiveTimezone);
+}
+
+interface DayOccurrence {
+  /** Local calendar date, YYYY-MM-DD. */
+  date: string;
+  notifyAt: Dayjs;
+}
+
+/**
+ * Each local calendar day after the first that a multi-day event covers,
+ * with the event's start clock time projected onto it (Wild Area's 10:00 on
+ * both days) and turned into a fire time by `fireTimeFor`. A day is dropped
+ * when the event has ended by its projected start or by its fire time (e.g.
+ * an event ending 09:59, or an all-day event ending before the all-day
+ * notification time) — only the last calendar day can be dropped this way.
+ * Empty for single-day events and when the days that remain, counting the
+ * first, exceed `maxSpanDays`.
+ *
+ * Dates are stepped as plain strings and rebuilt with dayjs.tz() rather than
+ * via `.add(n, 'day')` on a zoned instance, which keeps the original UTC
+ * offset and lands an hour off when a DST change falls between days.
+ */
+function laterDayOccurrences(
+  startInTz: Dayjs,
+  endInTz: Dayjs,
+  effectiveTimezone: string,
+  maxSpanDays: number,
+  fireTimeFor: (occurrenceStart: Dayjs) => Dayjs
+): DayOccurrence[] {
+  // An end exactly at local midnight belongs to the previous day.
+  const firstDate = startInTz.format('YYYY-MM-DD');
+  const lastDate = endInTz.subtract(1, 'millisecond').format('YYYY-MM-DD');
+  const spanDays = dayjs.utc(lastDate).diff(dayjs.utc(firstDate), 'day') + 1;
+
+  // Dropping the last day is the most that can bring a span under the cap.
+  if (spanDays < 2 || spanDays - 1 > maxSpanDays) {
+    return [];
+  }
+
+  const clockTime = startInTz.format('HH:mm:ss');
+  const occurrences: DayOccurrence[] = [];
+  for (let offset = 1; offset < spanDays; offset++) {
+    const date = dayjs.utc(firstDate).add(offset, 'day').format('YYYY-MM-DD');
+    const start = dayjs.tz(`${date}T${clockTime}`, effectiveTimezone);
+    const notifyAt = fireTimeFor(start);
+    if (!start.isBefore(endInTz) || !notifyAt.isBefore(endInTz)) {
+      continue;
+    }
+    occurrences.push({ date, notifyAt });
+  }
+
+  return occurrences.length + 1 > maxSpanDays ? [] : occurrences;
 }
 
 function parseTimeOfDay(value: string): [number, number] {
@@ -140,12 +248,14 @@ interface SettingsRow {
   hidden_event_ids: string;
   disabled_event_types: string;
   disabled_season_daily_bonus_days: string;
+  notification_multi_day_daily_enabled: number;
 }
 
 interface EventRow {
   event_id: string;
   event_type: string;
   start: string;
+  end: string;
   payload: string;
 }
 
@@ -154,7 +264,7 @@ function readSettings(): NotificationPreferences | null {
     .prepare(
       `SELECT notifications_enabled, notification_timed_event_offset_minutes,
               notification_all_day_event_time, hidden_event_ids, disabled_event_types,
-              disabled_season_daily_bonus_days
+              disabled_season_daily_bonus_days, notification_multi_day_daily_enabled
        FROM user_settings WHERE id = 1`
     )
     .get() as SettingsRow | undefined;
@@ -170,6 +280,7 @@ function readSettings(): NotificationPreferences | null {
     hiddenEventIds: JSON.parse(row.hidden_event_ids) as string[],
     disabledEventTypes: JSON.parse(row.disabled_event_types) as string[],
     disabledSeasonDailyBonusDays: JSON.parse(row.disabled_season_daily_bonus_days) as number[],
+    notificationMultiDayDailyEnabled: !!row.notification_multi_day_daily_enabled,
   };
 }
 
@@ -194,7 +305,7 @@ export function readEffectiveTimezone(): string {
 
 function readCandidateEvents(): CandidateEvent[] {
   const rows = db
-    .prepare(`SELECT event_id, event_type, start, payload FROM pokemon_go_events`)
+    .prepare(`SELECT event_id, event_type, start, end, payload FROM pokemon_go_events`)
     .all() as EventRow[];
 
   return rows.map((row) => {
@@ -203,6 +314,7 @@ function readCandidateEvents(): CandidateEvent[] {
       eventId: row.event_id,
       eventType: row.event_type,
       start: row.start,
+      end: row.end,
       name: payload.name,
       heading: payload.heading,
     };
@@ -231,7 +343,9 @@ function readSeasonDailyBonusCandidateEvents(): CandidateEvent[] {
  * merely because every token was already invalid), allowing a legitimate
  * retry next tick.
  */
-export async function checkAndSendDueNotifications(): Promise<void> {
+export async function checkAndSendDueNotifications(
+  multiDayMaxSpanDays: number = DEFAULT_MULTI_DAY_MAX_SPAN_DAYS
+): Promise<void> {
   const settings = readSettings();
   if (!settings || !settings.notificationsEnabled) {
     return;
@@ -240,7 +354,14 @@ export async function checkAndSendDueNotifications(): Promise<void> {
   const effectiveTimezone = readEffectiveTimezone();
   const events = [...readCandidateEvents(), ...readSeasonDailyBonusCandidateEvents()];
   const now = dayjs();
-  const due = computeDueNotifications(events, settings, now, effectiveTimezone);
+  const due = computeDueNotifications(
+    events,
+    settings,
+    now,
+    effectiveTimezone,
+    DEFAULT_LOOKBACK_MINUTES,
+    multiDayMaxSpanDays
+  );
 
   for (const notification of due) {
     const reservation = db

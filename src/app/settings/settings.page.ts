@@ -97,6 +97,7 @@ export class SettingsPage implements ViewWillEnter {
   notificationsEnabled = false;
   notificationTimedEventOffsetMinutes = 0;
   notificationAllDayEventTime = '09:00';
+  notificationMultiDayDailyEnabled = true;
 
   constructor() {
     addIcons({ download, share });
@@ -171,6 +172,13 @@ export class SettingsPage implements ViewWillEnter {
     const time = value.slice(11, 16);
     this.notificationAllDayEventTime = time;
     this.userDataService.updateUserSettings({ notificationAllDayEventTime: time });
+  }
+
+  multiDayDailyChanged(event: CustomEvent<{ checked: boolean }>): void {
+    this.notificationMultiDayDailyEnabled = event.detail.checked;
+    this.userDataService.updateUserSettings({
+      notificationMultiDayDailyEnabled: event.detail.checked,
+    });
   }
 
   get notificationAllDayEventTimeIso(): string {
@@ -299,5 +307,6 @@ export class SettingsPage implements ViewWillEnter {
     this.notificationsEnabled = userSettings.notificationsEnabled;
     this.notificationTimedEventOffsetMinutes = userSettings.notificationTimedEventOffsetMinutes;
     this.notificationAllDayEventTime = userSettings.notificationAllDayEventTime;
+    this.notificationMultiDayDailyEnabled = userSettings.notificationMultiDayDailyEnabled;
   }
 }
