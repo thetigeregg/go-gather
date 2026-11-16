@@ -429,3 +429,7 @@
 ## v0.31.2 - 2026-11-13
 
 - 5c1da2a fix(ota): bypass native HTTP cache for manifest checks (#129)
+
+## v0.32.0 - 2026-11-16
+
+- 0900416 feat(notifications): add daily reminders for multi-day events (#137)
