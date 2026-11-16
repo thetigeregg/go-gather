@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { CatalogEntry, PogoEvent, Season, UserSettings } from '@go-gather/shared';
-import { DEFAULT_SETTINGS, Region } from '@go-gather/shared';
+import { Region } from '@go-gather/shared';
 import { availabilityStatus } from './availability-store.js';
 import { maybeBackupAfterModifications } from './backup.js';
 import { db } from './db.js';
@@ -123,11 +123,10 @@ function applyProgressUpsert(payload: ProgressPayload): void {
 }
 
 function applySettingsUpsert(payload: UserSettings): void {
-  // App builds older than this field omit it from the wire payload; keep
-  // the default rather than reading `undefined` as "off".
-  const multiDayDailyEnabled =
-    (payload as Partial<UserSettings>).notificationMultiDayDailyEnabled ??
-    DEFAULT_SETTINGS.notificationMultiDayDailyEnabled;
+  // App builds older than this field omit it from the wire payload; bind
+  // NULL so COALESCE keeps the stored value rather than reading `undefined`
+  // as "off" or resetting it to the default.
+  const multiDayDailyEnabled = (payload as Partial<UserSettings>).notificationMultiDayDailyEnabled;
 
   db.prepare(
     `UPDATE user_settings SET
@@ -149,7 +148,8 @@ function applySettingsUpsert(payload: UserSettings): void {
       notifications_enabled = @notificationsEnabled,
       notification_timed_event_offset_minutes = @notificationTimedEventOffsetMinutes,
       notification_all_day_event_time = @notificationAllDayEventTime,
-      notification_multi_day_daily_enabled = @notificationMultiDayDailyEnabled
+      notification_multi_day_daily_enabled =
+        COALESCE(@notificationMultiDayDailyEnabled, notification_multi_day_daily_enabled)
     WHERE id = 1`
   ).run({
     pokedexType: payload.pokedexType,
@@ -170,7 +170,8 @@ function applySettingsUpsert(payload: UserSettings): void {
     notificationsEnabled: payload.notificationsEnabled ? 1 : 0,
     notificationTimedEventOffsetMinutes: payload.notificationTimedEventOffsetMinutes,
     notificationAllDayEventTime: payload.notificationAllDayEventTime,
-    notificationMultiDayDailyEnabled: multiDayDailyEnabled ? 1 : 0,
+    notificationMultiDayDailyEnabled:
+      multiDayDailyEnabled === undefined ? null : multiDayDailyEnabled ? 1 : 0,
   });
 }
 

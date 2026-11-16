@@ -17,8 +17,9 @@ dayjs.extend(timezone);
 
 const DEFAULT_LOOKBACK_MINUTES = 60;
 const DEFAULT_TIMEZONE = 'UTC';
-/** Longest multi-day event (in local calendar days) that still gets a
- * reminder on each day after its first. Longer events — week-long raid
+/** Longest multi-day event, in local days, that still gets a reminder on
+ * each day after its first — a final day the event ends on before its daily
+ * start (or fire) time doesn't count. Longer events — week-long raid
  * rotations, GO Battle League seasons, the season itself — only get the
  * start-day notification. Overridable via NOTIFICATION_MULTI_DAY_MAX_SPAN_DAYS
  * (see notification-scheduler-loop.ts). */
@@ -139,13 +140,13 @@ export function computeDueNotifications(
       startInTz,
       parseInTimezone(event.end, effectiveTimezone),
       effectiveTimezone,
-      multiDayMaxSpanDays
+      multiDayMaxSpanDays,
+      fireTimeFor
     );
     const totalDays = laterOccurrences.length + 1;
 
     laterOccurrences.forEach((occurrence, index) => {
-      const notifyAt = fireTimeFor(occurrence.start);
-      if (!isDue(notifyAt)) {
+      if (!isDue(occurrence.notifyAt)) {
         return;
       }
       due.push({
@@ -153,7 +154,7 @@ export function computeDueNotifications(
         eventType: event.eventType,
         category,
         eventKey: `${event.eventId}:${category}:${occurrence.date}`,
-        notifyAt,
+        notifyAt: occurrence.notifyAt,
         title: clampTitleWithSuffix({
           baseTitle: event.name,
           suffix: `Day ${String(index + 2)}/${String(totalDays)}`,
@@ -178,16 +179,18 @@ function parseInTimezone(value: string, effectiveTimezone: string): Dayjs {
 interface DayOccurrence {
   /** Local calendar date, YYYY-MM-DD. */
   date: string;
-  /** The event's start clock time on that date. */
-  start: Dayjs;
+  notifyAt: Dayjs;
 }
 
 /**
  * Each local calendar day after the first that a multi-day event covers,
  * with the event's start clock time projected onto it (Wild Area's 10:00 on
- * both days). Empty for single-day events and for events spanning more than
- * `maxSpanDays`. A day whose projected start is at or past the event's end
- * is dropped (e.g. an event ending at 09:59 on its last local day).
+ * both days) and turned into a fire time by `fireTimeFor`. A day is dropped
+ * when the event has ended by its projected start or by its fire time (e.g.
+ * an event ending 09:59, or an all-day event ending before the all-day
+ * notification time) — only the last calendar day can be dropped this way.
+ * Empty for single-day events and when the days that remain, counting the
+ * first, exceed `maxSpanDays`.
  *
  * Dates are stepped as plain strings and rebuilt with dayjs.tz() rather than
  * via `.add(n, 'day')` on a zoned instance, which keeps the original UTC
@@ -197,14 +200,16 @@ function laterDayOccurrences(
   startInTz: Dayjs,
   endInTz: Dayjs,
   effectiveTimezone: string,
-  maxSpanDays: number
+  maxSpanDays: number,
+  fireTimeFor: (occurrenceStart: Dayjs) => Dayjs
 ): DayOccurrence[] {
   // An end exactly at local midnight belongs to the previous day.
   const firstDate = startInTz.format('YYYY-MM-DD');
   const lastDate = endInTz.subtract(1, 'millisecond').format('YYYY-MM-DD');
   const spanDays = dayjs.utc(lastDate).diff(dayjs.utc(firstDate), 'day') + 1;
 
-  if (spanDays < 2 || spanDays > maxSpanDays) {
+  // Dropping the last day is the most that can bring a span under the cap.
+  if (spanDays < 2 || spanDays - 1 > maxSpanDays) {
     return [];
   }
 
@@ -213,12 +218,14 @@ function laterDayOccurrences(
   for (let offset = 1; offset < spanDays; offset++) {
     const date = dayjs.utc(firstDate).add(offset, 'day').format('YYYY-MM-DD');
     const start = dayjs.tz(`${date}T${clockTime}`, effectiveTimezone);
-    if (!start.isBefore(endInTz)) {
+    const notifyAt = fireTimeFor(start);
+    if (!start.isBefore(endInTz) || !notifyAt.isBefore(endInTz)) {
       continue;
     }
-    occurrences.push({ date, start });
+    occurrences.push({ date, notifyAt });
   }
-  return occurrences;
+
+  return occurrences.length + 1 > maxSpanDays ? [] : occurrences;
 }
 
 function parseTimeOfDay(value: string): [number, number] {

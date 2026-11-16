@@ -253,6 +253,30 @@ describe('computeDueNotifications — multi-day daily reminders', () => {
     expect(due[0].title).toBe('Wild Area 2026 Day 2/5');
   });
 
+  it('counts only real days toward the limit, not a final partial day', () => {
+    // Four full days — 10:00 day 1 to 09:59 day 5 — touches five calendar
+    // days, but day 5 ends before its 10:00 start and is dropped first.
+    const fourDays = wildArea({ end: '2026-11-18T09:59:00.000' });
+    const now = dayjs.tz('2026-11-15T09:45:00', ZONE);
+    const due = computeDueNotifications([fourDays], baseSettings(), now, ZONE);
+
+    expect(due).toHaveLength(1);
+    expect(due[0].title).toBe('Wild Area 2026 Day 2/4');
+  });
+
+  it('drops a final all-day day that ends before the all-day notification time', () => {
+    const endsEarly = event({
+      eventId: 'early',
+      name: 'Early',
+      start: '2027-02-27T00:00:00.000',
+      end: '2027-02-28T06:00:00.000',
+    });
+    const now = dayjs.tz('2027-02-28T09:00:00', ZONE);
+    const due = computeDueNotifications([endsEarly], baseSettings(), now, ZONE);
+
+    expect(due).toEqual([]);
+  });
+
   it('treats an end at exactly local midnight as ending the previous day', () => {
     const now = dayjs.tz('2026-11-15T09:45:00', ZONE);
     const due = computeDueNotifications(
