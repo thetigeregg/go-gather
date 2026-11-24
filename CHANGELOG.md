@@ -445,3 +445,7 @@
 ## v0.32.3 - 2026-11-24
 
 - 0ef59b1 chore(deps): bump addressable from 2.9.0 to 2.9.1 in /ios (#127)
+
+## v0.32.4 - 2026-11-24
+
+- 2f6d4ff chore(deps): bump fastlane from 2.240.1 to 2.242.0 in /ios (#140)
