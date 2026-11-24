@@ -437,3 +437,11 @@
 ## v0.32.1 - 2026-11-24
 
 - 738aa5a ci(ios): build TestFlight uploads with Xcode 27.2 (#138)
+
+## v0.32.2 - 2026-11-24
+
+- 3b23b5a chore(deps): bump Angular 22.3, Capacitor 8.6.2, tooling, Node 24.22.3 (#139)
+
+## v0.32.3 - 2026-11-24
+
+- 0ef59b1 chore(deps): bump addressable from 2.9.0 to 2.9.1 in /ios (#127)
