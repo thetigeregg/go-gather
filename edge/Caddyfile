@@ -9,8 +9,39 @@
 		reverse_proxy http://server:3000
 	}
 
+	# iOS OTA live-update manifests and bundles are served by the server.
+	# Without this, /ota/* falls through to the SPA's index.html (200
+	# text/html) and the client logs live_update.manifest_invalid.
+	handle /ota/* {
+		reverse_proxy http://server:3000
+	}
+
 	handle {
 		root * /srv
+
+		# Content-hashed build output (main-<hash>.js, chunk-<hash>.js,
+		# styles-<hash>.css): a rebuild emits new names, so a file that exists
+		# under such a name never changes. `file` keeps a stale hashed URL from
+		# an older build, which falls back to index.html below, from being
+		# cached as immutable.
+		@hashed {
+			path_regexp -[A-Za-z0-9_-]{8}\.(js|css)$
+			file
+		}
+		header @hashed Cache-Control "public, max-age=31536000, immutable"
+
+		# Everything else (index.html, the SPA fallback, assets/) must
+		# revalidate (cheap 304 via ETag). Without an explicit directive iOS's
+		# URLSession heuristically cached the SPA fallback once served for
+		# /ota/* and replayed it from disk across app launches.
+		@revalidate {
+			not {
+				path_regexp -[A-Za-z0-9_-]{8}\.(js|css)$
+				file
+			}
+		}
+		header @revalidate Cache-Control "no-cache"
+
 		try_files {path} /index.html
 		file_server
 	}

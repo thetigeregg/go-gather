@@ -54,6 +54,18 @@
             </ng-template>
           </ion-modal>
         </ion-item>
+
+        <ion-item lines="none" [disabled]="!notificationsEnabled">
+          <ion-toggle
+            [checked]="notificationMultiDayDailyEnabled"
+            (ionChange)="multiDayDailyChanged($event)"
+          >
+            <ion-label class="ion-text-wrap">
+              Remind me each day of short multi-day events
+              <p>e.g. Wild Area or GO Tour weekends</p>
+            </ion-label>
+          </ion-toggle>
+        </ion-item>
       </ion-card-content>
     </ion-card>
   }

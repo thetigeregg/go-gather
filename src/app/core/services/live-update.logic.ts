@@ -97,6 +97,18 @@ export function buildLiveUpdateManifestUrl(
   return `${origin}/ota/ios/${buildSegment}/manifest.json`;
 }
 
+/**
+ * Appends `?t=<cacheBuster>` to a manifest URL. CapacitorHttp sends fetch()
+ * through iOS's URLSession and drops fetch's `cache: 'no-store'`, so a
+ * cacheable response stored for the plain URL (e.g. an HTML fallback served
+ * before the manifest route existed) can be replayed from the device's disk
+ * cache without ever reaching the server. A unique query string per check
+ * sidesteps any such entry.
+ */
+export function withManifestCacheBuster(manifestUrl: string, cacheBuster: string | number): string {
+  return `${manifestUrl}?t=${encodeURIComponent(String(cacheBuster))}`;
+}
+
 export function resolveBackendOriginFromApiUrl(apiUrl: string): string | null {
   if (typeof apiUrl !== 'string' || apiUrl.trim().length === 0) {
     return null;

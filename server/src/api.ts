@@ -123,6 +123,11 @@ function applyProgressUpsert(payload: ProgressPayload): void {
 }
 
 function applySettingsUpsert(payload: UserSettings): void {
+  // App builds older than this field omit it from the wire payload; bind
+  // NULL so COALESCE keeps the stored value rather than reading `undefined`
+  // as "off" or resetting it to the default.
+  const multiDayDailyEnabled = (payload as Partial<UserSettings>).notificationMultiDayDailyEnabled;
+
   db.prepare(
     `UPDATE user_settings SET
       pokedex_type = @pokedexType,
@@ -142,7 +147,9 @@ function applySettingsUpsert(payload: UserSettings): void {
       disabled_season_daily_bonus_days = @disabledSeasonDailyBonusDays,
       notifications_enabled = @notificationsEnabled,
       notification_timed_event_offset_minutes = @notificationTimedEventOffsetMinutes,
-      notification_all_day_event_time = @notificationAllDayEventTime
+      notification_all_day_event_time = @notificationAllDayEventTime,
+      notification_multi_day_daily_enabled =
+        COALESCE(@notificationMultiDayDailyEnabled, notification_multi_day_daily_enabled)
     WHERE id = 1`
   ).run({
     pokedexType: payload.pokedexType,
@@ -163,6 +170,8 @@ function applySettingsUpsert(payload: UserSettings): void {
     notificationsEnabled: payload.notificationsEnabled ? 1 : 0,
     notificationTimedEventOffsetMinutes: payload.notificationTimedEventOffsetMinutes,
     notificationAllDayEventTime: payload.notificationAllDayEventTime,
+    notificationMultiDayDailyEnabled:
+      multiDayDailyEnabled === undefined ? null : multiDayDailyEnabled ? 1 : 0,
   });
 }
 

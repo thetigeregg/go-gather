@@ -41,6 +41,9 @@ log.txt
 # Node (unanchored so this also matches npm workspace packages'
 # node_modules, e.g. shared/node_modules, server/node_modules)
 node_modules/
+# Workspaces resolve through the root package-lock.json only
+/shared/package-lock.json
+/server/package-lock.json
 npm-debug.log
 yarn-error.log
 

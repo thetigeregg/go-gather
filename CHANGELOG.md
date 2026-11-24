@@ -421,3 +421,23 @@
 - f18503a feat(ui): wrap full event title on expanded timeline card (#126)
 - b754c38 chore(devx): bump dev-cli and add ship steps to PR commands (#125)
 - 4a2b03c Add Claude Code GitHub Workflow (#124)
+
+## v0.31.1 - 2026-11-13
+
+- 2ef1ce4 fix(edge): proxy /ota/* to server for iOS live updates (#128)
+
+## v0.31.2 - 2026-11-13
+
+- 5c1da2a fix(ota): bypass native HTTP cache for manifest checks (#129)
+
+## v0.32.0 - 2026-11-16
+
+- 0900416 feat(notifications): add daily reminders for multi-day events (#137)
+
+## v0.32.1 - 2026-11-24
+
+- 738aa5a ci(ios): build TestFlight uploads with Xcode 27.2 (#138)
+
+## v0.32.2 - 2026-11-24
+
+- 3b23b5a chore(deps): bump Angular 22.3, Capacitor 8.6.2, tooling, Node 24.22.3 (#139)
