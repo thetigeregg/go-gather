@@ -433,3 +433,7 @@
 ## v0.32.0 - 2026-11-16
 
 - 0900416 feat(notifications): add daily reminders for multi-day events (#137)
+
+## v0.32.1 - 2026-11-24
+
+- 738aa5a ci(ios): build TestFlight uploads with Xcode 27.2 (#138)
